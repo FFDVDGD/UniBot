@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 
 from nonebot import on_notice, on_message, on_command
@@ -9,13 +8,12 @@ from nonebot.adapters.minecraft import PlayerChatEvent, PlayerJoinEvent, PlayerQ
 from nonebot.adapters.minecraft.message import MessageSegment
 from nonebot.adapters.minecraft.models import HoverAction, HoverEvent, Component
 
-from nonebot_plugin_uninfo import Uninfo, SupportScope as UninfoSupportScope
-from nonebot_plugin_alconna import Target, SupportScope as AlconnaSupportScope
+from nonebot_plugin_uninfo import Uninfo
 from nonebot_plugin_alconna.uniseg import UniMsg
 
 from Scripts.Config import config
 from Scripts.Managers import server_manager
-from Scripts.Utils import check_message
+from Scripts.Utils import check_message, get_platform_name, send_message_to_groups
 from Scripts.Rules import message_group_rule
 
 __plugin_meta__ = PluginMetadata(
@@ -28,16 +26,6 @@ notice_watcher = on_notice()
 message_watcher = on_message(rule=message_group_rule)
 
 
-scope_mapping = {
-    str(UninfoSupportScope.qq_client): 'QQ',
-    str(UninfoSupportScope.qq_guild): 'QQ 频道',
-    str(UninfoSupportScope.telegram): 'Telegram',
-    str(UninfoSupportScope.discord): 'Discord',
-    str(UninfoSupportScope.dodo): 'DoDo',
-    str(UninfoSupportScope.kook): 'Kook',
-    str(UninfoSupportScope.wechat): '微信',
-    str(UninfoSupportScope.wecom): '企业微信',
-}
 segment_mapping = {
     'text': lambda seg: seg.data.get('text', ''),
     'image': lambda seg: '[图片]',
@@ -64,20 +52,6 @@ def build_server_message(source: str, player: str, content: str):
     return message
 
 
-async def send_message_to_group(message: str):
-    try:
-        for group_info in config.message_groups:
-            platform, group_id = group_info.split(':')
-            if scope := getattr(AlconnaSupportScope, platform.lower(), None):
-                asyncio.create_task(Target.group(group_id, scope).send(message))
-                continue
-            logger.warning(f'不支持的平台类型：{platform}，请检查配置文件！')
-        return True
-    except Exception:
-        logger.warning('发送群消息到失败！请检查机器人状态或填写群组信息是否正确。')
-        return False
-
-
 @notice_watcher.handle()
 async def handle_player_join(event: PlayerJoinEvent):
     '''处理玩家加入服务器事件'''
@@ -100,7 +74,7 @@ async def handle_player_join(event: PlayerJoinEvent):
         await server_manager.broadcast(build_server_message(name, player, server_message), name)
 
     if config.broadcast_player:
-        await send_message_to_group(group_message)
+        await send_message_to_groups(group_message)
 
 
 @notice_watcher.handle()
@@ -121,7 +95,7 @@ async def handle_player_quit(event: PlayerQuitEvent):
         await server_manager.broadcast(build_server_message(name, player, server_message), name)
 
     if config.broadcast_player:
-        await send_message_to_group(group_message)
+        await send_message_to_groups(group_message)
 
 
 @notice_watcher.handle()
@@ -137,7 +111,7 @@ async def handle_player_death(event: PlayerDeathEvent):
         if config.sync_message_between_servers:
             await server_manager.broadcast(build_server_message(name, player, broadcast_message), name)
         if config.broadcast_player:
-            await send_message_to_group(broadcast_message)
+            await send_message_to_groups(broadcast_message)
 
 
 @message_watcher.handle()
@@ -151,10 +125,10 @@ async def handle_player_chat(event: PlayerChatEvent):
     if config.sync_all_game_message:
         if check_message(chat_message):
             logger.warning(f'检测到消息 {chat_message} 包含敏感词，已丢弃！')
-            await send_message_to_group(f'检测到玩家 {player} 发送的消息包含敏感词，已丢弃！详情请看控制台。')
+            await send_message_to_groups(f'检测到玩家 {player} 发送的消息包含敏感词，已丢弃！详情请看控制台。')
             return
 
-        await send_message_to_group(f'[{name}] <{player}> {chat_message}')
+        await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
 
     if config.sync_message_between_servers:
         await server_manager.broadcast(build_server_message(name, player, chat_message), name)
@@ -181,7 +155,7 @@ async def handle_group_message(message: UniMsg, session: Uninfo):
             await message_watcher.finish('请在指令后输入要发送的消息！')
         if check_message(text_message):
             await message_watcher.finish('检测到消息包含敏感词，已丢弃！')
-        await send_message_to_group(f'[{session.self_id}] <{session.user.name}> {text_message}')
+        await send_message_to_groups(f'[{session.self_id}] <{session.user.name}> {text_message}')
         await message_watcher.finish('消息已发送！')
-    platform_name = scope_mapping.get(session.scope, '未知平台')
+    platform_name = get_platform_name(session.scope)
     await server_manager.broadcast(build_server_message(platform_name, session.user.name or str(session.user.id), message_to_text(message)))

@@ -3,7 +3,7 @@ from nonebot_plugin_alconna import Command, Match
 from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Managers import data_manager, server_manager
-from Scripts.Utils import get_player_name
+from Scripts.Utils import get_platform_name, get_player_name
 from Scripts.Rules import command_group_rule
 
 __plugin_meta__ = PluginMetadata(
@@ -28,8 +28,9 @@ async def handle(session: Uninfo, message: Match[list[str]]):
         await matcher.finish('参数错误，请检查命令格式！')
     user_id = str(session.user.id)
     user_name = session.user.name or get_player_name(str(session.user.name))
+    platform_name = get_platform_name(session.scope)
     if name := data_manager.players.get(user_id, (user_name,))[0]:
-        await server_manager.broadcast(f'[QQ]<{name}> {msg}')
+        await server_manager.broadcast(f'[{platform_name}]<{name}> {msg}')
         await matcher.finish(f'已向服务器发送消息：{msg}。')
-    await server_manager.broadcast(f'[QQ]<未知用户> {msg}')
+    await server_manager.broadcast(f'[{platform_name}]<未知用户> {msg}')
     await matcher.finish('未找到你的玩家名称，请绑定后再试！')

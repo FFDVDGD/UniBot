@@ -1,9 +1,24 @@
 import re
+import asyncio
 from collections.abc import AsyncIterable, Iterable
+
+from nonebot.log import logger
+from nonebot_plugin_alconna import Target, SupportScope as AlconnaSupportScope
+from nonebot_plugin_uninfo import SupportScope as UninfoSupportScope
 
 from .Config import config
 
 regex = re.compile(r'[A-Z0-9_]+|\.[A-Z0-9_]+', re.IGNORECASE)
+scope_mapping = {
+    str(UninfoSupportScope.qq_client): 'QQ',
+    str(UninfoSupportScope.qq_guild): 'QQ 频道',
+    str(UninfoSupportScope.telegram): 'Telegram',
+    str(UninfoSupportScope.discord): 'Discord',
+    str(UninfoSupportScope.dodo): 'DoDo',
+    str(UninfoSupportScope.kook): 'Kook',
+    str(UninfoSupportScope.wechat): '微信',
+    str(UninfoSupportScope.wecom): '企业微信',
+}
 
 
 async def turn_message_text(iterator: AsyncIterable[str] | Iterable[str]) -> str:
@@ -23,6 +38,33 @@ def check_message(message: str) -> bool:
 def get_player_name(name: str) -> str | None:
     if result := regex.search(name):
         return result.group()
+
+
+def get_platform_name(scope: str) -> str:
+    '''获取平台的可读名称'''
+    return scope_mapping.get(scope, '未知平台')
+
+
+async def send_message_to_groups(message: str) -> bool:
+    '''向配置中的所有平台群组发送消息'''
+    send_tasks = []
+    try:
+        for group_info in config.message_groups:
+            platform, separator, group_id = group_info.partition(':')
+            if not separator or not group_id:
+                logger.warning(f'消息群配置格式错误：{group_info}！')
+                continue
+            scope = getattr(AlconnaSupportScope, platform.lower(), None)
+            if scope is None:
+                logger.warning(f'不支持的平台类型：{platform}，请检查配置文件！')
+                continue
+            send_tasks.append(Target.group(group_id, scope).send(message))
+        if send_tasks:
+            await asyncio.gather(*send_tasks)
+        return True
+    except Exception as error:
+        logger.warning(f'发送群消息失败：{error}')
+        return False
 
 
 def get_permission(session) -> bool:
