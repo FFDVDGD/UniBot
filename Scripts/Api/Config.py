@@ -1,3 +1,5 @@
+import asyncio
+import shutil
 from copy import deepcopy
 
 import tomlkit
@@ -9,6 +11,59 @@ from Scripts.Managers import environment_manager
 from .Auth import get_current_user, require_role
 
 router = APIRouter(prefix='/api/config', tags=['Config'])
+
+PLATFORM_OPTIONS = [
+    {'value': 'qq_client', 'label': 'QQ'},
+    {'value': 'qq_guild', 'label': 'QQ 频道'},
+    {'value': 'telegram', 'label': 'Telegram'},
+    {'value': 'discord', 'label': 'Discord'},
+    {'value': 'dodo', 'label': 'DoDo'},
+    {'value': 'kook', 'label': 'Kook'},
+    {'value': 'wechat', 'label': '微信'},
+    {'value': 'wecom', 'label': '企业微信'},
+]
+
+ADAPTER_CATALOG = [
+    {
+        'id': 'onebot-v11', 'name': 'OneBot V11', 'package': 'nonebot-adapter-onebot',
+        'module_name': 'nonebot.adapters.onebot.v11', 'platforms': ['qq_client'],
+        'description': '适用于 Lagrange.OneBot、NapCat、LLOneBot 等 OneBot V11 实现。',
+        'config_keys': ['ONEBOT_ACCESS_TOKEN'],
+    },
+    {
+        'id': 'qq', 'name': 'QQ', 'package': 'nonebot-adapter-qq',
+        'module_name': 'nonebot.adapters.qq', 'platforms': ['qq_client', 'qq_guild'],
+        'description': 'QQ 开放平台官方机器人适配器。', 'config_keys': ['QQ_BOTS'],
+    },
+    {
+        'id': 'telegram', 'name': 'Telegram', 'package': 'nonebot-adapter-telegram',
+        'module_name': 'nonebot.adapters.telegram', 'platforms': ['telegram'],
+        'description': 'Telegram Bot API 适配器。', 'config_keys': ['TELEGRAM_BOTS'],
+    },
+    {
+        'id': 'discord', 'name': 'Discord', 'package': 'nonebot-adapter-discord',
+        'module_name': 'nonebot.adapters.discord', 'platforms': ['discord'],
+        'description': 'Discord Gateway 与 Bot API 适配器。', 'config_keys': ['DISCORD_BOTS'],
+    },
+    {
+        'id': 'dodo', 'name': 'DoDo', 'package': 'nonebot-adapter-dodo',
+        'module_name': 'nonebot.adapters.dodo', 'platforms': ['dodo'],
+        'description': 'DoDo 开放平台适配器。', 'config_keys': ['DODO_BOTS'],
+    },
+    {
+        'id': 'kook', 'name': 'Kook', 'package': 'nonebot-adapter-kaiheila',
+        'module_name': 'nonebot.adapters.kaiheila', 'platforms': ['kook'],
+        'description': 'KOOK（开黑啦）机器人适配器。', 'config_keys': ['KAIHEILA_BOTS'],
+    },
+    {
+        'id': 'satori', 'name': 'Satori', 'package': 'nonebot-adapter-satori',
+        'module_name': 'nonebot.adapters.satori', 'platforms': ['wechat', 'wecom'],
+        'description': '连接 Koishi 等 Satori 服务；服务端上报的平台可由 Uninfo/Alconna 识别为微信或企业微信。',
+        'config_keys': ['DRIVER', 'SATORI_CLIENTS'],
+    },
+]
+
+PROTECTED_ADAPTER_MODULES = {'nonebot.adapters.minecraft'}
 
 
 def deep_merge(base: dict, override: dict) -> dict:
@@ -52,8 +107,8 @@ async def get_config_schema(current_user: dict = Depends(get_current_user)):
             'fields': [
                 {'key': 'admin_superusers', 'label': '管理员视为超级用户', 'type': 'boolean', 'default': True, 'description': '是否将所有管理员视为超级用户'},
                 {'key': 'qq_bound_max_number', 'label': 'QQ 绑定数量上限', 'type': 'number', 'default': 1, 'description': '每名玩家最多可绑定的 QQ 号数量，设置为 0 表示不限制'},
-                {'key': 'command_groups', 'label': '指令群', 'type': 'list', 'default': [], 'description': '机器人只响应这些群内发送的指令，格式为“平台:群 ID”'},
-                {'key': 'message_groups', 'label': '消息群', 'type': 'list', 'default': [], 'description': '接收游戏消息，并可向游戏内同步群消息的群，格式为“平台:群 ID”'},
+                {'key': 'command_groups', 'label': '指令群', 'type': 'platform_list', 'default': [], 'options': PLATFORM_OPTIONS, 'description': '机器人只响应这些平台群组内发送的指令'},
+                {'key': 'message_groups', 'label': '消息群', 'type': 'platform_list', 'default': [], 'options': PLATFORM_OPTIONS, 'description': '接收游戏消息，并可向游戏内同步群消息的群'},
                 {'key': 'command_minecraft_whitelist', 'label': '指令白名单', 'type': 'list', 'default': [], 'description': 'Command 指令只允许执行以列表内容开头的 Minecraft 指令；使用时请留空黑名单'},
                 {'key': 'command_minecraft_blacklist', 'label': '指令黑名单', 'type': 'list', 'default': [], 'description': 'Command 指令禁止执行以列表内容开头的 Minecraft 指令'},
                 {'key': 'broadcast_server', 'label': '播报服务器状态', 'type': 'boolean', 'default': True, 'description': '是否向其他服务器和消息群播报服务器开启或关闭'},
@@ -164,14 +219,21 @@ ENV_SCHEMA = [
     {'key': 'COMMAND_SEP', 'label': '命令分隔符', 'type': 'list', 'default': [' '], 'description': 'NoneBot 命令分隔字符'},
     {'key': 'COMMAND_START', 'label': '命令起始符', 'type': 'list', 'default': ['.'], 'description': 'NoneBot 命令起始字符'},
     {'key': 'LOG_LEVEL', 'label': '日志等级', 'type': 'string', 'default': 'INFO', 'description': '日志输出等级'},
+    {'key': 'DRIVER', 'label': 'NoneBot 驱动', 'type': 'string', 'default': '~fastapi+~httpx+~websockets', 'description': '适配器所需驱动；Satori 需要 HTTPClient 和 WebSocketClient 支持'},
     {'key': 'ONEBOT_ACCESS_TOKEN', 'label': 'OneBot AccessToken', 'type': 'secret', 'default': '', 'description': 'OneBot 平台的 AccessToken'},
+    {'key': 'QQ_BOTS', 'label': 'QQ 机器人', 'type': 'json', 'default': [], 'description': 'QQ 开放平台机器人配置列表（JSON）'},
+    {'key': 'TELEGRAM_BOTS', 'label': 'Telegram 机器人', 'type': 'json', 'default': [], 'description': 'Telegram 机器人配置列表（JSON）'},
+    {'key': 'DISCORD_BOTS', 'label': 'Discord 机器人', 'type': 'json', 'default': [], 'description': 'Discord 机器人配置列表（JSON）'},
+    {'key': 'DODO_BOTS', 'label': 'DoDo 机器人', 'type': 'json', 'default': [], 'description': 'DoDo 机器人配置列表（JSON）'},
+    {'key': 'KAIHEILA_BOTS', 'label': 'KOOK 机器人', 'type': 'json', 'default': [], 'description': 'KOOK 机器人配置列表（JSON）'},
+    {'key': 'SATORI_CLIENTS', 'label': 'Satori 服务', 'type': 'json', 'default': [], 'description': 'Satori 客户端列表；每项支持 host、port、path、token、timeout、secure'},
     {'key': 'MINECRAFT_WS_URLS', 'label': 'Minecraft WS 地址', 'type': 'string', 'default': '', 'description': 'Minecraft 服务器 WebSocket 连接地址（JSON 格式）'},
     {'key': 'MINECRAFT_ACCESS_TOKEN', 'label': 'Minecraft 令牌', 'type': 'secret', 'default': '', 'description': 'Minecraft WebSocket 连接令牌'},
 ]
 
 ENV_GROUPS = [
-    {'name': '框架', 'keys': ['PORT', 'HOST', 'SUPERUSERS', 'COMMAND_SEP', 'COMMAND_START', 'LOG_LEVEL']},
-    {'name': '适配器', 'keys': ['ONEBOT_ACCESS_TOKEN', 'MINECRAFT_WS_URLS', 'MINECRAFT_ACCESS_TOKEN']},
+    {'name': '框架', 'keys': ['PORT', 'HOST', 'SUPERUSERS', 'COMMAND_SEP', 'COMMAND_START', 'LOG_LEVEL', 'DRIVER']},
+    {'name': '适配器', 'keys': ['ONEBOT_ACCESS_TOKEN', 'QQ_BOTS', 'TELEGRAM_BOTS', 'DISCORD_BOTS', 'DODO_BOTS', 'KAIHEILA_BOTS', 'SATORI_CLIENTS', 'MINECRAFT_WS_URLS', 'MINECRAFT_ACCESS_TOKEN']},
 ]
 
 
@@ -208,19 +270,77 @@ class NoneBotItemRequest(BaseModel):
     module_name: str
 
 
+class RemoveAdapterRequest(NoneBotItemRequest):
+    remove_dependency: bool = False
+
+
+class InstallAdapterRequest(BaseModel):
+    adapter_id: str
+
+
 @router.get('/nonebot', summary='获取 NoneBot 插件与适配器列表')
 async def get_nonebot_config(current_user: dict = Depends(get_current_user)):
     '''获取 pyproject.toml 中的 NoneBot 适配器和插件配置'''
     project_data = environment_manager.read_pyproject()
     nonebot_section = project_data.get('tool', {}).get('nonebot', {})
+    adapters = [
+        {**adapter, 'removable': adapter.get('module_name') not in PROTECTED_ADAPTER_MODULES}
+        for adapter in nonebot_section.get('adapters', [])
+        if isinstance(adapter, dict)
+    ]
+    registered_modules = {
+        adapter.get('module_name') for adapter in adapters
+    }
+    catalog = [
+        {
+            **adapter,
+            'registered': adapter['module_name'] in registered_modules,
+            'removable': adapter['module_name'] not in PROTECTED_ADAPTER_MODULES,
+        }
+        for adapter in ADAPTER_CATALOG
+    ]
     return {
         'code': 0,
         'data': {
-            'adapters': nonebot_section.get('adapters', []),
+            'adapters': adapters,
             'plugins': nonebot_section.get('plugins', []),
+            'adapter_catalog': catalog,
         },
         'message': 'ok',
     }
+
+
+@router.post('/nonebot/adapters/install', summary='在线安装并注册适配器')
+async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depends(require_role('admin'))):
+    '''从内置目录安装适配器依赖，并写入 pyproject.toml 的 NoneBot 配置。'''
+    adapter = next((item for item in ADAPTER_CATALOG if item['id'] == body.adapter_id), None)
+    if adapter is None:
+        return {'code': 404, 'data': None, 'message': '适配器不在内置目录中'}
+    uv_path = shutil.which('uv')
+    if uv_path is None:
+        return {'code': 1, 'data': None, 'message': '未找到 uv，请先安装 uv'}
+    process = None
+    try:
+        process = await asyncio.create_subprocess_exec(
+            uv_path, 'add', adapter['package'],
+            cwd=environment_manager.pyproject_path.parent,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=180)
+    except TimeoutError:
+        if process is not None:
+            process.kill()
+            await process.wait()
+        return {'code': 1, 'data': None, 'message': '安装超时，请检查网络后重试'}
+    except OSError as error:
+        return {'code': 1, 'data': None, 'message': f'启动安装程序失败：{error}'}
+    if process.returncode != 0:
+        output = (stderr or stdout).decode('utf-8', errors='replace').strip()
+        return {'code': 1, 'data': None, 'message': f'安装失败：{output[-1000:]}'}
+    environment_manager.add_adapter(adapter['name'], adapter['module_name'])
+    environment_manager.load_pyproject()
+    return {'code': 0, 'data': adapter, 'message': '安装并注册成功（重启后生效）'}
 
 
 @router.post('/nonebot/adapters', summary='添加适配器')
@@ -232,10 +352,44 @@ async def add_adapter(body: NoneBotItemRequest, current_user: dict = Depends(req
 
 
 @router.delete('/nonebot/adapters', summary='移除适配器')
-async def remove_adapter(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
+async def remove_adapter(body: RemoveAdapterRequest, current_user: dict = Depends(require_role('admin'))):
     '''从 pyproject.toml 移除适配器'''
+    if body.module_name in PROTECTED_ADAPTER_MODULES:
+        return {'code': 1, 'data': None, 'message': 'Minecraft 适配器是 UniBot 核心依赖，禁止卸载'}
+    if body.remove_dependency:
+        adapter = next(
+            (item for item in ADAPTER_CATALOG if item['module_name'] == body.module_name),
+            None,
+        )
+        if adapter is None:
+            return {'code': 1, 'data': None, 'message': '该适配器不在内置目录中，无法安全卸载依赖'}
+        uv_path = shutil.which('uv')
+        if uv_path is None:
+            return {'code': 1, 'data': None, 'message': '未找到 uv，请先安装 uv'}
+        process = None
+        try:
+            process = await asyncio.create_subprocess_exec(
+                uv_path,
+                'remove',
+                adapter['package'],
+                cwd=environment_manager.pyproject_path.parent,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=180)
+        except TimeoutError:
+            if process is not None:
+                process.kill()
+                await process.wait()
+            return {'code': 1, 'data': None, 'message': '卸载依赖超时，请稍后重试'}
+        except OSError as error:
+            return {'code': 1, 'data': None, 'message': f'启动卸载程序失败：{error}'}
+        if process.returncode != 0:
+            output = (stderr or stdout).decode('utf-8', errors='replace').strip()
+            return {'code': 1, 'data': None, 'message': f'卸载依赖失败：{output[-1000:]}'}
     environment_manager.remove_adapter(body.module_name)
-    return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}
+    message = '适配器及其依赖已删除（重启后生效）' if body.remove_dependency else '适配器已删除（重启后生效）'
+    return {'code': 0, 'data': None, 'message': message}
 
 
 @router.post('/nonebot/plugins', summary='添加插件')

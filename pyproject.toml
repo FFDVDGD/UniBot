@@ -11,6 +11,7 @@ dependencies = [
     "nonebot-plugin-alconna>=0.62.0",
     "nonebot-plugin-uninfo>=0.11.0",
     "nonebot-adapter-onebot>=2.4.6",
+    "nonebot-adapter-qq>=1.7.1",
 ]
 
 [project.optional-dependencies]
@@ -31,17 +32,13 @@ ai = [
 
 [unibot]
 # 此版本对应的 WebUi 版本
-webui_version = 'v0.0.2-pre'
+webui_version = 'v0.0.3'
 
 [[tool.uv.index]]
 url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
 default = true
 
 [tool.nonebot]
-adapters = [
-    { name = "Minecraft", module_name = "nonebot.adapters.minecraft" },
-    { name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11" },
-]
 plugins = [
     { module_name = "Plugins.Commands.About", enabled = true },
     { module_name = "Plugins.Commands.Bound", enabled = true },
@@ -55,3 +52,11 @@ plugins = [
     { module_name = "Plugins.Expand.Keywords", enabled = false },
     { module_name = "Plugins.Events", enabled = true },
 ]
+
+[[tool.nonebot.adapters]]
+name = "Minecraft"
+module_name = "nonebot.adapters.minecraft"
+
+[[tool.nonebot.adapters]]
+name = "OneBot V11"
+module_name = "nonebot.adapters.onebot.v11"
