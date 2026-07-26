@@ -355,5 +355,7 @@ async def add_plugin(body: NoneBotItemRequest, current_user: dict = Depends(requ
 @router.delete('/nonebot/plugins', summary='移除插件')
 async def remove_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
     '''从 pyproject.toml 移除插件'''
+    if body.module_name.startswith('Plugins.'):
+        return {'code': 1, 'data': None, 'message': '内置插件不允许删除'}
     environment_manager.remove_plugin(body.module_name)
     return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}
