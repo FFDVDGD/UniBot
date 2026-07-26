@@ -2,11 +2,12 @@ import time
 
 import nonebot
 import psutil
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 
 from Scripts.Config import config
 from Scripts.Managers import data_manager, server_manager, version_manager
-from .Auth import get_current_user
+from Scripts.Process import is_watchdog_process, request_restart
+from .Auth import get_current_user, require_role
 from .WebSocket import ws_clients
 
 router = APIRouter(prefix='/api/status', tags=['Status'])
@@ -40,4 +41,26 @@ async def get_status(current_user: dict = Depends(get_current_user)):
 @router.get('/health', summary='健康检查')
 async def health_check():
     '''健康检查（无需认证），用于监控探针'''
-    return {'code': 0, 'data': {'status': 'healthy'}, 'message': 'ok'}
+    return {
+        'code': 0,
+        'data': {'status': 'healthy', 'started_at': start_time},
+        'message': 'ok',
+    }
+
+
+@router.post('/restart', summary='重启机器人', dependencies=[Depends(require_role('admin'))])
+async def restart_bot(background_tasks: BackgroundTasks):
+    '''通知守护进程优雅重启机器人。'''
+    if not is_watchdog_process():
+        return {
+            'code': 1,
+            'data': None,
+            'message': '机器人未通过 Watchdog 启动，无法自动重启',
+        }
+
+    background_tasks.add_task(request_restart)
+    return {
+        'code': 0,
+        'data': {'started_at': start_time},
+        'message': '机器人正在重启',
+    }

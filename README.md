@@ -66,7 +66,7 @@
 3. 询问是否启用 WebUI（选择 `y` 自动开启并安装额外依赖）
 4. 执行 `uv sync` 同步所有依赖
 
-安装完成后运行机器人仅需 `uv run Bot.py`！
+安装完成后运行机器人仅需 `uv run Watchdog.py`！
 
 > 💡 一键脚本适合快速部署，如需自定义配置可后续编辑 `.env` 和 `Config.toml`。
 
@@ -91,7 +91,7 @@ uv sync --extra webui --inexact
 # Config.toml — 机器人自定义配置
 
 # 启动机器人
-uv run Bot.py
+uv run Watchdog.py
 ```
 
 > **为什么推荐 UV？**
@@ -120,7 +120,7 @@ pip install -e ".[webui]"
 # 配置环境（编辑 .env 与 Config.toml）
 
 # 启动
-python3 Bot.py
+python3 Watchdog.py
 ```
 
 <!-- ### 🐳 Docker 部署

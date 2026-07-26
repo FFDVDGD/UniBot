@@ -7,8 +7,6 @@ from fastapi.staticfiles import StaticFiles
 from nonebot.log import logger
 
 from Scripts.Network import download
-from Scripts.Api import api_router, setup_cors
-from Scripts.Api.WebSocket import log_sink
 from .Environment import environment_manager
 
 
@@ -19,7 +17,6 @@ class WebUiManager:
 
     webui_dir: Path = Path('WebUi')
     version_file: Path = Path('WebUi/.version')
-
     @property
     def version(self) -> str:
         '''当前期望的 WebUI 版本（来自 pyproject.toml [unibot] webui_version）'''
@@ -66,6 +63,9 @@ class WebUiManager:
 
     def mount(self, app: FastAPI):
         '''挂载 WebUI API 路由到 /webui 前缀下（需在 nonebot.init() 之后、nonebot.run() 之前调用）'''
+        from Scripts.Api import api_router, setup_cors
+        from Scripts.Api.WebSocket import log_sink
+
         self.app = app
         setup_cors(app)
         app.include_router(api_router, prefix='/webui')
@@ -90,6 +90,5 @@ class WebUiManager:
             self.mount_static()
         except Exception as error:
             logger.error(f'下载 WebUi 遇到错误，已自动禁用！错误：{error}')
-
 
 webui_manager = WebUiManager()

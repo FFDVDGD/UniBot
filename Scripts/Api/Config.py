@@ -308,7 +308,7 @@ async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depe
         return {'code': 404, 'data': None, 'message': '适配器不在内置目录中'}
     environment_manager.add_dependency(adapter['package'])
     environment_manager.add_adapter(adapter['name'], adapter['module_name'])
-    return {'code': 0, 'data': adapter, 'message': '依赖和注册信息已写入（请手动执行 uv sync 安装）'}
+    return {'code': 0, 'data': adapter, 'message': '依赖和注册信息已写入（重启时自动同步）'}
 
 
 @router.post('/nonebot/adapters', summary='添加适配器')
@@ -341,7 +341,7 @@ async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = 
         return {'code': 1, 'data': None, 'message': '该适配器不在内置目录中，无法安全卸载依赖'}
     environment_manager.remove_adapter(body.module_name)
     environment_manager.remove_dependency(adapter['package'])
-    return {'code': 0, 'data': None, 'message': '适配器及其依赖记录已删除（请手动执行 uv sync 清理）'}
+    return {'code': 0, 'data': None, 'message': '适配器及其依赖记录已删除（重启时自动同步）'}
 
 
 @router.post('/nonebot/plugins', summary='添加插件')
