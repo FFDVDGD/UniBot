@@ -15,21 +15,38 @@ __plugin_meta__ = PluginMetadata(
     usage='.about',
 )
 
+logger.debug('加载命令 About 完毕！')
+
 matcher = (
     Command('about', '查看关于信息。')
+    .subcommand('check #检测是否有新版本')
     .build(rule=command_group_rule, use_cmd_start=True)
 )
 
 
-@matcher.handle()
+@matcher.assign('$main')
 async def handle():
     if config.image.mode:
         image = await render_template(
             'About', (500, 0),
-            version=version_manager.version, has_update=version_manager.check_update()
+            version=version_manager.version, has_update=version_manager.check_update(),
         )
         await matcher.finish(UniMessage(Image(raw=image)))
     message = await turn_message_text(about_handler())
+    await matcher.finish(message)
+
+
+@matcher.assign('check')
+async def handle_check():
+    '''主动拉取最新版本并反馈检测结果'''
+    if config.image.mode:
+        await version_manager.fetch_latest()
+        image = await render_template(
+            'About', (500, 0),
+            version=version_manager.version, has_update=version_manager.check_update(),
+        )
+        await matcher.finish(UniMessage(Image(raw=image)))
+    message = await turn_message_text(check_handler())
     await matcher.finish(message)
 
 
@@ -38,3 +55,13 @@ async def about_handler():
     yield '\n项目官网：https://qqbot.bugjump.xyz/'
     yield '项目地址 https://github.com/Minecraft-QQBot'
     yield '欢迎加入 QQ 交流群 962802248，对这个项目感兴趣不妨点个 Star 吧！'
+
+
+async def check_handler():
+    if await version_manager.fetch_latest():
+        if version_manager.check_update():
+            yield f'发现新版本 {version_manager.latest_version}，当前版本为 {version_manager.version}，请及时更新！'
+            return
+        yield f'当前已是最新版本 {version_manager.version}！'
+        return
+    yield '检测失败，请检查网络稍后再试！'

@@ -24,6 +24,8 @@ async def get_status(current_user: dict = Depends(get_current_user)):
         'code': 0,
         'data': {
             'version': version_manager.version,
+            'latest_version': version_manager.latest_version,
+            'has_update': version_manager.check_update(),
             'uptime': int(time.time() - start_time),
             'memory_mb': round(psutil.Process().memory_info().rss / 1024 / 1024, 1),
             'cpu_percent': psutil.Process().cpu_percent(interval=0.1),
@@ -33,6 +35,23 @@ async def get_status(current_user: dict = Depends(get_current_user)):
             'adapters': adapter_names,
             'webui_enabled': config.webui.get('enabled', False) if isinstance(config.webui, dict) else config.webui.enabled,
             'ws_clients': len(ws_clients),
+        },
+        'message': 'ok',
+    }
+
+
+@router.post('/check-update', summary='检测最新版本')
+async def check_update(current_user: dict = Depends(get_current_user)):
+    '''主动从 GitHub 拉取最新发布版本并返回检测结果'''
+    success = await version_manager.fetch_latest()
+    if not success:
+        return {'code': 1, 'data': None, 'message': '检测失败，请检查网络稍后再试'}
+    return {
+        'code': 0,
+        'data': {
+            'version': version_manager.version,
+            'latest_version': version_manager.latest_version,
+            'has_update': version_manager.check_update(),
         },
         'message': 'ok',
     }

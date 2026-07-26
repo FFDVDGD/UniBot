@@ -44,7 +44,7 @@ class WebUiManager:
             logger.info(f'WebUI 静态资源已就绪（{self.version}）。')
             return True
         logger.info(f'正在下载 WebUI 静态资源（{self.version}）……')
-        url = f'https://github.com/Minecraft-UniBot/WebUi/releases/download/{self.version}/WebUi.zip'
+        url = f'https://github.com/MineJPGcraft/UniBot.WebUi/releases/download/{self.version}/WebUi.zip'
         if not (response := await download(url)):
             logger.warning(f'下载 WebUI（{self.version}）失败，请检查网络稍后再试。')
             return False
