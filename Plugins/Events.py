@@ -12,6 +12,7 @@ from nonebot_plugin_uninfo import Uninfo
 from nonebot_plugin_alconna.uniseg import UniMsg
 
 from Scripts.Config import config
+from Scripts.Globals import player_list_cache
 from Scripts.Managers import server_manager
 from Scripts.Utils import check_message, get_platform_name, send_message_to_groups
 from Scripts.Rules import message_group_rule
@@ -60,8 +61,11 @@ async def handle_player_join(event: PlayerJoinEvent):
     logger.info(f'收到玩家 {player} 加入服务器 [{name}] 通知！')
 
     if config.list_compatible_mode:
-        # 在兼容模式下记录玩家
-        pass
+        if name not in player_list_cache:
+            player_list_cache[name] = []
+        if not config.bot_prefix or not player.upper().startswith(config.bot_prefix):
+            if player not in player_list_cache[name]:
+                player_list_cache[name].append(player)
 
     server_message = f'玩家 {player} 加入了游戏。'
     group_message = f'玩家 {player} 加入了 [{name}] 服务器，喵～'
@@ -83,6 +87,10 @@ async def handle_player_quit(event: PlayerQuitEvent):
     name = event.server_name
     player = event.player.nickname
     logger.info(f'收到玩家 {player} 离开服务器 [{name}] 通知！')
+
+    if config.list_compatible_mode:
+        if name in player_list_cache and player in player_list_cache[name]:
+            player_list_cache[name].remove(player)
 
     server_message = f'玩家 {player} 离开了游戏。'
     group_message = f'玩家 {player} 离开了 [{name}] 服务器，呜……'

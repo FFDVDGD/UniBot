@@ -4,7 +4,7 @@ from nonebot_plugin_alconna import Command, Match
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
 from Scripts.Config import config
-from Scripts.Globals import render_template
+from Scripts.Globals import player_list_cache, render_template
 from Scripts.Managers import server_manager
 from Scripts.Network import get_player_uuid
 from Scripts.Utils import turn_message_text
@@ -54,6 +54,8 @@ def classify_players(players: list):
 async def get_players(server_flag: str = ''):
     if not server_manager.servers:
         return False, '当前没有已连接的服务器！'
+    if config.list_compatible_mode:
+        return get_players_from_cache(server_flag)
     if server_flag:
         server = server_manager.get_server(server_flag)
         if server is None:
@@ -64,6 +66,23 @@ async def get_players(server_flag: str = ''):
     for name, server in server_manager.servers.items():
         result, _ = await server_manager.get_player_list(server)
         players[name] = classify_players(result)
+    if not players:
+        return False, '当前没有已连接的服务器！'
+    return True, players
+
+
+def get_players_from_cache(server_flag: str = ''):
+    '''从兼容模式缓存中获取玩家列表'''
+    if server_flag:
+        server = server_manager.get_server(server_flag)
+        if server is None:
+            return False, f'没有找到已连接的 [{server_flag}] 服务器！请检查编号或名称是否输入正确。'
+        cached = player_list_cache.get(server.self_id, [])
+        return True, {server.self_id: classify_players(list(cached))}
+    players = {}
+    for name in server_manager.servers:
+        cached = player_list_cache.get(name, [])
+        players[name] = classify_players(list(cached))
     if not players:
         return False, '当前没有已连接的服务器！'
     return True, players

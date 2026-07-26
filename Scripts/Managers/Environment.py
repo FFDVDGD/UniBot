@@ -17,6 +17,7 @@ class EnvironmentManager:
     version: str = ''
     webui_version: str = ''
     nonebot_config: dict = {}
+    pyproject_data: dict = {}
 
     def init(self):
         '''加载 .env 和 pyproject.toml 配置'''
@@ -50,11 +51,16 @@ class EnvironmentManager:
             logger.error('没有找到 pyproject.toml！请重新下载后重试。')
             sys.exit(1)
         with self.pyproject_path.open('r', encoding='utf-8') as file:
-            data = tomlkit.parse(file.read())
-        self.version = data.get('project', {}).get('version', '')
-        self.webui_version = data.get('unibot', {}).get('webui_version', '')
-        self.nonebot_config = data.get('tool', {}).get('nonebot', {})
+            self.pyproject_data = tomlkit.parse(file.read())
+        self.update_pyproject_cache()
         logger.success('加载 pyproject.toml 完毕！')
+
+    def update_pyproject_cache(self):
+        '''更新 pyproject.toml 派生配置缓存'''
+        self.version = self.pyproject_data.get('project', {}).get('version', '')
+        tools = self.pyproject_data.get('tool', {})
+        self.webui_version = tools.get('unibot', {}).get('webui_version', '')
+        self.nonebot_config = tools.get('nonebot', {})
 
     # ===== .env 操作 =====
 
@@ -86,14 +92,15 @@ class EnvironmentManager:
     # ===== pyproject.toml 操作 =====
 
     def read_pyproject(self) -> dict:
-        '''读取 pyproject.toml 完整内容（保留注释和格式）'''
-        with self.pyproject_path.open('r', encoding='utf-8') as file:
-            return tomlkit.parse(file.read())
+        '''读取内存中的 pyproject.toml 完整内容'''
+        return self.pyproject_data
 
     def write_pyproject(self, data: dict):
-        '''写回 pyproject.toml（保留注释和格式）'''
+        '''更新缓存并写回 pyproject.toml（保留注释和格式）'''
         with self.pyproject_path.open('w', encoding='utf-8') as file:
             file.write(tomlkit.dumps(data))
+        self.pyproject_data = data
+        self.update_pyproject_cache()
 
     def add_adapter(self, name: str, module_name: str) -> bool:
         '''添加适配器，返回是否成功（False 表示已存在）'''
@@ -106,13 +113,35 @@ class EnvironmentManager:
         return True
 
     def remove_adapter(self, module_name: str):
-        '''移除适配器'''
+        '''移除适配器（从 pyproject.toml 中删除）'''
         data = self.read_pyproject()
         adapters = data.get('tool', {}).get('nonebot', {}).get('adapters', [])
         data['tool']['nonebot']['adapters'] = [
             adapter for adapter in adapters if adapter['module_name'] != module_name
         ]
         self.write_pyproject(data)
+
+    def remove_dependency(self, package: str):
+        '''从 pyproject.toml 的 dependencies 中移除指定包'''
+        data = self.read_pyproject()
+        dependencies = data.get('project', {}).get('dependencies', [])
+        data['project']['dependencies'] = [
+            dep for dep in dependencies
+            if dep.split('[')[0].split('>=')[0].split('<')[0].split('~')[0].split('!=')[0].strip() != package
+        ]
+        self.write_pyproject(data)
+
+    def add_dependency(self, package: str):
+        '''向 pyproject.toml 的 dependencies 中添加包（不重复）'''
+        data = self.read_pyproject()
+        dependencies = data.setdefault('project', {}).setdefault('dependencies', [])
+        existing = {
+            dep.split('[')[0].split('>=')[0].split('<')[0].split('~')[0].split('!=')[0].strip()
+            for dep in dependencies
+        }
+        if package not in existing:
+            dependencies.append(package)
+            self.write_pyproject(data)
 
     def add_plugin(self, module_name: str) -> bool:
         '''添加插件，返回是否成功（False 表示已存在）'''

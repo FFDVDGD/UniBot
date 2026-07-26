@@ -77,3 +77,19 @@ class InstallPluginRequest(BaseModel):
 
 class UpgradePluginRequest(BaseModel):
     name: str
+
+
+# ===== Config / Environment =====
+
+class NoneBotItemRequest(BaseModel):
+    name: str
+    module_name: str
+
+
+class InstallAdapterRequest(BaseModel):
+    adapter_id: str
+
+
+class UninstallAdapterRequest(BaseModel):
+    name: str
+    module_name: str
