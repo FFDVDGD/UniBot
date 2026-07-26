@@ -35,7 +35,7 @@ default = true
 
 [tool.unibot]
 # 此版本对应的 WebUi 版本
-webui_version = 'v0.0.3'
+webui_version = 'v0.0.4'
 
 [tool.nonebot]
 plugins = [
