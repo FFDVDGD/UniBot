@@ -71,5 +71,4 @@ async def render_template(template_name: str, size: tuple[int, int], **kwargs) -
         template.render_async(**context),
         load_style(template_name, **context),
     )
-    logger.debug(f'渲染图片：{html_content}\n{css_content}')
     return await asyncio.to_thread(render, html_content, css_content)
