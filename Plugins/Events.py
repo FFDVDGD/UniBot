@@ -29,7 +29,12 @@ message_watcher = on_message(rule=message_group_rule)
 
 
 segment_mapping = {
-    'text': lambda seg: seg.data.get('text', ''),
+    'text': lambda seg: seg.text,
+    'at': lambda seg: f'[@{seg.target}]',
+    'reply': lambda seg: f'[引用{"：" + seg.msg.extract_plain_text() if seg.msg else ""}]',
+    'reference': lambda seg: '[引用消息]',
+    'atall': lambda seg: '[@全体成员]',
+    'emoji': lambda seg: '[动画表情]',
     'image': lambda seg: '[图片]',
     'video': lambda seg: '[视频]',
     'audio': lambda seg: '[语音]',
@@ -143,28 +148,29 @@ async def handle_player_chat(event: PlayerChatEvent):
         await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
         await player_chat_watcher.finish()
 
+    logger.debug(f'收到服务器消息：{chat_message}')
     old_message = chat_message
-    for prefix in config.command_start:
-        chat_message = chat_message.lstrip(prefix).strip()
-    if old_message == chat_message:
-        await player_chat_watcher.finish()
-    logger.debug(f'收到服务器指令：{chat_message}')
-    commands = ('send', 'gp', 'qq')
-    old_message = chat_message
-    for command in commands:
+    for command in ('send', 'gp', 'qq', 'q'):
         if chat_message.startswith(command):
             chat_message = chat_message.lstrip(command).strip()
     if old_message == chat_message:
         await player_chat_watcher.finish()
     if not chat_message:
-        await player_chat_watcher.finish('请在指令后输入要发送的消息！')
+        message = MessageSegment.text('请在指令后输入要发送的消息！', color='red')
+        await player_chat_watcher.finish(message)
     if check_message(chat_message):
-        await player_chat_watcher.finish('检测到消息包含敏感词，已丢弃！')
+        message = MessageSegment.text('检测到消息包含敏感词，已丢弃！', color='red')
+        await player_chat_watcher.finish(message)
     await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
-    await player_chat_watcher.finish('消息已发送！')
+    message = MessageSegment.text('消息已发送！', color='green')
+    await player_chat_watcher.finish(message)
 
 
 @message_watcher.handle()
 async def handle_group_message(message: UniMsg, session: Uninfo):
     platform_name = get_platform_name(session.scope)
-    await server_manager.broadcast(build_server_message(platform_name, session.user.name or str(session.user.id), message_to_text(message)))
+    plain_text_message = message.extract_plain_text()
+    if any(plain_text_message.startswith(prefix) for prefix in config.command_start):
+        await message_watcher.finish()
+    user_name = session.user.nick or session.user.name or str(session.user.id)
+    await server_manager.broadcast(build_server_message(platform_name, user_name, message_to_text(message)))
