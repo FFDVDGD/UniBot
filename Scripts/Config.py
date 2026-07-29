@@ -62,9 +62,6 @@ class Config(BaseModel):
 
     qq_bound_max_number: int = 1
 
-    server_memory_update_interval: int = 5
-    server_memory_max_cache: int = 200
-
     image: ImageConfig = ImageConfig()
     ai: AiConfig = AiConfig()
     auto_reply: AutoReplyConfig = AutoReplyConfig()

@@ -8,7 +8,7 @@ from nonebot_plugin_uninfo import Uninfo, SupportScope
 
 def is_message_group(session: Uninfo):
     scope = SupportScope(session.scope)
-    group_info = f'{scope.name}:{session.id}'
+    group_info = f'{scope.name}:{session.scene.id}'
     return group_info in config.message_groups
 
 

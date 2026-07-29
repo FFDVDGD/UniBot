@@ -1,8 +1,8 @@
+import asyncio
 from datetime import datetime
 
-from nonebot import on_notice, on_message, on_command
+from nonebot import on_notice, on_message
 from nonebot.log import logger
-from nonebot.params import ArgPlainText
 from nonebot.plugin import PluginMetadata
 from nonebot.adapters.minecraft import PlayerChatEvent, PlayerJoinEvent, PlayerQuitEvent, PlayerDeathEvent
 from nonebot.adapters.minecraft.message import MessageSegment
@@ -24,6 +24,7 @@ __plugin_meta__ = PluginMetadata(
 )
 
 notice_watcher = on_notice()
+player_chat_watcher = on_message()
 message_watcher = on_message(rule=message_group_rule)
 
 
@@ -122,48 +123,48 @@ async def handle_player_death(event: PlayerDeathEvent):
             await send_message_to_groups(broadcast_message)
 
 
-@message_watcher.handle()
+@player_chat_watcher.handle()
 async def handle_player_chat(event: PlayerChatEvent):
     '''处理玩家聊天事件'''
     name = event.server_name
     player = event.player.nickname
-    chat_message = str(event.message)
+    chat_message = event.message.extract_plain_text().strip()
     logger.debug(f'收到玩家 {player} 在服务器 [{name}] 发送消息！')
+
+    if config.sync_message_between_servers:
+        asyncio.create_task(server_manager.broadcast(build_server_message(name, player, chat_message), name))
 
     if config.sync_all_game_message:
         if check_message(chat_message):
             logger.warning(f'检测到消息 {chat_message} 包含敏感词，已丢弃！')
             await send_message_to_groups(f'检测到玩家 {player} 发送的消息包含敏感词，已丢弃！详情请看控制台。')
-            return
+            await player_chat_watcher.finish()
 
         await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
+        await player_chat_watcher.finish()
 
-    if config.sync_message_between_servers:
-        await server_manager.broadcast(build_server_message(name, player, chat_message), name)
+    old_message = chat_message
+    for prefix in config.command_start:
+        chat_message = chat_message.lstrip(prefix).strip()
+    if old_message == chat_message:
+        await player_chat_watcher.finish()
+    logger.debug(f'收到服务器指令：{chat_message}')
+    commands = ('send', 'gp', 'qq')
+    old_message = chat_message
+    for command in commands:
+        if chat_message.startswith(command):
+            chat_message = chat_message.lstrip(command).strip()
+    if old_message == chat_message:
+        await player_chat_watcher.finish()
+    if not chat_message:
+        await player_chat_watcher.finish('请在指令后输入要发送的消息！')
+    if check_message(chat_message):
+        await player_chat_watcher.finish('检测到消息包含敏感词，已丢弃！')
+    await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
+    await player_chat_watcher.finish('消息已发送！')
 
 
 @message_watcher.handle()
 async def handle_group_message(message: UniMsg, session: Uninfo):
-    if session.scope == 'Minecraft':
-        text_message = message_to_text(message)
-        old_text_message = text_message.strip()
-        for prefix in config.command_start:
-            text_message = text_message.lstrip(prefix).strip()
-        if old_text_message == text_message:
-            await message_watcher.finish()
-        logger.debug(f'收到服务器指令：{text_message}')
-        commands = ('send', 'gp', 'qq')
-        old_text_message = text_message
-        for command in commands:
-            if text_message.startswith(command):
-                text_message = text_message.lstrip(command).strip()
-        if old_text_message == text_message:
-            await message_watcher.finish()
-        if not text_message:
-            await message_watcher.finish('请在指令后输入要发送的消息！')
-        if check_message(text_message):
-            await message_watcher.finish('检测到消息包含敏感词，已丢弃！')
-        await send_message_to_groups(f'[{session.self_id}] <{session.user.name}> {text_message}')
-        await message_watcher.finish('消息已发送！')
     platform_name = get_platform_name(session.scope)
     await server_manager.broadcast(build_server_message(platform_name, session.user.name or str(session.user.id), message_to_text(message)))

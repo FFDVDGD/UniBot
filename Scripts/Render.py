@@ -1,5 +1,6 @@
 import json
 import html
+import logging
 import asyncio
 from io import BytesIO
 from pathlib import Path
@@ -10,6 +11,11 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from nonebot.log import logger
 
 from .Config import config
+
+# html2pic 的传递依赖 stretchable 在导入时会调用 logging.basicConfig()，
+# 给 root logger 添加 StreamHandler，导致 uvicorn.access 日志被重复输出。
+# 在导入 html2pic 后清理 root logger 上多余的 handler，避免日志污染。
+logging.getLogger().handlers.clear()
 
 RESOURCES_DIR = Path(__file__).parent.parent / 'Resources'
 FONT_PATH: Path = RESOURCES_DIR / 'Font.ttf'

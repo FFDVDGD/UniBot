@@ -3,12 +3,11 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from nonebot.log import logger
 
 from Scripts.Network import download
 from .Environment import environment_manager
-
 
 class WebUiManager:
     '''WebUI 管理面板：负责 API 路由挂载、前端静态资源的版本校验/下载与静态文件挂载'''
@@ -17,6 +16,7 @@ class WebUiManager:
 
     webui_dir: Path = Path('WebUi')
     version_file: Path = Path('WebUi/.version')
+
     @property
     def version(self) -> str:
         '''当前期望的 WebUI 版本（来自 pyproject.toml [unibot] webui_version）'''
@@ -73,15 +73,21 @@ class WebUiManager:
         logger.success('WebUI API 路由挂载完毕！')
 
     def mount_static(self):
-        '''挂载 WebUI 静态文件到 /webui/ 路径'''
+        '''挂载 WebUI 静态文件到 /webui/ 路径，未命中的前端路由自动回退到 index.html'''
         if self.app is None:
             logger.warning('WebUI 尚未挂载 API 路由，无法挂载静态文件！')
             return
         if not (self.webui_dir / 'index.html').exists():
             logger.warning('WebUI 静态资源缺失，仅挂载 API 路由。')
             return
-        self.app.mount('/webui', StaticFiles(directory=self.webui_dir, html=True), name='webui')
-        logger.success('WebUI 静态文件挂载完毕！访问路径：/webui/')
+
+        @self.app.get('/', include_in_schema=False)
+        async def root_redirect():
+            '''根路径重定向到 /webui/'''
+            return RedirectResponse(url='/webui')
+
+        self.app.frontend('/webui', directory=self.webui_dir, fallback='index.html')
+        logger.success(f'WebUI 静态文件挂载完毕！访问下方根路径即可打开 WebUi 使用。')
 
     async def init(self):
         '''初始化：校验并下载 WebUI 静态资源，随后挂载静态文件'''
@@ -90,5 +96,6 @@ class WebUiManager:
             self.mount_static()
         except Exception as error:
             logger.error(f'下载 WebUi 遇到错误，已自动禁用！错误：{error}')
+
 
 webui_manager = WebUiManager()
