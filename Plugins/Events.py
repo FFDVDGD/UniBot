@@ -44,7 +44,8 @@ segment_mapping = {
 
 def message_to_text(message: UniMsg):
     '''将 UniMsg 转换为文本'''
-
+    for seg in message:
+        logger.debug(seg)
     texts = [func(seg) for seg in message if (func := segment_mapping.get(seg.type)) is not None if func(seg)]
     return ' '.join(texts)
 
@@ -155,15 +156,17 @@ async def handle_player_chat(event: PlayerChatEvent):
             chat_message = chat_message.lstrip(command).strip()
     if old_message == chat_message:
         await player_chat_watcher.finish()
+    server = server_manager.get_server(name)
+    if server is None:
+        await player_chat_watcher.finish()
     if not chat_message:
         message = MessageSegment.text('请在指令后输入要发送的消息！', color='red')
-        await player_chat_watcher.finish(message)
-    if check_message(chat_message):
+    elif check_message(chat_message):
         message = MessageSegment.text('检测到消息包含敏感词，已丢弃！', color='red')
-        await player_chat_watcher.finish(message)
-    await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
-    message = MessageSegment.text('消息已发送！', color='green')
-    await player_chat_watcher.finish(message)
+    else:
+        await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
+        message = MessageSegment.text('消息已发送！', color='green')
+    await server.send_private_msg(message=message, nickname=player)
 
 
 @message_watcher.handle()

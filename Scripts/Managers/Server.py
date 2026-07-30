@@ -2,7 +2,6 @@ import re
 import asyncio
 
 from nonebot import get_adapter
-from nonebot.internal import adapter
 from nonebot.log import logger
 
 from nonebot.adapters.minecraft.message import Message
@@ -62,7 +61,7 @@ class ServerManager:
     async def get_status(self, server: Bot) -> dict:
         '''获取 Minecraft 服务器状态'''
         try:
-            status = await self.adatper.send_websocket_message(server.self_id, 'get_status', {})
+            status = await server.get_status()
         except Exception as error:
             logger.warning(f'获取服务器 [{server.self_id}] 状态失败：{error}')
             return {
@@ -78,26 +77,23 @@ class ServerManager:
                 'jvm_memory_max': 0,
             }
 
-        status_data = status.get('data', status) if isinstance(status, dict) else {}
-        server_ping = status_data.get('server_list_ping') or {}
-        player_status = server_ping.get('players') or {}
-        version_status = server_ping.get('version') or {}
-
-        cpu_info = status_data.get('cpu_information') or {}
-        memory_info = status_data.get('memory_information') or {}
-        jvm_memory = memory_info.get('jvm_memory') or {}
+        server_ping = status.server_list_ping
+        player_status = server_ping.players
+        version_status = server_ping.version
+        cpu_info = status.cpu_information
+        jvm_memory = status.memory_information.jvm_memory
 
         return {
-            'online': bool(server_ping.get('available', True)),
-            'server_type': status_data.get('server_type', ''),
-            'players': int(player_status.get('online', 0)),
-            'max_players': int(player_status.get('max', 0)),
-            'version': version_status.get('name', status_data.get('server_version', '')),
-            'motd': server_ping.get('description', ''),
-            'cpu_load': round(max(cpu_info.get('system_load', 0), cpu_info.get('process_load', 0)), 1),
-            'memory_percent': round(jvm_memory.get('percentage', 0), 1),
-            'jvm_memory_used': round(jvm_memory.get('used', 0) / 1024 / 1024, 1),
-            'jvm_memory_max': round(jvm_memory.get('max', 0) / 1024 / 1024, 1),
+            'online': server_ping.available,
+            'server_type': status.server_type,
+            'players': int(player_status.online) if player_status else 0,
+            'max_players': int(player_status.max) if player_status else 0,
+            'version': version_status.name if version_status else status.server_version,
+            'motd': server_ping.description,
+            'cpu_load': round(max(cpu_info.system_load, cpu_info.process_load), 1),
+            'memory_percent': round(jvm_memory.percentage, 1),
+            'jvm_memory_used': round(jvm_memory.used / 1024 / 1024, 1),
+            'jvm_memory_max': round(jvm_memory.max / 1024 / 1024, 1),
         }
 
     async def get_player_list(self, server: Bot) -> tuple[list[str], int]:
