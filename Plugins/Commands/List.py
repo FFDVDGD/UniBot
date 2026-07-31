@@ -1,3 +1,6 @@
+import asyncio
+from typing import Literal
+
 from nonebot.plugin import PluginMetadata
 
 from nonebot_plugin_alconna import Command, Match
@@ -5,10 +8,10 @@ from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
 from Scripts.Config import config
 from Scripts.Globals import player_list_cache, render_template
-from Scripts.Managers import server_manager
-from Scripts.Network import get_player_uuid
-from Scripts.Utils import turn_message_text
+from Scripts.Managers import cache_manager, server_manager
+from Scripts.Network import fetch_player_avatars
 from Scripts.Rules import command_group_rule
+from Scripts.Utils import turn_message_text
 
 __plugin_meta__ = PluginMetadata(
     name='在线玩家',
@@ -25,24 +28,37 @@ matcher = (
 @matcher.handle()
 async def handle(server: Match[str]):
     server_flag = server.result if server.available else None
-    flag, response = await get_players(server_flag)
-    if flag is False:
+    _, response = await get_players(server_flag)
+    if not isinstance(response, dict):
         await matcher.finish(response)
+        return
     if config.image.mode:
-        player_uuids = {}
-        for players in response.values():
-            for player in players[0]:
-                player_uuids[player] = await get_player_uuid(player)
-        image = await render_template('List', (600, 800), player_list=response, uuids=player_uuids)
+        player_names = {name for groups in response.values() for name in groups[0]}
+        avatars = await ensure_avatars(list(player_names))
+        image = await render_template('List', (600, 800), player_list=response, avatars=avatars)
         await matcher.finish(UniMessage(Image(raw=image)))
     message = await turn_message_text(list_handler(response))
     await matcher.finish(message)
 
 
-def classify_players(players: list):
+async def ensure_avatars(player_names: list):
+    '''获取玩家头像文件路径：本地已缓存直接复用，缺失的下载后落盘'''
+    cached, missing_names = cache_manager.get_cached(player_names)
+    if not missing_names:
+        return cached
+    contents = await fetch_player_avatars(missing_names)
+    files = {cache_manager.get_path(name).name: content for name, (content, _) in contents.items()}
+    saved = await cache_manager.save_all(files)
+    for name in contents:
+        cached[name] = saved[cache_manager.get_path(name).name]
+    return cached
+
+
+def split_players(players: list):
+    '''将玩家列表按假人前缀分为 (真实玩家, 假人) 两组，未配置前缀时全部视为真实玩家'''
     if not config.bot_prefix:
-        return (players,)
-    fake_players, real_players = [], []
+        return list(players), []
+    real_players, fake_players = [], []
     for player in players:
         if player.upper().startswith(config.bot_prefix):
             fake_players.append(player)
@@ -51,80 +67,61 @@ def classify_players(players: list):
     return real_players, fake_players
 
 
-async def get_players(server_flag: str = ''):
+async def get_players(server_flag: str | None = None):
+    '''查询在线玩家列表：指定服务器查单个，否则查询全部已连接服务器'''
+    if server_flag:
+        server = server_manager.get_server(server_flag)
+        if server is None:
+            return False, f'没有找到已连接的 [{server_flag}] 服务器！请检查编号或名称是否输入正确。'
+        return True, {server.self_id: await query_server_players(server, server.self_id)}
     if not server_manager.servers:
         return False, '当前没有已连接的服务器！'
+    results = await asyncio.gather(
+        *(query_server_players(server, name) for name, server in server_manager.servers.items())
+    )
+    players = dict(zip(server_manager.servers.keys(), results))
+    return True, players
+
+
+async def query_server_players(server, server_name: str):
+    '''查询单个服务器的玩家并分组：兼容模式读取缓存，否则实时查询'''
     if config.list_compatible_mode:
-        return get_players_from_cache(server_flag)
-    if server_flag:
-        server = server_manager.get_server(server_flag)
-        if server is None:
-            return False, f'没有找到已连接的 [{server_flag}] 服务器！请检查编号或名称是否输入正确。'
-        players, _ = await server_manager.get_player_list(server)
-        return True, {server.self_id: classify_players(players)}
-    players = {}
-    for name, server in server_manager.servers.items():
-        result, _ = await server_manager.get_player_list(server)
-        players[name] = classify_players(result)
-    if not players:
-        return False, '当前没有已连接的服务器！'
-    return True, players
-
-
-def get_players_from_cache(server_flag: str = ''):
-    '''从兼容模式缓存中获取玩家列表'''
-    if server_flag:
-        server = server_manager.get_server(server_flag)
-        if server is None:
-            return False, f'没有找到已连接的 [{server_flag}] 服务器！请检查编号或名称是否输入正确。'
-        cached = player_list_cache.get(server.self_id, [])
-        return True, {server.self_id: classify_players(list(cached))}
-    players = {}
-    for name in server_manager.servers:
-        cached = player_list_cache.get(name, [])
-        players[name] = classify_players(list(cached))
-    if not players:
-        return False, '当前没有已连接的服务器！'
-    return True, players
+        cached = player_list_cache.get(server_name, [])
+        return split_players(list(cached))
+    player_list, _ = await server_manager.get_player_list(server)
+    return split_players(player_list)
 
 
 def list_handler(players: dict):
+    '''将玩家列表数据格式化为文本消息（异步生成器）'''
+    if not players:
+        yield '当前没有已连接的服务器！'
+        return
     if len(players) == 1:
-        server_name, players_data = players.popitem()
-        online_count = sum(len(p) for p in players_data)
+        server_name, players_data = next(iter(players.items()))
         yield f'===== {server_name} 玩家列表 ====='
         yield from format_players(players_data)
-        yield f'当前在线人数共 {online_count} 人'
+        yield f'当前在线人数共 {sum(len(group) for group in players_data)} 人'
         return
     player_count = 0
-    if players:
-        yield '====== 玩家列表 ======'
-        for name, value in players.items():
-            if value is None:
-                continue
-            player_count += sum(len(p) for p in value)
-            yield f' -------- {name} --------'
-            yield from format_players(value)
-        yield f'当前在线人数共 {player_count} 人'
-        return
-    yield '当前没有已连接的服务器！'
+    yield '====== 玩家列表 ======'
+    for name, players_data in players.items():
+        player_count += sum(len(group) for group in players_data)
+        yield f' -------- {name} --------'
+        yield from format_players(players_data)
+    yield f'当前在线人数共 {player_count} 人'
 
 
 def format_players(players: list):
-    if config.bot_prefix and len(players) > 1:
-        real_players, fake_players = players
-        real_players_str = '\n    '.join(real_players)
-        fake_players_str = '\n    '.join(fake_players)
+    '''格式化单个服务器的玩家分组为文本'''
+    real_players, fake_players = players
+    if config.bot_prefix:
         yield '  ———— 玩家 ————'
-        if not real_players_str:
-            real_players_str = '没有玩家在线！'
-        yield '    ' + real_players_str
+        yield '    ' + ('\n    '.join(real_players) if real_players else '没有玩家在线！')
         yield '  ———— 假人 ————'
-        if not fake_players_str:
-            fake_players_str = '没有假人在线！'
-        yield '    ' + fake_players_str + '\n'
+        yield '    ' + ('\n    '.join(fake_players) if fake_players else '没有假人在线！') + '\n'
         return
-    if grouped := players[0]:
-        yield '    ' + '\n    '.join(grouped) + '\n'
+    if real_players:
+        yield '    ' + '\n    '.join(real_players) + '\n'
         return
     yield '  没有玩家在线！\n'

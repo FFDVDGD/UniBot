@@ -15,29 +15,30 @@ router = APIRouter(prefix='/api/status', tags=['Status'])
 start_time = time.time()
 
 
-@router.get('', summary='获取运行状态')
-async def get_status(current_user: dict = Depends(get_current_user)):
-    '''获取机器人运行状态概览'''
+def get_status_data() -> dict:
+    '''生成机器人运行状态数据（REST 接口与 WebSocket 推送共用）'''
     adapter_names = list(nonebot.get_adapters().keys())
     servers = server_manager.servers or {}
     return {
-        'code': 0,
-        'data': {
-            'version': version_manager.version,
-            'latest_version': version_manager.latest_version,
-            'has_update': version_manager.check_update(),
-            'uptime': int(time.time() - start_time),
-            'memory_mb': round(psutil.Process().memory_info().rss / 1024 / 1024, 1),
-            'cpu_percent': psutil.Process().cpu_percent(interval=0.1),
-            'servers_online': len(servers),
-            'servers_total': len(servers),
-            'players_bound': len(data_manager.players),
-            'adapters': adapter_names,
-            'webui_enabled': config.webui.get('enabled', False) if isinstance(config.webui, dict) else config.webui.enabled,
-            'ws_clients': len(ws_clients),
-        },
-        'message': 'ok',
+        'version': version_manager.version,
+        'latest_version': version_manager.latest_version,
+        'has_update': version_manager.check_update(),
+        'uptime': int(time.time() - start_time),
+        'memory_mb': round(psutil.Process().memory_info().rss / 1024 / 1024, 1),
+        'cpu_percent': psutil.Process().cpu_percent(interval=0.1),
+        'servers_online': len(servers),
+        'servers_total': len(servers),
+        'players_bound': len(data_manager.players),
+        'adapters': adapter_names,
+        'webui_enabled': config.webui.get('enabled', False) if isinstance(config.webui, dict) else config.webui.enabled,
+        'ws_clients': len(ws_clients),
     }
+
+
+@router.get('', summary='获取运行状态')
+async def get_status(current_user: dict = Depends(get_current_user)):
+    '''获取机器人运行状态概览'''
+    return {'code': 0, 'data': get_status_data(), 'message': 'ok'}
 
 
 @router.post('/check-update', summary='检测最新版本')

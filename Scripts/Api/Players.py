@@ -1,7 +1,12 @@
-from fastapi import APIRouter, Depends, Query
+import asyncio
+from pathlib import Path
+
+from fastapi import APIRouter, Response, Depends, Query
+from fastapi.responses import FileResponse
 
 from Scripts.Config import config
-from Scripts.Managers import data_manager
+from Scripts.Managers import cache_manager, data_manager
+from Scripts.Network import AVATAR_SIZE, fetch_player_avatar
 from .Auth import get_current_user, require_role
 from .Schemas import BindPlayerRequest
 
@@ -36,6 +41,27 @@ async def get_players(
         'data': {'items': items, 'total': total, 'page': page, 'page_size': page_size},
         'message': 'ok',
     }
+
+
+@router.get('/{name}/avatar', summary='获取玩家头像')
+async def get_player_avatar(
+    name: str,
+    size: int = Query(24, ge=8, le=128),
+    current_user: dict = Depends(get_current_user),
+):
+    '''获取玩家头像：本地缓存优先，缺失时下载并落盘缓存，避免重复请求外部 CDN'''
+    cached, _ = cache_manager.get_cached([name])
+    if name in cached:
+        avatar_path = Path()
+        return FileResponse(cached[name], media_type='image/png')
+    result = await fetch_player_avatar(name, size)
+    if result is None:
+        return Response(status_code=404)
+    content, content_type = result
+    # 与缓存尺寸一致时顺手落盘，供 List 渲染等复用
+    if size == AVATAR_SIZE:
+        await cache_manager.save_all({cache_manager.get_path(name).name: content})
+    return Response(content=content, media_type=content_type)
 
 
 @router.get('/{user}', summary='查询用户绑定')

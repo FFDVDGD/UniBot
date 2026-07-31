@@ -1,3 +1,4 @@
+from .Cache import cache_manager
 from .Data import data_manager
 from .Environment import environment_manager
 from .Plugin import plugin_manager

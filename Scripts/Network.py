@@ -1,9 +1,8 @@
+import asyncio
 from io import BytesIO
 
 from httpx import AsyncClient
 from nonebot.log import logger
-
-from Scripts.Globals import uuid_caches
 
 client = AsyncClient(follow_redirects=True)
 
@@ -14,6 +13,21 @@ GITHUB_MIRRORS = [
     'https://ghfast.top/',
     'https://ghproxy.cc/',
 ]
+
+# 玩家头像 CDN 列表（按名字查询，依次尝试）
+AVATAR_CDNS = [
+    'https://minotar.net/avatar/{name}/{size}',
+    'https://mc-heads.net/avatar/{name}/{size}',
+]
+
+# 头像尺寸：获取 48px 保证渲染清晰，模板中以 24px 展示
+AVATAR_SIZE = 48
+# 头像并发请求上限，避免同时请求过多触发 CDN 限流
+MAX_AVATAR_CONCURRENCY = 10
+
+# 玩家头像内存缓存：{(名字, 尺寸): (图片内容, Content-Type)}，避免重复请求外部 CDN
+avatar_cache: dict[tuple[str, int], tuple[bytes, str]] = {}
+MAX_AVATAR_CACHE = 100
 
 
 async def request(url: str):
@@ -26,33 +40,68 @@ async def request(url: str):
         logger.warning(f'请求 {url} 失败：{error}')
 
 
-async def get_player_uuid(name: str):
-    if name in uuid_caches:
-        return uuid_caches[name]
-    uuid = '8667ba71b85a4004af54457a9734eed7'
-    if response := await request(f'https://api.mojang.com/users/profiles/minecraft/{name}'):
-        uuid = response.get('id') or '8667ba71b85a4004af54457a9734eed7'
-    uuid_caches[name] = uuid
-    return uuid
+async def download(url: str) -> BytesIO | None:
+    '''下载单个 URL 的文件内容，成功返回 BytesIO，失败返回 False'''
+    try:
+        download_bytes = BytesIO()
+        async with client.stream('GET', url) as stream:
+            if stream.status_code != 200:
+                logger.warning(f'下载 {url} 失败：错误的状态代码 {stream.status_code}')
+                return
+            async for chunk in stream.aiter_bytes():
+                download_bytes.write(chunk)
+        download_bytes.seek(0)
+        return download_bytes
+    except Exception as error:
+        logger.warning(f'下载 {url} 失败：{error}')
+        return
 
 
-async def download(url: str):
-    '''下载文件，GitHub 地址会依次尝试加速镜像，全部失败后回退到原始地址直连'''
-    candidate_urls = []
-    if 'github' in url:
-        candidate_urls = [mirror + url for mirror in GITHUB_MIRRORS]
+async def github_download(url: str) -> BytesIO | None:
+    '''下载 GitHub 文件，依次尝试加速镜像，全部失败后回退到原始地址直连'''
+    candidate_urls = [mirror + url for mirror in GITHUB_MIRRORS]
     candidate_urls.append(url)
     for candidate_url in candidate_urls:
-        try:
-            download_bytes = BytesIO()
-            async with client.stream('GET', candidate_url) as stream:
-                if stream.status_code != 200:
-                    logger.warning(f'下载 {candidate_url} 失败：错误的状态代码 {stream.status_code}')
-                    continue
-                async for chunk in stream.aiter_bytes():
-                    download_bytes.write(chunk)
-            download_bytes.seek(0)
-            return download_bytes
-        except Exception as error:
-            logger.warning(f'下载 {candidate_url} 失败：{error}')
-    return False
+        if result := await download(candidate_url):
+            return result
+    return
+
+
+async def fetch_player_avatar(name: str, size: int) -> tuple[bytes, str] | None:
+    '''获取玩家头像（带内存缓存），依次尝试多个头像 CDN，全部失败后回退到史蒂夫默认头像'''
+    cache_key = (name, size)
+    if cache_key in avatar_cache:
+        return avatar_cache[cache_key]
+    for url_template in AVATAR_CDNS:
+        url = url_template.format(name=name, size=size)
+        result = await download(url)
+        if isinstance(result, BytesIO):
+            avatar = (result.getvalue(), 'image/png')
+            avatar_cache[cache_key] = avatar
+            if len(avatar_cache) > MAX_AVATAR_CACHE:
+                avatar_cache.clear()
+            return avatar
+    # 全部 CDN 都失败时回退到史蒂夫默认头像（MHF_Steve 是 Mojang 经典账号，对应默认皮肤）
+    if name != 'MHF_Steve':
+        return await fetch_player_avatar('MHF_Steve', size)
+    return None
+
+
+async def fetch_player_avatars(player_names: list[str], size: int = AVATAR_SIZE) -> dict[str, tuple]:
+    '''并发获取多个玩家头像，返回 {玩家名: (图片内容, Content-Type)}，获取失败的玩家不在结果中'''
+    semaphore = asyncio.Semaphore(MAX_AVATAR_CONCURRENCY)
+
+    async def fetch_one(player_name: str) -> tuple[str, tuple] | None:
+        async with semaphore:
+            result = await fetch_player_avatar(player_name, size)
+        if result is None:
+            return None
+        return player_name, result
+
+    results = await asyncio.gather(*(fetch_one(name) for name in set(player_names)))
+    avatars = {}
+    for item in results:
+        if item is not None:
+            player_name, avatar = item
+            avatars[player_name] = avatar
+    return avatars

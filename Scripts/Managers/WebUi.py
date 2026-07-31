@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from nonebot.log import logger
 
-from Scripts.Network import download
+from Scripts.Network import github_download
 from .Environment import environment_manager
 
 class WebUiManager:
@@ -45,7 +45,7 @@ class WebUiManager:
             return True
         logger.info(f'正在下载 WebUI 静态资源（{self.version}）……')
         url = f'https://github.com/MineJPGcraft/UniBot.WebUi/releases/download/{self.version}/WebUi.zip'
-        if not (response := await download(url)):
+        if not (response := await github_download(url)):
             logger.warning(f'下载 WebUI（{self.version}）失败，请检查网络稍后再试。')
             return False
         try:

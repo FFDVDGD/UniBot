@@ -87,5 +87,4 @@ class PluginManager:
         environment_manager.set_plugin_enabled(plugin['module_name'], enabled)
         return True
 
-
 plugin_manager = PluginManager()

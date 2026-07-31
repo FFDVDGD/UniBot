@@ -6,12 +6,7 @@
     <div class="subtitle">ONLINE PLAYERS</div>
 </div>
 <div class="title-bar"></div>
-{% for server, players_data in player_list.items() %}
-{% if players_data | length == 2 %}
-{% set real_players, fake_players = players_data %}
-{% else %}
-{% set real_players, fake_players = players_data[0], [] %}
-{% endif %}
+{% for server, (real_players, fake_players) in player_list.items() %}
 <div class="server">
     <div class="server-header">
         <div class="server-name">
@@ -25,8 +20,11 @@
         {% if real_players or fake_players %}
         {% for player in real_players %}
         <div class="player">
-            {# <img src="https://crafatar.com/avatars/{{ uuids[player] }}?size=24&overlay"/> #}
+            {% if avatars.get(player) %}
+            <img src="{{ avatars[player] }}"/>
+            {% else %}
             <span class="head"></span>
+            {% endif %}
             <span class="name">{{ player }}</span>
         </div>
         {% endfor %}
