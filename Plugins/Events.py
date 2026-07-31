@@ -32,15 +32,14 @@ segment_mapping = {
     'text': lambda seg: seg.text,
     'at': lambda seg: f'[@{seg.target}]',
     'reply': lambda seg: f'[引用{"：" + seg.msg.extract_plain_text() if seg.msg else ""}]',
-    'reference': lambda seg: '[引用消息]',
-    'atall': lambda seg: '[@全体成员]',
-    'emoji': lambda seg: '[动画表情]',
-    'image': lambda seg: '[图片]',
-    'video': lambda seg: '[视频]',
-    'audio': lambda seg: '[语音]',
-    'file': lambda seg: '[文件]'
+    'reference': lambda _: '[引用消息]',
+    'atall': lambda _: '[@全体成员]',
+    'emoji': lambda _: '[动画表情]',
+    'image': lambda _: '[图片]',
+    'video': lambda _: '[视频]',
+    'audio': lambda _: '[语音]',
+    'file': lambda _: '[文件]'
 }
-
 
 def message_to_text(message: UniMsg):
     '''将 UniMsg 转换为文本'''
