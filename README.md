@@ -3,11 +3,11 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/Minecraft-UniBot/UniBot" alt="版本">
-  <img src="https://img.shields.io/github/license/Minecraft-UniBot/UniBot" alt="许可证">
+  <img src="https://img.shields.io/github/v/release/MineJPGcraft/UniBot" alt="版本">
+  <img src="https://img.shields.io/github/license/MineJPGcraft/UniBot" alt="许可证">
   <img src="https://img.shields.io/badge/Python-3.11%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/NoneBot2-2.2%2B-purple" alt="NoneBot2">
-  <!-- <img src="https://img.shields.io/github/downloads/Minecraft-UniBot/UniBot/total" alt="下载量"> -->
+  <!-- <img src="https://img.shields.io/github/downloads/MineJPGcraft/UniBot/total" alt="下载量"> -->
 </p>
 
 <h1 align="center">Minecraft UniBot</h1>
@@ -53,7 +53,7 @@
 
 #### 方式一：一键脚本安装（推荐）
 
-从 [Releases 页面](https://github.com/Minecraft-UniBot/UniBot/releases) 下载对应平台的一键安装脚本：
+从 [Releases 页面](https://github.com/MineJPGcraft/UniBot/releases) 下载对应平台的一键安装脚本：
 
 | 平台 | 脚本 |
 |------|------|
@@ -74,7 +74,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/Minecraft-UniBot/UniBot
+git clone https://github.com/MineJPGcraft/UniBot
 cd UniBot
 
 # 创建虚拟环境并安装依赖（UV 自动管理）
@@ -101,7 +101,7 @@ uv run Watchdog.py
 #### 方式三：使用 pip + venv（传统方式）
 
 ```bash
-git clone https://github.com/Minecraft-UniBot/UniBot
+git clone https://github.com/MineJPGcraft/UniBot
 cd UniBot
 
 # 创建虚拟环境

@@ -11,6 +11,7 @@ from .Config import config
 regex = re.compile(r'[A-Z0-9_]+|\.[A-Z0-9_]+', re.IGNORECASE)
 scope_mapping = {
     str(UninfoSupportScope.qq_client): 'QQ',
+    str(UninfoSupportScope.qq_api): 'QQ',
     str(UninfoSupportScope.qq_guild): 'QQ 频道',
     str(UninfoSupportScope.telegram): 'Telegram',
     str(UninfoSupportScope.discord): 'Discord',

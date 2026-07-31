@@ -5,7 +5,7 @@ from nonebot.log import logger
 
 from Scripts.Globals import uuid_caches
 
-client = AsyncClient()
+client = AsyncClient(follow_redirects=True)
 
 # GitHub 加速镜像列表（依次尝试，全部失败后回退到原始地址直连）
 GITHUB_MIRRORS = [

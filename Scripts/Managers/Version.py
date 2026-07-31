@@ -5,7 +5,7 @@ from nonebot.log import logger
 from Scripts.Network import request
 from .Environment import environment_manager
 
-LATEST_RELEASE_API = 'https://api.github.com/repos/Minecraft-UniBot/UniBot/releases/latest'
+LATEST_RELEASE_API = 'https://api.github.com/repos/MineJPGcraft/UniBot/releases/latest'
 
 
 class VersionManager:

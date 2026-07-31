@@ -29,9 +29,8 @@ ai = [
     "openai>=2.46.0",
 ]
 
-[[tool.uv.index]]
-url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
-default = true
+[tool.uv]
+index-url = "https://mirrors.huaweicloud.com/repository/pypi/simple"
 
 [tool.unibot]
 # 此版本对应的 WebUi 版本
