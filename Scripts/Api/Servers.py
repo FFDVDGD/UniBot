@@ -1,7 +1,6 @@
 import asyncio
 
 from fastapi import APIRouter, Depends
-
 from nonebot.log import logger
 
 from Scripts.Config import config

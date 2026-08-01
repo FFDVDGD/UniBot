@@ -1,7 +1,7 @@
 import uuid
 from asyncio import Lock
 from datetime import datetime, timezone
-from json import loads, dump
+from json import dumps, loads
 from pathlib import Path
 
 import bcrypt
@@ -30,9 +30,9 @@ class DataManager:
         logger.info('加载数据文件……')
         if not self.data_dir.exists():
             logger.warning('数据文件目录不存在，正在创建数据目录……')
-            self.data_dir.mkdir()
+            self.data_dir.mkdir(parents=True, exist_ok=True)
         # 加载玩家绑定数据
-        player_file = (self.data_dir / 'Player.json')
+        player_file = self.data_dir / 'Player.json'
         if player_file.exists():
             try:
                 self.players = loads(player_file.read_text('Utf-8'))
@@ -47,14 +47,19 @@ class DataManager:
                 logger.warning('用户数据文件损坏，使用空数据！')
                 self.users = {}
         # 生成或加载 JWT 签名密钥
-        if self.secret_file.exists():
-            self.secret_key = self.secret_file.read_text('Utf-8').strip()
-        else:
-            self.secret_key = uuid.uuid4().hex + uuid.uuid4().hex
-            self.secret_file.write_text(self.secret_key, encoding='Utf-8')
+        self.secret_key = self.load_secret_key()
         logger.success('加载数据文件完毕！')
 
+    def load_secret_key(self) -> str:
+        '''生成或加载 JWT 签名密钥'''
+        if self.secret_file.exists():
+            return self.secret_file.read_text('Utf-8').strip()
+        secret_key = uuid.uuid4().hex + uuid.uuid4().hex
+        self.secret_file.write_text(secret_key, encoding='Utf-8')
+        return secret_key
+
     def load_bot_data(self):
+        '''加载机器人运行时数据'''
         logger.debug('正在加载机器人数据……')
         logger.success('加载机器人数据完毕！')
 
@@ -62,11 +67,9 @@ class DataManager:
         '''持久化全部数据（玩家绑定 + WebUI 用户）'''
         async with self.lock:
             logger.debug('正在保存数据文件……')
-            player_file = (self.data_dir / 'Player.json')
-            with player_file.open('w', encoding='Utf-8') as file:
-                dump(self.players, file, ensure_ascii=False, indent=2)
-            with self.users_file.open('w', encoding='Utf-8') as file:
-                dump(self.users, file, ensure_ascii=False, indent=2)
+            player_file = self.data_dir / 'Player.json'
+            player_file.write_text(dumps(self.players, ensure_ascii=False, indent=2), encoding='Utf-8')
+            self.users_file.write_text(dumps(self.users, ensure_ascii=False, indent=2), encoding='Utf-8')
             logger.success('保存数据文件完毕！')
 
     # ── 玩家绑定 ──────────────────────────────────────────────

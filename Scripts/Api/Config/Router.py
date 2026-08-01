@@ -5,16 +5,17 @@
 
 from copy import deepcopy
 
-import tomlkit
 from fastapi import APIRouter, Depends, Request
+import tomlkit
 
-from Scripts.Config import TOML_PATH, Config, config
+from Scripts.Config import TOML_PATH, Config, config, reload_config, validate_config_content
 from Scripts.Managers import environment_manager
-from ..Auth import get_current_user, require_role
-from .Schema import CONFIG_GROUPS, CONFIG_SCHEMA, ENV_GROUPS, ENV_SCHEMA
-from .Helpers import deep_merge, mask_api_key
-from .Driver import compute_redundant_drivers, format_driver, merge_driver, shrink_driver
+
 from .Adapters import ADAPTER_CATALOG, PROTECTED_ADAPTER_MODULES
+from .Driver import compute_redundant_drivers, format_driver, merge_driver, shrink_driver
+from .Helpers import deep_merge, mask_api_key
+from .Schema import CONFIG_GROUPS, CONFIG_SCHEMA, ENV_GROUPS, ENV_SCHEMA
+from ..Auth import get_current_user, require_role
 from ..Schemas import InstallAdapterRequest, NoneBotItemRequest, UninstallAdapterRequest
 
 router = APIRouter(prefix='/api/config', tags=['Config'])
@@ -67,17 +68,17 @@ async def patch_config(request: Request, current_user: dict = Depends(require_ro
         for key, value in data.items():
             if value is None:
                 result[key] = ''
-            elif isinstance(value, dict):
+                continue
+            if isinstance(value, dict):
                 result[key] = sanitize_none(value)
-            else:
-                result[key] = value
+                continue
+            result[key] = value
         return result
 
     try:
         # 读取现有文件以保留注释和格式
         try:
-            with open(TOML_PATH, 'r', encoding='utf-8') as file:
-                toml_document = tomlkit.parse(file.read())
+            toml_document = tomlkit.parse(TOML_PATH.read_text('Utf-8'))
         except FileNotFoundError:
             toml_document = tomlkit.document()
 
@@ -87,11 +88,10 @@ async def patch_config(request: Request, current_user: dict = Depends(require_ro
             if isinstance(value, dict) and key in toml_document and isinstance(toml_document[key], dict):
                 for sub_key, sub_value in value.items():
                     toml_document[key][sub_key] = sub_value
-            else:
-                toml_document[key] = value
+                continue
+            toml_document[key] = value
 
-        with open(TOML_PATH, 'w', encoding='utf-8') as file:
-            file.write(tomlkit.dumps(toml_document))
+        TOML_PATH.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
     except Exception as error:
         return {'code': 500, 'data': None, 'message': f'写入配置文件失败：{error}'}
 
@@ -131,6 +131,49 @@ async def patch_env_config(request: Request, current_user: dict = Depends(requir
     return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}
 
 
+# ===== 原始文件直接编辑 =====
+
+
+@router.get('/raw', summary='获取原始配置文件内容')
+async def get_raw_config(current_user: dict = Depends(get_current_user)):
+    '''获取 Config.toml 与 .env 的原始文本内容'''
+    return {
+        'code': 0,
+        'data': {
+            'config_toml': TOML_PATH.read_text('Utf-8'),
+            'env': environment_manager.env_path.read_text('Utf-8'),
+        },
+        'message': 'ok',
+    }
+
+
+@router.patch('/raw', summary='保存原始配置文件内容')
+async def patch_raw_config(request: Request, current_user: dict = Depends(require_role('admin'))):
+    '''以原始文本方式保存 Config.toml / .env（.env 改动需重启生效）'''
+    try:
+        patch_data = await request.json()
+    except Exception:
+        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
+
+    hints = []
+    config_content = patch_data.get('config_toml')
+    if config_content is not None:
+        if error_message := validate_config_content(config_content):
+            return {'code': 400, 'data': None, 'message': error_message}
+        TOML_PATH.write_text(config_content, encoding='Utf-8')
+        reload_config()
+        hints.append('Config.toml 已热更新')
+
+    env_content = patch_data.get('env')
+    if env_content is not None:
+        environment_manager.write_env_raw(env_content)
+        hints.append('.env 已保存，重启后生效')
+
+    if not hints:
+        return {'code': 1, 'data': None, 'message': '未提供需要保存的文件内容'}
+    return {'code': 0, 'data': None, 'message': '；'.join(hints)}
+
+
 # ===== pyproject.toml NoneBot 插件/适配器管理 =====
 
 
@@ -148,8 +191,8 @@ async def get_nonebot_config(current_user: dict = Depends(get_current_user)):
         adapter.get('module_name') for adapter in adapters
     }
     installed_packages = {
-        dep.split('[')[0].split('>=')[0].split('<')[0].split('~')[0].split('!=')[0].strip()
-        for dep in project_data.get('project', {}).get('dependencies', [])
+        environment_manager._package_base(dependency)
+        for dependency in environment_manager.get_dependencies()
     }
     catalog = [
         {

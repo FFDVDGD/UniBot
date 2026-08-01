@@ -26,8 +26,7 @@ EXTRA_CONFIG_FIELDS = {
 
 def read_toml(path: Path) -> dict:
     '''读取 TOML 文件。'''
-    with path.open('rb') as file:
-        return tomllib.load(file)
+    return tomllib.loads(path.read_text('Utf-8'))
 
 
 def get_enabled_extras() -> list[str]:

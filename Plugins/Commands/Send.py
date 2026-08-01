@@ -23,14 +23,14 @@ matcher = (
 async def handle(session: Uninfo, message: Match[list[str]]):
     if not message.available:
         await matcher.finish('参数错误，请检查命令格式！')
-    msg = ' '.join(message.result).strip()
-    if not msg:
+    message_text = ' '.join(message.result).strip()
+    if not message_text:
         await matcher.finish('参数错误，请检查命令格式！')
     user_id = str(session.user.id)
     user_name = session.user.name or get_player_name(str(session.user.name))
     platform_name = get_platform_name(session.scope)
     if name := data_manager.players.get(user_id, (user_name,))[0]:
-        await server_manager.broadcast(f'[{platform_name}]<{name}> {msg}')
-        await matcher.finish(f'已向服务器发送消息：{msg}。')
-    await server_manager.broadcast(f'[{platform_name}]<未知用户> {msg}')
+        await server_manager.broadcast(f'[{platform_name}]<{name}> {message_text}')
+        await matcher.finish(f'已向服务器发送消息：{message_text}。')
+    await server_manager.broadcast(f'[{platform_name}]<未知用户> {message_text}')
     await matcher.finish('未找到你的玩家名称，请绑定后再试！')

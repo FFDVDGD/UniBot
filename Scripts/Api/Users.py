@@ -15,12 +15,12 @@ async def get_users(
     current_user: dict = Depends(require_role('admin')),
 ):
     '''分页获取用户列表'''
-    all_users = [data_manager.public_user_info(u) for u in data_manager.users.values()]
+    all_users = [data_manager.public_user_info(user_info) for user_info in data_manager.users.values()]
     if keyword:
         keyword_lower = keyword.lower()
         all_users = [
-            u for u in all_users
-            if keyword_lower in u['username'].lower() or keyword_lower in u['nickname'].lower()
+            user_info for user_info in all_users
+            if keyword_lower in user_info['username'].lower() or keyword_lower in user_info['nickname'].lower()
         ]
     total = len(all_users)
     start = (page - 1) * page_size

@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime
 
-from nonebot import on_notice, on_message
+from nonebot import on_message, on_notice
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata
 from nonebot.adapters.minecraft import PlayerChatEvent, PlayerJoinEvent, PlayerQuitEvent, PlayerDeathEvent
@@ -14,8 +14,8 @@ from nonebot_plugin_alconna.uniseg import UniMsg
 from Scripts.Config import config
 from Scripts.Globals import player_list_cache
 from Scripts.Managers import server_manager
-from Scripts.Utils import check_message, get_platform_name, send_message_to_groups
 from Scripts.Rules import message_group_rule
+from Scripts.Utils import check_message, get_platform_name, send_message_to_groups
 
 __plugin_meta__ = PluginMetadata(
     name='消息互通事件',
@@ -29,23 +29,28 @@ message_watcher = on_message(rule=message_group_rule)
 
 
 segment_mapping = {
-    'text': lambda seg: seg.text,
-    'at': lambda seg: f'[@{seg.target}]',
-    'reply': lambda seg: f'[引用{"：" + seg.msg.extract_plain_text() if seg.msg else ""}]',
+    'text': lambda segment: segment.text,
+    'at': lambda segment: f'[@{segment.target}]',
+    'reply': lambda segment: f'[引用{"：" + segment.msg.extract_plain_text() if segment.msg else ""}]',
     'reference': lambda _: '[引用消息]',
     'atall': lambda _: '[@全体成员]',
     'emoji': lambda _: '[动画表情]',
     'image': lambda _: '[图片]',
     'video': lambda _: '[视频]',
     'audio': lambda _: '[语音]',
-    'file': lambda _: '[文件]'
+    'file': lambda _: '[文件]',
 }
 
 def message_to_text(message: UniMsg):
     '''将 UniMsg 转换为文本'''
-    for seg in message:
-        logger.debug(seg)
-    texts = [func(seg) for seg in message if (func := segment_mapping.get(seg.type)) is not None if func(seg)]
+    for segment in message:
+        logger.debug(segment)
+    texts = [
+        func(segment)
+        for segment in message
+        if (func := segment_mapping.get(segment.type)) is not None
+        if func(segment)
+    ]
     return ' '.join(texts)
 
 

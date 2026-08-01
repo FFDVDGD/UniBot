@@ -3,9 +3,8 @@ import asyncio
 
 from nonebot import get_adapter
 from nonebot.log import logger
-
-from nonebot.adapters.minecraft.message import Message
 from nonebot.adapters.minecraft import Adapter as MCAdapter, Bot
+from nonebot.adapters.minecraft.message import Message
 
 from ..Config import config
 
@@ -13,8 +12,8 @@ from ..Config import config
 class ServerManager:
     '''Minecraft 服务器管理器，封装与 Minecraft 的交互'''
     def init(self):
-        self.adatper = get_adapter(MCAdapter)
-        self.servers = self.adatper.bots
+        self.adapter = get_adapter(MCAdapter)
+        self.servers = self.adapter.bots
 
     def get_server(self, server_flag: str | int):
         '''通过名称或编号获取 Minecraft 机器人'''
@@ -31,12 +30,12 @@ class ServerManager:
         '''是否有 Minecraft 服务器在线'''
         return bool(self.servers)
 
-    async def gather(self, get_task, filter = None):
+    async def gather(self, get_task, filter_function=None):
         if self.servers is None:
             return
         names, tasks = [], []
         for name, server in self.servers.items():
-            if filter is None or filter(server):
+            if filter_function is None or filter_function(server):
                 names.append(name)
                 tasks.append(get_task(server))
         results = await asyncio.gather(*tasks)
@@ -120,8 +119,8 @@ class ServerManager:
         async def get_task(server: Bot):
             try:
                 return await server.send_msg(message=message)
-            except Exception as e:
-                logger.warning(f'向服务器 [{server.self_id}] 广播消息失败：{e}')
+            except Exception as error:
+                logger.warning(f'向服务器 [{server.self_id}] 广播消息失败：{error}')
 
         return await self.gather(get_task, lambda server: server.self_id != except_server)
 

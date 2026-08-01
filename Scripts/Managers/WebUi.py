@@ -9,6 +9,7 @@ from nonebot.log import logger
 from Scripts.Network import github_download
 from .Environment import environment_manager
 
+
 class WebUiManager:
     '''WebUI 管理面板：负责 API 路由挂载、前端静态资源的版本校验/下载与静态文件挂载'''
 

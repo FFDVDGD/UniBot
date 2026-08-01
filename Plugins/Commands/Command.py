@@ -6,7 +6,7 @@ from nonebot_plugin_alconna import Command, Match
 from Scripts.Config import config
 from Scripts.Managers import server_manager
 from Scripts.Rules import command_group_rule
-from Scripts.Utils import turn_message_text, get_permission
+from Scripts.Utils import get_permission, turn_message_text
 
 __plugin_meta__ = PluginMetadata(
     name='控制台命令',
@@ -44,7 +44,7 @@ def parse_command(command: str):
 
 
 async def command_handler(server_flag, command):
-    if not (cmd := parse_command(command)):
+    if not (parsed_command := parse_command(command)):
         yield f'命令 {command} 已被禁止！'
         return
     if server_flag == '*':
@@ -54,7 +54,7 @@ async def command_handler(server_flag, command):
         for name, bot in server_manager.servers.items():
             yield '已发送指令到所有服务器：'
             try:
-                result = await bot.send_rcon_command(command=cmd)
+                result = await bot.send_rcon_command(command=parsed_command)
                 yield f'  [{name}] -> {result if result else '无返回值'}'
             except Exception as error:
                 logger.warning(f'向服务器 [{name}] 发送指令失败：{error}')
@@ -65,7 +65,7 @@ async def command_handler(server_flag, command):
         yield f'服务器 [{server_flag}] 不存在！请检查插件配置。'
         return
     try:
-        result = await bot.send_rcon_command(command=cmd)
+        result = await bot.send_rcon_command(command=parsed_command)
         yield f'命令已发送到服务器 [{bot.self_id}]！服务器回应：{result if result else '无返回值'}'
     except Exception as error:
         yield f'向服务器 [{server_flag}] 发送指令失败：{error}'

@@ -1,5 +1,5 @@
-from arclet.alconna.args import Args
 from arclet.alconna import Alconna, Subcommand, command_manager
+from arclet.alconna.args import Args
 from nonebot.plugin import PluginMetadata
 from nonebot_plugin_alconna import Command, Match
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
@@ -7,8 +7,8 @@ from nonebot_plugin_alconna.uniseg import Image, UniMessage
 from Scripts.Config import config
 from Scripts.Globals import render_template
 from Scripts.Managers import environment_manager
-from Scripts.Utils import turn_message_text
 from Scripts.Rules import command_group_rule
+from Scripts.Utils import turn_message_text
 
 __plugin_meta__ = PluginMetadata(
     name='命令帮助',
@@ -28,9 +28,9 @@ async def handle(command: Match[str]):
         if command.available:
             detail = get_command_detail(command.result)
             image = await render_template('Help', (600, 0), detail=detail, commands=None)
-        else:
-            commands = get_commands_list()
-            image = await render_template('Help', (600, 0), detail=None, commands=commands)
+            await matcher.finish(UniMessage(Image(raw=image)))
+        commands = get_commands_list()
+        image = await render_template('Help', (600, 0), detail=None, commands=commands)
         await matcher.finish(UniMessage(Image(raw=image)))
     if command.available:
         message = await turn_message_text(detailed_handler(command.result))
@@ -40,7 +40,7 @@ async def handle(command: Match[str]):
 
 
 def get_commands_list() -> list[dict]:
-    """构建命令列表数据用于图片渲染"""
+    '''构建命令列表数据用于图片渲染'''
     commands = []
     for alconna in get_enabled_commands():
         usage = alconna.meta.usage or gen_usage(alconna)
@@ -56,7 +56,7 @@ def get_commands_list() -> list[dict]:
 
 
 def get_command_detail(name: str) -> dict | None:
-    """构建命令详情数据用于图片渲染"""
+    '''构建命令详情数据用于图片渲染'''
     alconna = get_alconna(name)
     if alconna is None or alconna not in get_enabled_commands():
         return None
@@ -75,7 +75,7 @@ def get_command_detail(name: str) -> dict | None:
 
 
 def get_alconna(name: str) -> Alconna | None:
-    """从 command_manager 中获取已注册的 Alconna 对象。"""
+    '''从 command_manager 中获取已注册的 Alconna 对象。'''
     for command in command_manager.get_commands():
         if command.command == name:
             return command
@@ -83,7 +83,7 @@ def get_alconna(name: str) -> Alconna | None:
 
 
 def get_enabled_commands() -> list[Alconna]:
-    """获取 pyproject.toml 中已启用且成功注册的内置命令。"""
+    '''获取 pyproject.toml 中已启用且成功注册的内置命令。'''
     commands = []
     for plugin in environment_manager.nonebot_config.get('plugins', []):
         module_name = plugin if isinstance(plugin, str) else plugin.get('module_name', '')
@@ -96,7 +96,7 @@ def get_enabled_commands() -> list[Alconna]:
 
 
 def gen_usage(alconna: Alconna):
-    """根据 Alconna 对象自动生成用法字符串。"""
+    '''根据 Alconna 对象自动生成用法字符串。'''
     parts = [alconna.command]
     if isinstance(alconna.args, Args):
         for arg in alconna.args:
@@ -105,7 +105,7 @@ def gen_usage(alconna: Alconna):
 
 
 def sub_usage(subcommand: Subcommand):
-    """根据子命令的参数构造用法字符串。"""
+    '''根据子命令的参数构造用法字符串。'''
     parts = [subcommand.name]
     if isinstance(subcommand.args, Args):
         for arg in subcommand.args:

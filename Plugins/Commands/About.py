@@ -5,9 +5,9 @@ from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
 from Scripts.Config import config
 from Scripts.Globals import render_template
-from Scripts.Managers.Version import version_manager
-from Scripts.Utils import turn_message_text
+from Scripts.Managers import version_manager
 from Scripts.Rules import command_group_rule
+from Scripts.Utils import turn_message_text
 
 __plugin_meta__ = PluginMetadata(
     name='关于信息',

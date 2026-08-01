@@ -2,13 +2,13 @@ from fastapi import APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from .Auth import router as auth_router
-from .Users import router as users_router
-from .Status import router as status_router
 from .Config import router as config_router
-from .Servers import router as servers_router
-from .Players import router as players_router
 from .Logs import router as logs_router
+from .Players import router as players_router
 from .Plugins import router as plugins_router
+from .Servers import router as servers_router
+from .Status import router as status_router
+from .Users import router as users_router
 from .WebSocket import router as ws_router
 
 api_router = APIRouter()

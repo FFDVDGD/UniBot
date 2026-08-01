@@ -1,5 +1,4 @@
-from openai import AsyncClient
-from openai import RateLimitError, BadRequestError
+from openai import AsyncClient, BadRequestError, RateLimitError
 
 from nonebot import on_message
 from nonebot.log import logger
@@ -27,8 +26,8 @@ matcher = on_message(rule=to_me(), priority=15, block=False)
 
 
 @matcher.handle()
-async def handle_message(session: Uninfo, msg: UniMsg):
-    plain_text = msg.extract_plain_text().strip()
+async def handle_message(session: Uninfo, message: UniMsg):
+    plain_text = message.extract_plain_text().strip()
     if plain_text in ('清空缓存', '清除缓存'):
         if not get_permission(session):
             await matcher.finish('你没有权限执行此操作！')
@@ -48,8 +47,8 @@ async def handle_message(session: Uninfo, msg: UniMsg):
     if text := response.message.content:
         messages.append(dict(response.message))
         # 保留系统提示 + 最近 10 轮对话
-        if len(messages) > 21:
-            messages[:] = [messages[0]] + messages[-20:]
+        if len(messages) > MAX_HISTORY:
+            messages[:] = [messages[0]] + messages[-(MAX_HISTORY - 1):]
         await matcher.finish(text)
     await matcher.finish('呃？你在说什么，能不能重新说一下 T_T')
 

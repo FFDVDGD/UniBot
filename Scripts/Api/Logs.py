@@ -18,11 +18,11 @@ async def get_logs(current_user: dict = Depends(get_current_user)):
 
     log_files = []
     for file in sorted(LOGS_DIR.glob('*.log'), reverse=True):
-        stat = file.stat()
+        file_stat = file.stat()
         log_files.append({
             'name': file.name,
-            'size': stat.st_size,
-            'modified': datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+            'size': file_stat.st_size,
+            'modified': datetime.fromtimestamp(file_stat.st_mtime, tz=timezone.utc).isoformat(),
         })
     return {'code': 0, 'data': log_files, 'message': 'ok'}
 

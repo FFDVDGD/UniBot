@@ -38,8 +38,8 @@ class VersionManager:
             return False
         if self.check_update():
             logger.info(f'发现新版本 {self.latest_version}，当前版本为 {self.version}！')
-        else:
-            logger.info(f'当前已是最新版本 {self.version}！')
+            return True
+        logger.info(f'当前已是最新版本 {self.version}！')
         return True
 
 

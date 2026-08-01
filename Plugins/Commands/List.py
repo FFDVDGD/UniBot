@@ -1,5 +1,4 @@
 import asyncio
-from typing import Literal
 
 from nonebot.plugin import PluginMetadata
 

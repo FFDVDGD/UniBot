@@ -1,9 +1,9 @@
-from .Config import config
 from nonebot import require
 from nonebot.rule import Rule
 
-require('nonebot_plugin_uninfo')
 from nonebot_plugin_uninfo import Uninfo, SupportScope
+
+from .Config import config
 
 
 def is_message_group(session: Uninfo):

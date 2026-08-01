@@ -9,8 +9,8 @@ from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Config import config
 from Scripts.Globals import render_template
-from Scripts.Utils import turn_message_text
 from Scripts.Rules import command_group_rule
+from Scripts.Utils import turn_message_text
 
 __plugin_meta__ = PluginMetadata(
     name='今日人品',

@@ -23,8 +23,8 @@ class CacheManager:
             avatar_path = self.get_path(name)
             if avatar_path.is_file():
                 cached[name] = str(avatar_path)
-            else:
-                missing.append(name)
+                continue
+            missing.append(name)
         return cached, missing
 
     async def save_all(self, files: dict[str, bytes]) -> dict[str, str]:

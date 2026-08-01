@@ -76,7 +76,7 @@ mode = false
 # 生成图片的背景，即 css 中的 background-image 属性。
 # https://developer.mozilla.org/zh-CN/docs/Web/CSS/background-image
 # 支持 random 函数，传入一个本地目录，返回目录下的一张随机图片（无需再用url包裹）
-background = 'random("./Resources/Backgrounds/")'
+background = "random(\"./Resources/Backgrounds/\")"
 
 [ai]
 # 是否启用 AI 功能。

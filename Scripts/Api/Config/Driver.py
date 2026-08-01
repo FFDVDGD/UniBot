@@ -18,10 +18,7 @@ def parse_driver(driver_value: str | list | None) -> list[str]:
     '''将 DRIVER 配置解析为驱动列表'''
     if not driver_value:
         return [BASE_DRIVER]
-    if isinstance(driver_value, list):
-        items = driver_value
-    else:
-        items = driver_value.split('+')
+    items = driver_value if isinstance(driver_value, list) else driver_value.split('+')
     drivers = []
     for item in items:
         item = item.strip()

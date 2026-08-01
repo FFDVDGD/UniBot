@@ -73,11 +73,34 @@ class Config(BaseModel):
         return self
 
 
-with open(TOML_PATH, 'r', encoding='utf-8') as f:
-    toml_data = tomlkit.parse(f.read())
+toml_data = tomlkit.parse(TOML_PATH.read_text('Utf-8'))
 
 merged = get_plugin_config(Config).model_dump()
 merged.update(toml_data)
 
 config = Config.model_validate(merged)
+
+
+def _merge_toml(content: str) -> dict:
+    '''解析 Config.toml 文本内容，并合并到模型默认值上'''
+    toml_data = tomlkit.parse(content)
+    merged = get_plugin_config(Config).model_dump()
+    merged.update(toml_data)
+    return merged
+
+
+def validate_config_content(content: str) -> str | None:
+    '''校验 Config.toml 文本内容是否可被正确加载，返回错误信息（合法返回 None）'''
+    try:
+        Config.model_validate(_merge_toml(content))
+    except Exception as error:
+        return f'配置校验失败：{error}'
+    return None
+
+
+def reload_config():
+    '''从磁盘重新读取 Config.toml，热更新全局 config 对象（保持对象引用不变）'''
+    updated_config = Config.model_validate(_merge_toml(TOML_PATH.read_text('Utf-8')))
+    for field_name in Config.model_fields:
+        setattr(config, field_name, getattr(updated_config, field_name))
 

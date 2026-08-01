@@ -1,8 +1,9 @@
 import time
 
+from fastapi import APIRouter, BackgroundTasks, Depends
+
 import nonebot
 import psutil
-from fastapi import APIRouter, BackgroundTasks, Depends
 
 from Scripts.Config import config
 from Scripts.Managers import data_manager, server_manager, version_manager

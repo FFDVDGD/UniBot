@@ -1,7 +1,6 @@
 import asyncio
-from pathlib import Path
 
-from fastapi import APIRouter, Response, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import FileResponse
 
 from Scripts.Config import config
@@ -30,7 +29,7 @@ async def get_players(
         all_items = [
             item for item in all_items
             if keyword_lower in item['user'].lower()
-            or any(keyword_lower in p.lower() for p in item['players'])
+            or any(keyword_lower in player_name.lower() for player_name in item['players'])
         ]
 
     total = len(all_items)
@@ -52,7 +51,6 @@ async def get_player_avatar(
     '''获取玩家头像：本地缓存优先，缺失时下载并落盘缓存，避免重复请求外部 CDN'''
     cached, _ = cache_manager.get_cached([name])
     if name in cached:
-        avatar_path = Path()
         return FileResponse(cached[name], media_type='image/png')
     result = await fetch_player_avatar(name, size)
     if result is None:

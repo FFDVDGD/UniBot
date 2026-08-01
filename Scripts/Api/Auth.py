@@ -1,8 +1,7 @@
+import jwt
 import asyncio
 from datetime import datetime, timedelta, timezone
-from json import dumps
 
-import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from nonebot.log import logger

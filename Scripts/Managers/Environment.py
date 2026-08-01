@@ -1,7 +1,8 @@
-import sys
-import tomlkit
+from json import JSONDecodeError, dumps, loads
 from pathlib import Path
-from json import JSONDecodeError, loads, dumps
+import sys
+
+import tomlkit
 
 from nonebot.log import logger
 
@@ -12,6 +13,9 @@ class EnvironmentManager:
 
     env_path: Path = Path('.env')
     pyproject_path: Path = Path('pyproject.toml')
+
+    # .env 中记录插件 pip 依赖的键名
+    ENV_DEPS_KEY = 'UNIBOT_PLUGIN_DEPS'
 
     # pyproject.toml 数据
     version: str = ''
@@ -25,10 +29,12 @@ class EnvironmentManager:
         self.load_pyproject()
 
     def load_env(self):
-        '''加载 .env 配置文件'''
+        '''加载 .env 配置文件（可重复调用，会重置内存缓存）'''
         if not self.env_path.exists():
             logger.error('没有找到配置文件！请重新下载后重试。')
             sys.exit(1)
+        self.mapping = []
+        self.environment = {}
         file_content = self.env_path.read_text('Utf-8')
         for line in file_content.split('\n'):
             line = line.strip()
@@ -50,8 +56,7 @@ class EnvironmentManager:
         if not self.pyproject_path.exists():
             logger.error('没有找到 pyproject.toml！请重新下载后重试。')
             sys.exit(1)
-        with self.pyproject_path.open('r', encoding='utf-8') as file:
-            self.pyproject_data = tomlkit.parse(file.read())
+        self.pyproject_data = tomlkit.parse(self.pyproject_path.read_text('Utf-8'))
         self.update_pyproject_cache()
         logger.success('加载 pyproject.toml 完毕！')
 
@@ -89,6 +94,12 @@ class EnvironmentManager:
         self.env_path.write_text('\n'.join(lines), encoding='Utf-8')
         logger.success('写入配置成功！手动重启机器人后修改才会生效。')
 
+    def write_env_raw(self, content: str):
+        '''以原始文本内容写回 .env 文件，并同步内存缓存'''
+        self.env_path.write_text(content, encoding='Utf-8')
+        self.load_env()
+        logger.success('写入配置成功！手动重启机器人后修改才会生效。')
+
     # ===== pyproject.toml 操作 =====
 
     def read_pyproject(self) -> dict:
@@ -97,8 +108,7 @@ class EnvironmentManager:
 
     def write_pyproject(self, data: dict):
         '''更新缓存并写回 pyproject.toml（保留注释和格式）'''
-        with self.pyproject_path.open('w', encoding='utf-8') as file:
-            file.write(tomlkit.dumps(data))
+        self.pyproject_path.write_text(tomlkit.dumps(data), encoding='Utf-8')
         self.pyproject_data = data
         self.update_pyproject_cache()
 
@@ -121,27 +131,33 @@ class EnvironmentManager:
         ]
         self.write_pyproject(data)
 
+    @staticmethod
+    def _package_base(dependency: str) -> str:
+        '''从依赖字符串中提取包名（去除 extras 与版本约束）'''
+        for separator in ('[', '>', '<', '~', '!', '='):
+            if separator in dependency:
+                dependency = dependency.split(separator, 1)[0]
+        return dependency.strip()
+
+    def get_dependencies(self) -> list[str]:
+        '''获取 .env 中登记的插件依赖列表'''
+        dependencies = self.environment.get(self.ENV_DEPS_KEY, [])
+        return list(dependencies) if isinstance(dependencies, list) else []
+
     def remove_dependency(self, package: str):
-        '''从 pyproject.toml 的 dependencies 中移除指定包'''
-        data = self.read_pyproject()
-        dependencies = data.get('project', {}).get('dependencies', [])
-        data['project']['dependencies'] = [
-            dep for dep in dependencies
-            if dep.split('[')[0].split('>=')[0].split('<')[0].split('~')[0].split('!=')[0].strip() != package
-        ]
-        self.write_pyproject(data)
+        '''从 .env 的插件依赖列表中移除指定包'''
+        dependencies = self.get_dependencies()
+        updated = [dependency for dependency in dependencies if self._package_base(dependency) != package]
+        if len(updated) != len(dependencies):
+            self.update_env({self.ENV_DEPS_KEY: updated})
 
     def add_dependency(self, package: str):
-        '''向 pyproject.toml 的 dependencies 中添加包（不重复）'''
-        data = self.read_pyproject()
-        dependencies = data.setdefault('project', {}).setdefault('dependencies', [])
-        existing = {
-            dep.split('[')[0].split('>=')[0].split('<')[0].split('~')[0].split('!=')[0].strip()
-            for dep in dependencies
-        }
-        if package not in existing:
+        '''向 .env 的插件依赖列表中添加包（不重复）'''
+        dependencies = self.get_dependencies()
+        package_bases = {self._package_base(dependency) for dependency in dependencies}
+        if self._package_base(package) not in package_bases:
             dependencies.append(package)
-            self.write_pyproject(data)
+            self.update_env({self.ENV_DEPS_KEY: dependencies})
 
     def add_plugin(self, module_name: str) -> bool:
         '''添加插件，返回是否成功（False 表示已存在）'''
@@ -175,14 +191,17 @@ class EnvironmentManager:
         '''更新 pyproject.toml 中插件的启用状态。'''
         data = self.read_pyproject()
         plugins = data.get('tool', {}).get('nonebot', {}).get('plugins', [])
+        plugin_found = False
         for index, plugin in enumerate(plugins):
             if plugin == module_name:
                 plugins[index] = {'module_name': module_name, 'enabled': enabled}
+                plugin_found = True
                 break
             if isinstance(plugin, dict) and plugin.get('module_name') == module_name:
                 plugin['enabled'] = enabled
+                plugin_found = True
                 break
-        else:
+        if not plugin_found:
             plugins.append({'module_name': module_name, 'enabled': enabled})
         data['tool']['nonebot']['plugins'] = plugins
         self.write_pyproject(data)
