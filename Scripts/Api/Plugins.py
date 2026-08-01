@@ -102,7 +102,7 @@ async def get_market(
 
 @router.post('/market/install', summary='安装插件')
 async def install_plugin(body: InstallPluginRequest, current_user: dict = Depends(require_role('admin'))):
-    '''从市场安装插件（pip 安装并登记，重启后生效）'''
+    '''从市场安装插件（登记依赖，重启后由 Watchdog 自动安装）'''
     plugin = await find_market_plugin(body.name)
     if not plugin:
         return {'code': 404, 'data': None, 'message': '市场中未找到该插件'}
@@ -116,7 +116,7 @@ async def install_plugin(body: InstallPluginRequest, current_user: dict = Depend
 
 @router.post('/market/upgrade', summary='升级插件')
 async def upgrade_plugin(body: UpgradePluginRequest, current_user: dict = Depends(require_role('admin'))):
-    '''升级已安装插件（重启后生效）'''
+    '''升级已安装插件（更新登记，重启后由 Watchdog 自动更新）'''
     plugin = await find_market_plugin(body.name)
     if not plugin:
         return {'code': 404, 'data': None, 'message': '市场中未找到该插件'}
@@ -157,7 +157,7 @@ async def disable_plugin(name: str, current_user: dict = Depends(require_role('a
 
 @router.delete('/{name}', summary='卸载插件')
 async def uninstall_plugin(name: str, current_user: dict = Depends(require_role('admin'))):
-    '''卸载外部插件：pip 卸载并移除 pyproject 登记（重启后生效）'''
+    '''卸载外部插件：移除 pyproject 登记，重启后由 Watchdog 自动卸载'''
     plugin = plugin_manager.get_plugin_detail(name)
     if not plugin:
         return {'code': 404, 'data': None, 'message': '插件不存在'}

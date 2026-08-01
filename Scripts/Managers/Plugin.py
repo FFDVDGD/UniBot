@@ -1,5 +1,3 @@
-import asyncio
-import sys
 import time
 
 import nonebot
@@ -18,7 +16,6 @@ class PluginManager:
 
     market_cache: list = []
     market_cache_time: float = 0
-    pip_lock = asyncio.Lock()
 
     def load(self):
         '''记录插件管理器已完成初始化。'''
@@ -120,68 +117,35 @@ class PluginManager:
         logger.success(f'刷新插件市场数据成功！共收录 {len(self.market_cache)} 个插件。')
         return self.market_cache
 
-    @staticmethod
-    async def _run_pip(*arguments: str) -> tuple[bool, str]:
-        '''执行 pip 命令，返回 (是否成功, 输出摘要)'''
-        command = [sys.executable, '-m', 'pip', '--disable-pip-version-check', *arguments]
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-            )
-            output, _ = await process.communicate()
-        except Exception as error:
-            logger.warning(f'执行 pip 命令失败：{error}')
-            return False, str(error)
-        text = output.decode('Utf-8', errors='replace').strip()
-        summary = '\n'.join(text.splitlines()[-5:])
-        return process.returncode == 0, summary
-
     async def install(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
-        '''从市场安装插件：pip 安装 → 登记依赖 → 注册插件，返回 (是否成功, 提示信息)'''
-        async with self.pip_lock:
-            from Scripts.Managers import environment_manager
+        '''从市场安装插件：登记依赖并注册插件，重启后由 Watchdog 自动 uv sync 安装'''
+        from Scripts.Managers import environment_manager
 
-            package = f'{project_link}=={version}' if version else project_link
-            success, message = await self._run_pip('install', package)
-            if not success:
-                logger.warning(f'安装插件 {project_link} 失败：{message}')
-                return False, f'安装失败：{message}'
-            environment_manager.add_dependency(package)
-            environment_manager.add_plugin(module_name)
-            logger.success(f'安装插件 {project_link} 成功！')
-            return True, '安装成功，重启后生效'
+        package = f'{project_link}=={version}' if version else project_link
+        environment_manager.add_dependency(package)
+        environment_manager.add_plugin(module_name)
+        logger.success(f'登记插件 {project_link} 成功！')
+        return True, '安装成功，重启后生效'
 
     async def upgrade(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
-        '''升级市场插件：pip 升级并更新依赖登记，返回 (是否成功, 提示信息)'''
-        async with self.pip_lock:
-            from Scripts.Managers import environment_manager
+        '''升级市场插件：更新依赖登记并确保注册，重启后由 Watchdog 自动 uv sync 更新'''
+        from Scripts.Managers import environment_manager
 
-            package = f'{project_link}=={version}' if version else project_link
-            success, message = await self._run_pip('install', '--upgrade', package)
-            if not success:
-                logger.warning(f'升级插件 {project_link} 失败：{message}')
-                return False, f'升级失败：{message}'
-            environment_manager.remove_dependency(project_link)
-            environment_manager.add_dependency(package)
-            environment_manager.set_plugin_enabled(module_name, True)
-            logger.success(f'升级插件 {project_link} 成功！')
-            return True, '升级成功，重启后生效'
+        package = f'{project_link}=={version}' if version else project_link
+        environment_manager.remove_dependency(project_link)
+        environment_manager.add_dependency(package)
+        environment_manager.set_plugin_enabled(module_name, True)
+        logger.success(f'登记升级插件 {project_link} 成功！')
+        return True, '升级成功，重启后生效'
 
     async def uninstall(self, project_link: str, module_name: str) -> tuple[bool, str]:
-        '''卸载市场插件：pip 卸载并移除登记，返回 (是否成功, 提示信息)'''
-        async with self.pip_lock:
-            from Scripts.Managers import environment_manager
+        '''卸载市场插件：移除登记，重启后由 Watchdog 自动 uv sync 卸载'''
+        from Scripts.Managers import environment_manager
 
-            success, message = await self._run_pip('uninstall', '-y', project_link)
-            # 无论卸载结果如何，都清理 pyproject.toml 中的登记
-            environment_manager.remove_plugin(module_name)
-            environment_manager.remove_dependency(project_link)
-            if not success:
-                logger.warning(f'卸载插件 {project_link} 失败：{message}')
-                return False, f'卸载失败：{message}'
-            logger.success(f'卸载插件 {project_link} 成功！')
-            return True, '卸载成功，重启后生效'
+        environment_manager.remove_plugin(module_name)
+        environment_manager.remove_dependency(project_link)
+        logger.success(f'登记卸载插件 {project_link} 成功！')
+        return True, '卸载成功，重启后生效'
+
 
 plugin_manager = PluginManager()

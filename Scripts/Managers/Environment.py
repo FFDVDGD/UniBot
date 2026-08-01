@@ -14,9 +14,6 @@ class EnvironmentManager:
     env_path: Path = Path('.env')
     pyproject_path: Path = Path('pyproject.toml')
 
-    # .env 中记录插件 pip 依赖的键名
-    ENV_DEPS_KEY = 'UNIBOT_PLUGIN_DEPS'
-
     # pyproject.toml 数据
     version: str = ''
     webui_version: str = ''
@@ -140,24 +137,28 @@ class EnvironmentManager:
         return dependency.strip()
 
     def get_dependencies(self) -> list[str]:
-        '''获取 .env 中登记的插件依赖列表'''
-        dependencies = self.environment.get(self.ENV_DEPS_KEY, [])
-        return list(dependencies) if isinstance(dependencies, list) else []
+        '''获取 pyproject.toml 中登记的依赖列表'''
+        dependencies = self.read_pyproject().get('project', {}).get('dependencies', [])
+        return list(dependencies)
 
     def remove_dependency(self, package: str):
-        '''从 .env 的插件依赖列表中移除指定包'''
-        dependencies = self.get_dependencies()
-        updated = [dependency for dependency in dependencies if self._package_base(dependency) != package]
-        if len(updated) != len(dependencies):
-            self.update_env({self.ENV_DEPS_KEY: updated})
+        '''从 pyproject.toml 的 dependencies 中移除指定包'''
+        data = self.read_pyproject()
+        dependencies = data.get('project', {}).get('dependencies', [])
+        data['project']['dependencies'] = [
+            dependency for dependency in dependencies
+            if self._package_base(dependency) != package
+        ]
+        self.write_pyproject(data)
 
     def add_dependency(self, package: str):
-        '''向 .env 的插件依赖列表中添加包（不重复）'''
-        dependencies = self.get_dependencies()
+        '''向 pyproject.toml 的 dependencies 中添加包（不重复）'''
+        data = self.read_pyproject()
+        dependencies = data.setdefault('project', {}).setdefault('dependencies', [])
         package_bases = {self._package_base(dependency) for dependency in dependencies}
         if self._package_base(package) not in package_bases:
             dependencies.append(package)
-            self.update_env({self.ENV_DEPS_KEY: dependencies})
+            self.write_pyproject(data)
 
     def add_plugin(self, module_name: str) -> bool:
         '''添加插件，返回是否成功（False 表示已存在）'''
