@@ -6,6 +6,7 @@ from nonebot_plugin_alconna.uniseg import Image, UniMessage
 from Scripts.Config import config
 from Scripts.Globals import render_template
 from Scripts.Managers import version_manager
+from Scripts.Messages import messages
 from Scripts.Rules import command_group_rule
 from Scripts.Utils import turn_message_text
 
@@ -51,17 +52,25 @@ async def handle_check():
 
 
 async def about_handler():
-    yield f'当前版本为 {version_manager.version}，{'发现新版本，请及时更新！' if version_manager.check_update() else '已是最新版本！'}'
-    yield '\n项目文档：https://github.com/MineJPGcraft/UniBot/blob/main/README.md'
-    yield '项目地址 https://github.com/MineJPGcraft/UniBot'
-    yield '欢迎加入 QQ 交流群 962802248，对这个项目感兴趣不妨点个 Star 吧！'
+    if version_manager.check_update():
+        yield messages.commands.about.version_with_update.format(version=version_manager.version)
+        yield messages.commands.about.document_line
+        yield messages.commands.about.repo_line
+        yield messages.commands.about.invite_line
+        return
+    yield messages.commands.about.version_latest.format(version=version_manager.version)
+    yield messages.commands.about.document_line
+    yield messages.commands.about.repo_line
+    yield messages.commands.about.invite_line
 
 
 async def check_handler():
     if await version_manager.fetch_latest():
         if version_manager.check_update():
-            yield f'发现新版本 {version_manager.latest_version}，当前版本为 {version_manager.version}，请及时更新！'
+            yield messages.commands.about.check_has_update.format(
+                latest=version_manager.latest_version, version=version_manager.version
+            )
             return
-        yield f'当前已是最新版本 {version_manager.version}！'
+        yield messages.commands.about.check_latest.format(version=version_manager.version)
         return
-    yield '检测失败，请检查网络稍后再试！'
+    yield messages.commands.about.check_failed

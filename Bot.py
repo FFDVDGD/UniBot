@@ -72,11 +72,11 @@ def main():
     '''初始化并运行机器人进程。'''
     # NoneBot 初始化必须在本地模块导入之前完成。
     from Scripts.Config import config as bot_config
-    from Scripts.Managers import environment_manager, webui_manager
+    from Scripts.Managers import config_manager, webui_manager
 
-    environment_manager.init()
-    register_adapters(driver, environment_manager.nonebot_config.get('adapters', []))
-    load_plugins(environment_manager.nonebot_config.get('plugins', []))
+    config_manager.init()
+    register_adapters(driver, config_manager.nonebot_config.get('adapters', []))
+    load_plugins(config_manager.nonebot_config.get('plugins', []))
 
     if bot_config.webui.enabled:
         webui_manager.mount(nonebot.get_app())

@@ -3,7 +3,7 @@ import asyncio
 from nonebot.log import logger
 
 from Scripts.Network import request
-from .Environment import environment_manager
+from .Config import config_manager
 
 LATEST_RELEASE_API = 'https://api.github.com/repos/MineJPGcraft/UniBot/releases/latest'
 
@@ -22,7 +22,7 @@ class VersionManager:
 
     async def init(self):
         '''记录当前版本，并在后台异步拉取最新版本'''
-        self.version = environment_manager.version
+        self.version = config_manager.version
         logger.info(f'监测到当前为 {self.version} 版本。')
         asyncio.create_task(self.fetch_latest())
 

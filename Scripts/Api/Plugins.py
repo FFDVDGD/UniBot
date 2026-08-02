@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
-from Scripts.Managers import environment_manager, plugin_manager
+from Scripts.Managers import config_manager, plugin_manager
 from .Auth import get_current_user, require_role
 from .Schemas import InstallPluginRequest, UpgradePluginRequest
 
@@ -29,12 +29,12 @@ async def find_market_plugin(name: str) -> dict | None:
 def installed_state(items: list[dict]) -> list[dict]:
     '''标注市场插件是否已安装 / 已登记'''
     installed_packages = {
-        environment_manager._package_base(dependency)
-        for dependency in environment_manager.get_dependencies()
+        config_manager._package_base(dependency)
+        for dependency in config_manager.get_dependencies()
     }
     registered_modules = {
         plugin.get('module_name') if isinstance(plugin, dict) else plugin
-        for plugin in environment_manager.nonebot_config.get('plugins', [])
+        for plugin in config_manager.nonebot_config.get('plugins', [])
     }
     result = []
     for item in items:
@@ -169,8 +169,8 @@ async def uninstall_plugin(name: str, current_user: dict = Depends(require_role(
     project_link = market_plugin.get('project_link', '') if market_plugin else ''
     if not project_link:
         # 未收录于市场时仅移除 pyproject 登记
-        environment_manager.remove_plugin(module_name)
-        environment_manager.remove_dependency(module_name)
+        config_manager.remove_plugin(module_name)
+        config_manager.remove_dependency(module_name)
         return {'code': 0, 'data': None, 'message': '已移除登记，重启后生效'}
     success, message = await plugin_manager.uninstall(project_link, module_name)
     if not success:

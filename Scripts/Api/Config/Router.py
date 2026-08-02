@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Request
 import tomlkit
 
 from Scripts.Config import TOML_PATH, Config, config, reload_config, validate_config_content
-from Scripts.Managers import environment_manager
+from Scripts.Managers import config_manager
 
 from .Adapters import ADAPTER_CATALOG, PROTECTED_ADAPTER_MODULES
 from .Driver import compute_redundant_drivers, format_driver, merge_driver, shrink_driver
@@ -103,6 +103,39 @@ async def patch_config(request: Request, current_user: dict = Depends(require_ro
     return {'code': 0, 'data': None, 'message': 'ok'}
 
 
+# ===== Messages.toml 消息文本 =====
+
+
+@router.get('/messages', summary='获取消息文本配置')
+async def get_messages(current_user: dict = Depends(get_current_user)):
+    '''获取 Messages.toml 的原始文本内容'''
+    return {
+        'code': 0,
+        'data': {
+            'messages_toml': config_manager.read_messages_raw(),
+        },
+        'message': 'ok',
+    }
+
+
+@router.patch('/messages', summary='保存消息文本配置')
+async def patch_messages(request: Request, current_user: dict = Depends(require_role('admin'))):
+    '''以原始文本方式保存 Messages.toml 并热更新'''
+    try:
+        patch_data = await request.json()
+    except Exception:
+        return {'code': 1, 'data': None, 'message': '请求体格式错误'}
+
+    content = patch_data.get('messages_toml')
+    if content is None:
+        return {'code': 1, 'data': None, 'message': '未提供需要保存的消息文本'}
+    try:
+        config_manager.write_messages_raw(content)
+    except Exception as error:
+        return {'code': 400, 'data': None, 'message': f'消息文本保存失败：{error}'}
+    return {'code': 0, 'data': None, 'message': '消息文本已保存并生效'}
+
+
 # ===== .env 环境变量配置 =====
 
 
@@ -112,7 +145,7 @@ async def get_env_config(current_user: dict = Depends(get_current_user)):
     return {
         'code': 0,
         'data': {
-            'values': environment_manager.read_env(),
+            'values': config_manager.read_env(),
             'schema': ENV_SCHEMA,
             'groups': ENV_GROUPS,
         },
@@ -127,7 +160,7 @@ async def patch_env_config(request: Request, current_user: dict = Depends(requir
         patch_data = await request.json()
     except Exception:
         return {'code': 1, 'data': None, 'message': '请求体格式错误'}
-    environment_manager.update_env(patch_data)
+    config_manager.update_env(patch_data)
     return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}
 
 
@@ -141,7 +174,7 @@ async def get_raw_config(current_user: dict = Depends(get_current_user)):
         'code': 0,
         'data': {
             'config_toml': TOML_PATH.read_text('Utf-8'),
-            'env': environment_manager.env_path.read_text('Utf-8'),
+            'env': config_manager.env_path.read_text('Utf-8'),
         },
         'message': 'ok',
     }
@@ -166,7 +199,7 @@ async def patch_raw_config(request: Request, current_user: dict = Depends(requir
 
     env_content = patch_data.get('env')
     if env_content is not None:
-        environment_manager.write_env_raw(env_content)
+        config_manager.write_env_raw(env_content)
         hints.append('.env 已保存，重启后生效')
 
     if not hints:
@@ -180,7 +213,7 @@ async def patch_raw_config(request: Request, current_user: dict = Depends(requir
 @router.get('/nonebot', summary='获取 NoneBot 插件与适配器列表')
 async def get_nonebot_config(current_user: dict = Depends(get_current_user)):
     '''获取 pyproject.toml 中的 NoneBot 适配器和插件配置'''
-    project_data = environment_manager.read_pyproject()
+    project_data = config_manager.read_pyproject()
     nonebot_section = project_data.get('tool', {}).get('nonebot', {})
     adapters = [
         {**adapter, 'removable': adapter.get('module_name') not in PROTECTED_ADAPTER_MODULES}
@@ -191,8 +224,8 @@ async def get_nonebot_config(current_user: dict = Depends(get_current_user)):
         adapter.get('module_name') for adapter in adapters
     }
     installed_packages = {
-        environment_manager._package_base(dependency)
-        for dependency in environment_manager.get_dependencies()
+        config_manager._package_base(dependency)
+        for dependency in config_manager.get_dependencies()
     }
     catalog = [
         {
@@ -220,8 +253,8 @@ async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depe
     adapter = next((item for item in ADAPTER_CATALOG if item['id'] == body.adapter_id), None)
     if adapter is None:
         return {'code': 404, 'data': None, 'message': '适配器不在内置目录中'}
-    environment_manager.add_dependency(adapter['package'])
-    environment_manager.add_adapter(adapter['name'], adapter['module_name'])
+    config_manager.add_dependency(adapter['package'])
+    config_manager.add_adapter(adapter['name'], adapter['module_name'])
     new_driver, added_drivers = merge_driver(adapter.get('drivers', []))
     message = '依赖和注册信息已写入（重启时自动同步）'
     if added_drivers:
@@ -232,7 +265,7 @@ async def install_adapter(body: InstallAdapterRequest, current_user: dict = Depe
 @router.post('/nonebot/adapters', summary='添加适配器')
 async def add_adapter(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
     '''向 pyproject.toml 添加适配器'''
-    if environment_manager.add_adapter(body.name, body.module_name):
+    if config_manager.add_adapter(body.name, body.module_name):
         return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}
     return {'code': 1, 'data': None, 'message': '该适配器已存在'}
 
@@ -242,7 +275,7 @@ async def remove_adapter(body: NoneBotItemRequest, current_user: dict = Depends(
     '''从 pyproject.toml 移除适配器注册（不删除依赖包）'''
     if body.module_name in PROTECTED_ADAPTER_MODULES:
         return {'code': 1, 'data': None, 'message': 'Minecraft 适配器是 UniBot 核心依赖，禁止卸载'}
-    environment_manager.remove_adapter(body.module_name)
+    config_manager.remove_adapter(body.module_name)
     return {'code': 0, 'data': None, 'message': '适配器已禁用（重启后生效）'}
 
 
@@ -257,8 +290,8 @@ async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = 
     )
     if adapter is None:
         return {'code': 1, 'data': None, 'message': '该适配器不在内置目录中，无法安全卸载依赖'}
-    environment_manager.remove_adapter(body.module_name)
-    environment_manager.remove_dependency(adapter['package'])
+    config_manager.remove_adapter(body.module_name)
+    config_manager.remove_dependency(adapter['package'])
     redundant = compute_redundant_drivers(body.module_name)
     new_driver, removed_drivers = shrink_driver(redundant)
     message = '适配器及其依赖记录已删除（重启时自动同步）'
@@ -270,7 +303,7 @@ async def uninstall_adapter(body: UninstallAdapterRequest, current_user: dict = 
 @router.post('/nonebot/plugins', summary='添加插件')
 async def add_plugin(body: NoneBotItemRequest, current_user: dict = Depends(require_role('admin'))):
     '''向 pyproject.toml 添加插件'''
-    if environment_manager.add_plugin(body.module_name):
+    if config_manager.add_plugin(body.module_name):
         return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}
     return {'code': 1, 'data': None, 'message': '该插件已存在'}
 
@@ -280,5 +313,5 @@ async def remove_plugin(body: NoneBotItemRequest, current_user: dict = Depends(r
     '''从 pyproject.toml 移除插件'''
     if body.module_name.startswith('Plugins.'):
         return {'code': 1, 'data': None, 'message': '内置插件不允许删除'}
-    environment_manager.remove_plugin(body.module_name)
+    config_manager.remove_plugin(body.module_name)
     return {'code': 0, 'data': None, 'message': 'ok（重启后生效）'}

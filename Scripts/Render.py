@@ -1,8 +1,9 @@
-import asyncio
+import re
+import time
 import html
 import json
 import logging
-import re
+import asyncio
 from io import BytesIO
 from pathlib import Path
 from random import choice
@@ -71,11 +72,14 @@ logger.debug('图片渲染器加载完毕！')
 
 
 def render(html: str, css: str) -> bytes:
+    start = time.time()
     renderer = Html2Pic(html, css)
     image = renderer.render()
     pil_image = image.to_pillow()
     buffer = BytesIO()
     pil_image.save(buffer, format='PNG', compress_level=1)
+    end = time.time()
+    logger.debug(f'图片渲染耗时：{end - start:.2f}秒')
     return buffer.getvalue()
 
 

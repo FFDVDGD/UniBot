@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 from nonebot.log import logger
 
 from Scripts.Network import github_download
-from .Environment import environment_manager
+from .Config import config_manager
 
 
 class WebUiManager:
@@ -21,7 +21,7 @@ class WebUiManager:
     @property
     def version(self) -> str:
         '''当前期望的 WebUI 版本（来自 pyproject.toml [unibot] webui_version）'''
-        return environment_manager.webui_version
+        return config_manager.webui_version
 
     def read_local_version(self) -> str:
         '''读取本地已下载的 WebUI 版本'''

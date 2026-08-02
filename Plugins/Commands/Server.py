@@ -5,6 +5,7 @@ from nonebot_plugin_alconna.uniseg import Image, UniMessage
 from Scripts.Config import config
 from Scripts.Globals import render_template
 from Scripts.Managers import server_manager
+from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 from Scripts.Rules import command_group_rule
 
@@ -35,7 +36,7 @@ async def handle():
 
 async def server_handler():
     if not server_manager.servers:
-        yield '当前没有已连接的服务器！'
+        yield messages.commands.server.no_server
         return
     for index, name in enumerate(server_manager.servers.keys()):
-        yield f'[{index}] {name}'
+        yield messages.commands.server.server_line.format(index=index, name=name)

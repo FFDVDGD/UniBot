@@ -8,6 +8,7 @@ from nonebot_plugin_alconna import UniMsg
 from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Config import config
+from Scripts.Messages import messages as bot_messages
 from Scripts.Utils import get_permission
 
 __plugin_meta__ = PluginMetadata(
@@ -30,9 +31,9 @@ async def handle_message(session: Uninfo, message: UniMsg):
     plain_text = message.extract_plain_text().strip()
     if plain_text in ('清空缓存', '清除缓存'):
         if not get_permission(session):
-            await matcher.finish('你没有权限执行此操作！')
+            await matcher.finish(bot_messages.commands.ai.no_permission)
         await clear()
-        await matcher.finish('缓存已清空！')
+        await matcher.finish(bot_messages.commands.ai.cache_cleared)
     if plain_text:
         messages.append({'role': 'user', 'content': plain_text})
     try:
@@ -40,9 +41,9 @@ async def handle_message(session: Uninfo, message: UniMsg):
             messages=messages, model=config.ai.model_name, temperature=0.3
         )
     except RateLimitError:
-        await matcher.finish('啊哦！你问的太快啦，我的脑袋转不过来了 TwT')
+        await matcher.finish(bot_messages.commands.ai.rate_limited)
     except BadRequestError as error:
-        await matcher.finish(f'啊哦！遇到错误：{error.message}')
+        await matcher.finish(bot_messages.commands.ai.error.format(error=error.message))
     response = completion.choices[0]
     if text := response.message.content:
         messages.append(dict(response.message))
@@ -50,7 +51,7 @@ async def handle_message(session: Uninfo, message: UniMsg):
         if len(messages) > MAX_HISTORY:
             messages[:] = [messages[0]] + messages[-(MAX_HISTORY - 1):]
         await matcher.finish(text)
-    await matcher.finish('呃？你在说什么，能不能重新说一下 T_T')
+    await matcher.finish(bot_messages.commands.ai.no_reply)
 
 
 async def clear():

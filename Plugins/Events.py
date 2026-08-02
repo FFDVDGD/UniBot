@@ -14,6 +14,7 @@ from nonebot_plugin_alconna.uniseg import UniMsg
 from Scripts.Config import config
 from Scripts.Globals import player_list_cache
 from Scripts.Managers import server_manager
+from Scripts.Messages import messages as message_config
 from Scripts.Rules import message_group_rule
 from Scripts.Utils import check_message, get_platform_name, send_message_to_groups
 
@@ -44,7 +45,7 @@ segment_mapping = {
 def message_to_text(message: UniMsg):
     '''将 UniMsg 转换为文本'''
     for segment in message:
-        logger.debug(segment)
+       print(segment)
     texts = [
         func(segment)
         for segment in message
@@ -78,12 +79,12 @@ async def handle_player_join(event: PlayerJoinEvent):
             if player not in player_list_cache[name]:
                 player_list_cache[name].append(player)
 
-    server_message = f'玩家 {player} 加入了游戏。'
-    group_message = f'玩家 {player} 加入了 [{name}] 服务器，喵～'
+    server_message = message_config.events.player_join.format(player=player)
+    group_message = message_config.events.player_join_group.format(player=player, server=name)
 
     if config.bot_prefix and player.upper().startswith(config.bot_prefix):
-        group_message = f'机器人 {player} 加入了 [{name}] 服务器。'
-        server_message = f'[{name}] 机器人 {player} 加入了游戏。'
+        group_message = message_config.events.fake_join_group.format(player=player, server=name)
+        server_message = message_config.events.fake_join_game.format(server=name, player=player)
 
     if config.sync_message_between_servers:
         await server_manager.broadcast(build_server_message(name, player, server_message), name)
@@ -103,12 +104,12 @@ async def handle_player_quit(event: PlayerQuitEvent):
         if name in player_list_cache and player in player_list_cache[name]:
             player_list_cache[name].remove(player)
 
-    server_message = f'玩家 {player} 离开了游戏。'
-    group_message = f'玩家 {player} 离开了 [{name}] 服务器，呜……'
+    server_message = message_config.events.player_quit.format(player=player)
+    group_message = message_config.events.player_quit_group.format(player=player, server=name)
 
     if config.bot_prefix and player.upper().startswith(config.bot_prefix):
-        server_message = f'机器人 {player} 离开了游戏。'
-        group_message = f'机器人 {player} 离开了 [{name}] 服务器。'
+        server_message = message_config.events.fake_quit_game.format(player=player)
+        group_message = message_config.events.fake_quit_group.format(player=player, server=name)
 
     if config.sync_message_between_servers:
         await server_manager.broadcast(build_server_message(name, player, server_message), name)
@@ -126,7 +127,7 @@ async def handle_player_death(event: PlayerDeathEvent):
     logger.debug(f'收到玩家死亡消息：{death_message}')
 
     if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):
-        broadcast_message = f'玩家 {player} 死亡了，呜……'
+        broadcast_message = message_config.events.player_death.format(player=player)
         if config.sync_message_between_servers:
             await server_manager.broadcast(build_server_message(name, player, broadcast_message), name)
         if config.broadcast_player:
@@ -147,10 +148,10 @@ async def handle_player_chat(event: PlayerChatEvent):
     if config.sync_all_game_message:
         if check_message(chat_message):
             logger.warning(f'检测到消息 {chat_message} 包含敏感词，已丢弃！')
-            await send_message_to_groups(f'检测到玩家 {player} 发送的消息包含敏感词，已丢弃！详情请看控制台。')
+            await send_message_to_groups(message_config.events.sensitive_group.format(player=player))
             await player_chat_watcher.finish()
 
-        await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
+        await send_message_to_groups(message_config.events.chat_forward.format(server=name, player=player, content=chat_message))
         await player_chat_watcher.finish()
 
     logger.debug(f'收到服务器消息：{chat_message}')
@@ -164,12 +165,12 @@ async def handle_player_chat(event: PlayerChatEvent):
     if server is None:
         await player_chat_watcher.finish()
     if not chat_message:
-        message = MessageSegment.text('请在指令后输入要发送的消息！', color='red')
+        message = MessageSegment.text(message_config.events.need_content, color='red')
     elif check_message(chat_message):
-        message = MessageSegment.text('检测到消息包含敏感词，已丢弃！', color='red')
+        message = MessageSegment.text(message_config.events.sensitive_reply, color='red')
     else:
-        await send_message_to_groups(f'[{name}] <{player}> {chat_message}')
-        message = MessageSegment.text('消息已发送！', color='green')
+        await send_message_to_groups(message_config.events.chat_forward.format(server=name, player=player, content=chat_message))
+        message = MessageSegment.text(message_config.events.sent_success, color='green')
     await server.send_private_msg(message=message, nickname=player)
 
 

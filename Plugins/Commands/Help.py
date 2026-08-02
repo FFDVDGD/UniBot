@@ -6,7 +6,8 @@ from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
 from Scripts.Config import config
 from Scripts.Globals import render_template
-from Scripts.Managers import environment_manager
+from Scripts.Managers import config_manager
+from Scripts.Messages import messages
 from Scripts.Rules import command_group_rule
 from Scripts.Utils import turn_message_text
 
@@ -85,7 +86,7 @@ def get_alconna(name: str) -> Alconna | None:
 def get_enabled_commands() -> list[Alconna]:
     '''获取 pyproject.toml 中已启用且成功注册的内置命令。'''
     commands = []
-    for plugin in environment_manager.nonebot_config.get('plugins', []):
+    for plugin in config_manager.nonebot_config.get('plugins', []):
         module_name = plugin if isinstance(plugin, str) else plugin.get('module_name', '')
         enabled = True if isinstance(plugin, str) else plugin.get('enabled', True)
         if enabled and module_name.startswith('Plugins.Commands.'):
@@ -114,7 +115,7 @@ def sub_usage(subcommand: Subcommand):
 
 
 def help_handler():
-    yield '命令列表：'
+    yield messages.commands.help.title
     for alconna in get_enabled_commands():
         usage = alconna.meta.usage or gen_usage(alconna)
         description = alconna.meta.description or ''
@@ -124,28 +125,28 @@ def help_handler():
             branch = '└─' if index == len(subcommands) - 1 else '├─'
             subcommand_description = f' — {subcommand.help_text}' if subcommand.help_text else ''
             yield f'    {branch} {subcommand.name}{subcommand_description}'
-    yield '\n注：<name> 代表必填的参数，<*name> 代表此参数可选。'
+    yield messages.commands.help.footnote
 
 
 def detailed_handler(name: str):
     alconna = get_alconna(name)
     if alconna is None or alconna not in get_enabled_commands():
-        yield f'命令 {name} 不存在或已被禁用！'
+        yield messages.commands.help.not_found.format(name=name)
         return
-    yield f'命令 {name} 的详细信息：'
-    yield f'    用法：{alconna.meta.usage or gen_usage(alconna)}'
+    yield messages.commands.help.detail_title.format(name=name)
+    yield f'    {messages.commands.help.detail_usage.format(usage=alconna.meta.usage or gen_usage(alconna))}'
     if alconna.meta.description:
-        yield f'    描述：{alconna.meta.description}'
+        yield f'    {messages.commands.help.detail_description.format(description=alconna.meta.description)}'
     if isinstance(alconna.args, Args):
         notices = [arg for arg in alconna.args if arg.notice]
         if notices:
-            yield '    参数：'
+            yield f'    {messages.commands.help.detail_args_title}'
             for arg in notices:
-                yield f'        {arg.name} — {arg.notice}'
+                yield f'        {messages.commands.help.arg_line.format(name=arg.name, notice=arg.notice)}'
     subcommands = [option for option in alconna.options if isinstance(option, Subcommand)]
     if not subcommands:
         return
-    yield '    子命令：'
+    yield f'    {messages.commands.help.detail_subcommands_title}'
     for index, subcommand in enumerate(subcommands):
         branch = '└─' if index == len(subcommands) - 1 else '├─'
         continuation = '    ' if index == len(subcommands) - 1 else '│   '
@@ -155,4 +156,4 @@ def detailed_handler(name: str):
             continue
         for arg in subcommand.args:
             if arg.notice:
-                yield f'        {continuation}    {arg.name} — {arg.notice}'
+                yield f'        {continuation}    {messages.commands.help.arg_line.format(name=arg.name, notice=arg.notice)}'

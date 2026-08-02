@@ -5,6 +5,7 @@ from nonebot_plugin_alconna import Command, Match
 
 from Scripts.Config import config
 from Scripts.Managers import server_manager
+from Scripts.Messages import messages
 from Scripts.Rules import command_group_rule
 from Scripts.Utils import get_permission, turn_message_text
 
@@ -23,9 +24,9 @@ matcher = (
 @matcher.handle()
 async def handle(session: Uninfo, server: Match[str], command: Match[list[str]]):
     if not get_permission(session):
-        await matcher.finish('缺少必要的管理员权限！')
+        await matcher.finish(messages.commands.command.no_permission)
     if not command.available:
-        await matcher.finish('参数不正确！请查看语法后再试。')
+        await matcher.finish(messages.commands.command.invalid_param)
     command_string = ' '.join(command.result)
     message = await turn_message_text(command_handler(server.result, command_string))
     await matcher.finish(message)
@@ -45,27 +46,29 @@ def parse_command(command: str):
 
 async def command_handler(server_flag, command):
     if not (parsed_command := parse_command(command)):
-        yield f'命令 {command} 已被禁止！'
+        yield messages.commands.command.command_forbidden.format(command=command)
         return
     if server_flag == '*':
         if not server_manager.servers:
-            yield '当前没有已连接的服务器，无法执行命令！'
+            yield messages.commands.command.no_server
             return
         for name, bot in server_manager.servers.items():
-            yield '已发送指令到所有服务器：'
+            yield messages.commands.command.send_all_title
             try:
                 result = await bot.send_rcon_command(command=parsed_command)
-                yield f'  [{name}] -> {result if result else '无返回值'}'
+                reply = result if result else messages.commands.command.no_return
+                yield messages.commands.command.send_result.format(name=name, result=reply)
             except Exception as error:
                 logger.warning(f'向服务器 [{name}] 发送指令失败：{error}')
-                yield f'  [{name}] -> 发送指令失败'
+                yield messages.commands.command.send_failed.format(name=name)
         return
     bot = server_manager.get_server(server_flag)
     if bot is None:
-        yield f'服务器 [{server_flag}] 不存在！请检查插件配置。'
+        yield messages.commands.command.server_not_found.format(server_flag=server_flag)
         return
     try:
         result = await bot.send_rcon_command(command=parsed_command)
-        yield f'命令已发送到服务器 [{bot.self_id}]！服务器回应：{result if result else '无返回值'}'
+        reply = result if result else messages.commands.command.no_return
+        yield messages.commands.command.send_success.format(server=bot.self_id, result=reply)
     except Exception as error:
-        yield f'向服务器 [{server_flag}] 发送指令失败：{error}'
+        yield messages.commands.command.send_error.format(server_flag=server_flag, error=error)

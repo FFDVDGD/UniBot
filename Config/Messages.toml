@@ -1,0 +1,133 @@
+# UniBot 消息文本配置
+# 本文件定义机器人对外发送的所有提示/播报文本，支持 {占位符} 格式化。
+# 修改后重启机器人生效；缺失必填项会导致启动失败，请勿删除已有键。
+#
+# 占位符说明（随具体消息不同，见各键注释）：
+#   {content}  消息内容    {server}  服务器名称
+#   {player}   玩家名称    {user}    用户 ID      {name} 用户名
+# ...
+
+[events]
+# 玩家事件与消息同步相关播报
+player_join = "玩家 {player} 加入了游戏。"
+player_join_group = "玩家 {player} 加入了 [{server}] 服务器，喵～"
+fake_join_game = "[{server}] 机器人 {player} 加入了游戏。"
+fake_join_group = "机器人 {player} 加入了 [{server}] 服务器。"
+player_quit = "玩家 {player} 离开了游戏。"
+player_quit_group = "玩家 {player} 离开了 [{server}] 服务器，呜……"
+fake_quit_game = "机器人 {player} 离开了游戏。"
+fake_quit_group = "机器人 {player} 离开了 [{server}] 服务器。"
+player_death = "玩家 {player} 死亡了，呜……"
+sensitive_group = "检测到玩家 {player} 发送的消息包含敏感词，已丢弃！详情请看控制台。"
+chat_forward = "[{server}] <{player}> {content}"
+sensitive_reply = "检测到消息包含敏感词，已丢弃！"
+need_content = "请在指令后输入要发送的消息！"
+sent_success = "消息已发送！"
+
+[commands.send]
+# 发送消息到服务器相关提示
+param_error = "参数错误，请检查命令格式！"
+sent = "已向服务器发送消息：{content}。"
+not_bound = "未找到你的玩家名称，请绑定后再试！"
+
+[commands.bound]
+# 白名单绑定相关提示
+invalid_name = "此玩家名称非法！玩家名称应只包含字母、数字、下划线且长度不超过 16 个字符。"
+already_bound = "你已经绑定了此白名单！"
+occupied = "此玩家名称已经绑定过了，请换一个名称！"
+server_offline = "当前没有已连接的服务器，绑定失败！请联系管理员连接后再试。"
+bound_success = "用户 {name}({user}) 已成功绑定白名单到 {player} 玩家。"
+too_many = "你绑定的玩家个数过多，绑定失败！"
+no_permission = "你没有权限执行此命令！"
+no_binding = "当前没有绑定任何玩家！"
+list_title = "白名单列表："
+not_bound_query = "用户 ({target_user}) 还没有绑定白名单！"
+query_result = "用户 ({target_user}) 绑定的白名单有 {players} 。"
+invalid_name_short = "玩家名称非法！玩家名称只能包含字母、数字、下划线且长度不超过 16 个字符。"
+server_offline_try = "当前没有已连接的服务器，请稍后再次尝试！"
+remove_success = "已移除白名单 {player_name}！"
+no_such_whitelist = "你没有绑定名为 {player_name} 的白名单！"
+remove_user_all = "已移除用户 ({target_user}) 绑定的所有白名单！"
+no_binding_self = "你还没有绑定白名单！"
+remove_self_all = "已移除所有绑定的白名单！"
+
+[commands.command]
+# 控制台命令相关提示
+no_permission = "缺少必要的管理员权限！"
+invalid_param = "参数不正确！请查看语法后再试。"
+command_forbidden = "命令 {command} 已被禁止！"
+no_server = "当前没有已连接的服务器，无法执行命令！"
+send_all_title = "已发送指令到所有服务器："
+send_result = "[{name}] -> {result}"
+no_return = "无返回值"
+send_failed = "[{name}] -> 发送指令失败"
+server_not_found = "服务器 [{server_flag}] 不存在！请检查插件配置。"
+send_success = "命令已发送到服务器 [{server}]！服务器回应：{result}"
+send_error = "向服务器 [{server_flag}] 发送指令失败：{error}"
+
+[commands.about]
+# 关于信息相关提示
+version_with_update = "当前版本为 {version}，发现新版本，请及时更新！"
+version_latest = "当前版本为 {version}，已是最新版本！"
+document_line = "项目文档：https://github.com/MineJPGcraft/UniBot/blob/main/README.md"
+repo_line = "项目地址 https://github.com/MineJPGcraft/UniBot"
+invite_line = "欢迎加入 QQ 交流群 962802248，对这个项目感兴趣不妨点个 Star 吧！"
+check_has_update = "发现新版本 {latest}，当前版本为 {version}，请及时更新！"
+check_latest = "当前已是最新版本 {version}！"
+check_failed = "检测失败，请检查网络稍后再试！"
+
+[commands.help]
+# 帮助信息相关提示
+title = "命令列表："
+footnote = "注：<name> 代表必填的参数，<*name> 代表此参数可选。"
+not_found = "命令 {name} 不存在或已被禁用！"
+detail_title = "命令 {name} 的详细信息："
+detail_usage = "用法：{usage}"
+detail_description = "描述：{description}"
+detail_args_title = "参数："
+detail_subcommands_title = "子命令："
+arg_line = "{name} — {notice}"
+
+[commands.list]
+# 在线玩家相关提示
+server_not_found = "没有找到已连接的 [{server}] 服务器！请检查编号或名称是否输入正确。"
+no_server = "当前没有已连接的服务器！"
+no_player = "没有玩家在线！"
+no_fake = "没有假人在线！"
+single_title = "===== {server} 玩家列表 ====="
+global_title = "====== 玩家列表 ======"
+server_divider = " -------- {name} --------"
+player_total = "当前在线人数共 {count} 人"
+player_section = "  ———— 玩家 ————"
+fake_section = "  ———— 假人 ————"
+
+[commands.luck]
+# 今日人品相关提示
+result = "你今天的人品为 {point}，{tips}"
+good = "今日宜：{thing}"
+bad = "今日忌：{thing}"
+tip_low = "啧……"
+tip_mid = "呜……"
+tip_high = "喵~"
+tip_max = "哇！"
+good_things = [
+    '造世吞（完美运行', '修机器（一修就好', '挖矿（挖到十钻石',
+    '造建筑（要啥都有', '钓鱼（钓到把神弓', '刷附魔（一发就中',
+]
+bad_things = [
+    '造世吞（直接放飞', '修机器（一修就炸', '挖矿（只挖到原石',
+    '造建筑（啥都没有', '钓鱼（全部是垃圾', '刷附魔（刷的垃圾',
+]
+
+[commands.server]
+# 服务器列表相关提示
+no_server = "当前没有已连接的服务器！"
+server_line = "[{index}] {name}"
+
+[commands.ai]
+# AI 对话相关提示
+no_permission = "你没有权限执行此操作！"
+cache_cleared = "缓存已清空！"
+rate_limited = "啊哦！你问的太快啦，我的脑袋转不过来了 TwT"
+error = "啊哦！遇到错误：{error}"
+no_reply = "呃？你在说什么，能不能重新说一下 T_T"

@@ -7,6 +7,7 @@ from nonebot_plugin_alconna.uniseg import Image, UniMessage
 from Scripts.Config import config
 from Scripts.Globals import render_template
 from Scripts.Managers import data_manager, server_manager
+from Scripts.Messages import messages
 from Scripts.Utils import check_player, get_permission
 from Scripts.Rules import command_group_rule
 
@@ -29,34 +30,34 @@ matcher = (
 async def handle_base(session: Uninfo, player: Match[str]):
     '''处理 .bound <player>'''
     if not player.available:
-        await matcher.finish('请输入要绑定的玩家名称！')
+        await matcher.finish(messages.commands.bound.invalid_name)
     message = await bound_handler(session, player.result)
     await matcher.finish(message)
 
 
 async def bound_handler(session: Uninfo, player: str):
     if not check_player(player):
-        return '此玩家名称非法！玩家名称应只包含字母、数字、下划线且长度不超过 16 个字符。'
+        return messages.commands.bound.invalid_name
     user = str(session.user.id)
     if user in data_manager.players and player in data_manager.players[user]:
-        return '你已经绑定了此白名单！'
+        return messages.commands.bound.already_bound
     if await data_manager.check_player_occupied(player):
-        return '此玩家名称已经绑定过了，请换一个名称！'
+        return messages.commands.bound.occupied
     if not server_manager.check_online():
-        return '当前没有已连接的服务器，绑定失败！请联系管理员连接后再试。'
+        return messages.commands.bound.server_offline
     if await data_manager.append_player(user, player):
         await server_manager.execute(f'{config.whitelist_command} add {player}')
-        return f'用户 {session.user.name or user}({user}) 已成功绑定白名单到 {player} 玩家。'
-    return '你绑定的玩家个数过多，绑定失败！'
+        return messages.commands.bound.bound_success.format(name=session.user.name or user, user=user, player=player)
+    return messages.commands.bound.too_many
 
 
 @matcher.assign('list')
 async def handle_list(session: Uninfo):
     '''处理 .bound list'''
     if not get_permission(session):
-        await matcher.finish('你没有权限执行此命令！')
+        await matcher.finish(messages.commands.bound.no_permission)
     if not data_manager.players:
-        await matcher.finish('当前没有绑定任何玩家！')
+        await matcher.finish(messages.commands.bound.no_binding)
     if config.image.mode:
         bindings = [
             {'user': user, 'players': players}
@@ -64,7 +65,7 @@ async def handle_list(session: Uninfo):
         ]
         image = await render_template('Bound', (600, 800), bindings=bindings)
         await matcher.finish(UniMessage(Image(raw=image)))
-    message = '白名单列表：\n' + '\n'.join(
+    message = messages.commands.bound.list_title + '\n' + '\n'.join(
         f'  {user} -> {'、'.join(players)}' for user, players in data_manager.players.items()
     )
     await matcher.finish(message)
@@ -77,8 +78,9 @@ async def handle_query(session: Uninfo, user_id: Match[At | str]):
     if isinstance(target_user, At):
         target_user = target_user.target
     if target_user not in data_manager.players:
-        await matcher.finish(f'用户 ({target_user}) 还没有绑定白名单！')
-    await matcher.finish(f'用户 ({target_user}) 绑定的白名单有 {'、'.join(data_manager.players[target_user])} 。')
+        await matcher.finish(messages.commands.bound.not_bound_query.format(target_user=target_user))
+    players = '、'.join(data_manager.players[target_user])
+    await matcher.finish(messages.commands.bound.query_result.format(target_user=target_user, players=players))
 
 
 @matcher.assign('remove')
@@ -90,7 +92,7 @@ async def handle_remove(session: Uninfo, player: Match[str]):
         await matcher.finish(await bound_remove_self_all(session))
     # .bound remove <QQ> - 管理员解绑用户
     if player.result != current_user and not get_permission(session):
-        await matcher.finish('你没有权限执行此命令！')
+        await matcher.finish(messages.commands.bound.no_permission)
     await matcher.finish(await bound_remove_user(player.result))
 
 
@@ -98,52 +100,52 @@ async def handle_remove(session: Uninfo, player: Match[str]):
 async def handle_append(session: Uninfo, user_id: At | str, player: str):
     '''处理 .bound append <user_id> <player>'''
     if not get_permission(session):
-        await matcher.finish('你没有权限执行此命令！')
+        await matcher.finish(messages.commands.bound.no_permission)
     message = await bound_append_handler(user_id.target if isinstance(user_id, At) else user_id, player)
     await matcher.finish(message)
 
 
 async def bound_append_handler(user: str, player: str):
     if not check_player(player):
-        return '玩家名称非法！玩家名称只能包含字母、数字、下划线且长度不超过 16 个字符。'
+        return messages.commands.bound.invalid_name_short
     if await data_manager.check_player_occupied(player):
-        return '此玩家名称已经绑定过了，请换一个名称！'
+        return messages.commands.bound.occupied
     if not server_manager.check_online():
-        return '当前没有已连接的服务器，绑定失败！请连接后再试。'
+        return messages.commands.bound.server_offline_try
     if await data_manager.append_player(user, player):
         await server_manager.execute(f'{config.whitelist_command} add {player}')
-        return f'用户 ({user}) 已绑定白名单到 {player} 玩家。'
-    return '你绑定的玩家个数过多，绑定失败！'
+        return messages.commands.bound.bound_success.format(name=user, user=user, player=player)
+    return messages.commands.bound.too_many
 
 
 async def bound_remove_player(session: Uninfo, player_name: str):
     if not server_manager.check_online():
-        return '当前没有已连接的服务器，请稍后再次尝试！'
+        return messages.commands.bound.server_offline_try
     user = str(session.user.id)
     if await data_manager.remove_player(user, player_name):
         await server_manager.execute(f'{config.whitelist_command} remove {player_name}')
-        return f'已移除白名单 {player_name}！'
-    return f'你没有绑定名为 {player_name} 的白名单！'
+        return messages.commands.bound.remove_success.format(player_name=player_name)
+    return messages.commands.bound.no_such_whitelist.format(player_name=player_name)
 
 
 async def bound_remove_user(target_user: str):
     if not server_manager.check_online():
-        return '当前没有已连接的服务器，请稍后再次尝试！'
+        return messages.commands.bound.server_offline_try
     bounded = await data_manager.remove_player(target_user)
     if not bounded:
-        return f'用户 ({target_user}) 还没有绑定白名单！'
+        return messages.commands.bound.not_bound_query.format(target_user=target_user)
     for player in bounded:
         await server_manager.execute(f'{config.whitelist_command} remove {player}')
-    return f'已移除用户 ({target_user}) 绑定的所有白名单！'
+    return messages.commands.bound.remove_user_all.format(target_user=target_user)
 
 
 async def bound_remove_self_all(session: Uninfo):
     if not server_manager.check_online():
-        return '当前没有已连接的服务器，请稍后再次尝试！'
+        return messages.commands.bound.server_offline_try
     user = str(session.user.id)
     bounded = await data_manager.remove_player(user)
     if not bounded:
-        return '你还没有绑定白名单！'
+        return messages.commands.bound.no_binding_self
     for player in bounded:
         await server_manager.execute(f'{config.whitelist_command} remove {player}')
-    return '已移除所有绑定的白名单！'
+    return messages.commands.bound.remove_self_all

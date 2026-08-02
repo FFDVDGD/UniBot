@@ -4,6 +4,7 @@ import nonebot
 from nonebot.log import logger
 
 from Scripts.Network import request
+from Scripts.Managers import config_manager
 
 
 class PluginManager:
@@ -23,10 +24,8 @@ class PluginManager:
 
     def _configured_plugins(self) -> list[dict]:
         '''获取 pyproject.toml 中登记的插件配置。'''
-        from Scripts.Managers import environment_manager
-
         configured_plugins = []
-        for plugin in environment_manager.nonebot_config.get('plugins', []):
+        for plugin in config_manager.nonebot_config.get('plugins', []):
             if isinstance(plugin, str):
                 configured_plugins.append({'module_name': plugin, 'enabled': True})
             elif plugin.get('module_name'):
@@ -92,9 +91,9 @@ class PluginManager:
         plugin = self.get_plugin_detail(name)
         if not plugin or not plugin['can_disable']:
             return False
-        from Scripts.Managers import environment_manager
+        from Scripts.Managers import config_manager
 
-        environment_manager.set_plugin_enabled(plugin['module_name'], enabled)
+        config_manager.set_plugin_enabled(plugin['module_name'], enabled)
         return True
 
     # ===== 插件市场 =====
@@ -119,31 +118,25 @@ class PluginManager:
 
     async def install(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
         '''从市场安装插件：登记依赖并注册插件，重启后由 Watchdog 自动 uv sync 安装'''
-        from Scripts.Managers import environment_manager
-
         package = f'{project_link}=={version}' if version else project_link
-        environment_manager.add_dependency(package)
-        environment_manager.add_plugin(module_name)
+        config_manager.add_dependency(package)
+        config_manager.add_plugin(module_name)
         logger.success(f'登记插件 {project_link} 成功！')
         return True, '安装成功，重启后生效'
 
     async def upgrade(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
         '''升级市场插件：更新依赖登记并确保注册，重启后由 Watchdog 自动 uv sync 更新'''
-        from Scripts.Managers import environment_manager
-
         package = f'{project_link}=={version}' if version else project_link
-        environment_manager.remove_dependency(project_link)
-        environment_manager.add_dependency(package)
-        environment_manager.set_plugin_enabled(module_name, True)
+        config_manager.remove_dependency(project_link)
+        config_manager.add_dependency(package)
+        config_manager.set_plugin_enabled(module_name, True)
         logger.success(f'登记升级插件 {project_link} 成功！')
         return True, '升级成功，重启后生效'
 
     async def uninstall(self, project_link: str, module_name: str) -> tuple[bool, str]:
         '''卸载市场插件：移除登记，重启后由 Watchdog 自动 uv sync 卸载'''
-        from Scripts.Managers import environment_manager
-
-        environment_manager.remove_plugin(module_name)
-        environment_manager.remove_dependency(project_link)
+        config_manager.remove_plugin(module_name)
+        config_manager.remove_dependency(project_link)
         logger.success(f'登记卸载插件 {project_link} 成功！')
         return True, '卸载成功，重启后生效'
 

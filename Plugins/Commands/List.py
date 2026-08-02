@@ -8,6 +8,7 @@ from nonebot_plugin_alconna.uniseg import Image, UniMessage
 from Scripts.Config import config
 from Scripts.Globals import player_list_cache, render_template
 from Scripts.Managers import cache_manager, server_manager
+from Scripts.Messages import messages
 from Scripts.Network import fetch_player_avatars
 from Scripts.Rules import command_group_rule
 from Scripts.Utils import turn_message_text
@@ -71,10 +72,10 @@ async def get_players(server_flag: str | None = None):
     if server_flag:
         server = server_manager.get_server(server_flag)
         if server is None:
-            return False, f'没有找到已连接的 [{server_flag}] 服务器！请检查编号或名称是否输入正确。'
+            return False, messages.commands.list.server_not_found.format(server=server_flag)
         return True, {server.self_id: await query_server_players(server, server.self_id)}
     if not server_manager.servers:
-        return False, '当前没有已连接的服务器！'
+        return False, messages.commands.list.no_server
     results = await asyncio.gather(
         *(query_server_players(server, name) for name, server in server_manager.servers.items())
     )
@@ -94,33 +95,34 @@ async def query_server_players(server, server_name: str):
 def list_handler(players: dict):
     '''将玩家列表数据格式化为文本消息（异步生成器）'''
     if not players:
-        yield '当前没有已连接的服务器！'
+        yield messages.commands.list.no_server
         return
     if len(players) == 1:
         server_name, players_data = next(iter(players.items()))
-        yield f'===== {server_name} 玩家列表 ====='
+        yield messages.commands.list.single_title.format(server=server_name)
         yield from format_players(players_data)
-        yield f'当前在线人数共 {sum(len(group) for group in players_data)} 人'
+        total = sum(len(group) for group in players_data)
+        yield messages.commands.list.player_total.format(count=total)
         return
     player_count = 0
-    yield '====== 玩家列表 ======'
+    yield messages.commands.list.global_title
     for name, players_data in players.items():
         player_count += sum(len(group) for group in players_data)
-        yield f' -------- {name} --------'
+        yield messages.commands.list.server_divider.format(name=name)
         yield from format_players(players_data)
-    yield f'当前在线人数共 {player_count} 人'
+    yield messages.commands.list.player_total.format(count=player_count)
 
 
 def format_players(players: list):
     '''格式化单个服务器的玩家分组为文本'''
     real_players, fake_players = players
     if config.bot_prefix:
-        yield '  ———— 玩家 ————'
-        yield '    ' + ('\n    '.join(real_players) if real_players else '没有玩家在线！')
-        yield '  ———— 假人 ————'
-        yield '    ' + ('\n    '.join(fake_players) if fake_players else '没有假人在线！') + '\n'
+        yield messages.commands.list.player_section
+        yield '    ' + ('\n    '.join(real_players) if real_players else messages.commands.list.no_player)
+        yield messages.commands.list.fake_section
+        yield '    ' + ('\n    '.join(fake_players) if fake_players else messages.commands.list.no_fake) + '\n'
         return
     if real_players:
         yield '    ' + '\n    '.join(real_players) + '\n'
         return
-    yield '  没有玩家在线！\n'
+    yield '  ' + messages.commands.list.no_player + '\n'
