@@ -40,6 +40,27 @@
 
 ---
 
+## 📸 效果展示
+
+### 🖥️ WebUI 管理面板
+
+| | |
+|---|---|
+| <p align="center"><img src=".github/images/shows/webui/dashboard.png"><br>仪表盘</p> | <p align="center"><img src=".github/images/shows/webui/server.png"><br>服务器管理</p> |
+| <p align="center"><img src=".github/images/shows/webui/config.png"><br>配置管理</p> | <p align="center"><img src=".github/images/shows/webui/adapters.png"><br>适配器管理</p> |
+| <p align="center"><img src=".github/images/shows/webui/plugins.png"><br>插件管理</p> | <p align="center"><img src=".github/images/shows/webui/log.png"><br>日志查看</p> |
+| <p align="center"><img src=".github/images/shows/webui/market.png"><br>插件市场</p> | |
+
+### 🎨 指令图片渲染
+
+指令输出渲染为精美图片，支持玩家头像与自定义背景：
+
+| | | |
+|---|---|---|
+| <p align="center"><img src=".github/images/shows/commands/about.png"><br>About 指令</p> | <p align="center"><img src=".github/images/shows/commands/list.png"><br>List 指令</p> | <p align="center"><img src=".github/images/shows/commands/help.png"><br>Help 指令</p> |
+
+---
+
 ## 📖 快速开始
 
 ### 前置要求
@@ -62,9 +83,9 @@
 
 脚本会自动完成以下操作：
 1. 检测并安装 [UV](https://docs.astral.sh/uv/) 包管理器
-2. 克隆 UniBot 仓库
-3. 询问是否启用 WebUI（选择 `y` 自动开启并安装额外依赖）
-4. 执行 `uv sync` 同步所有依赖
+2. 下载并解压指定版本的 UniBot 仓库
+3. 询问是否启用 WebUI（选择 `y` 自动将 `Config.toml` 中的 `[webui] enabled` 改为 `true`）
+4. 执行 `uv sync` 同步所有依赖（启用 WebUI 时附带 `--extra webui`）
 
 安装完成后运行机器人仅需 `uv run Watchdog.py`！
 
@@ -213,6 +234,17 @@ enabled = false
 keywords = { "看群公告里的 IP 地址。" = ["服务器在哪", "服务器地址"] }
 ```
 
+> 💡 **可选功能依赖**：以上任一功能启用前，建议先同步对应 extra 依赖：
+>
+> ```bash
+> # 图片渲染模式
+> uv sync --extra image --inexact
+> # 或 WebUI 管理面板
+> uv sync --extra webui --inexact
+> # 或 AI 对话
+> uv sync --extra ai --inexact
+> ```
+
 > 📖 完整配置项说明请参阅 `Config.toml` 与 `.env` 文件内注释。
 
 ## 🎯 功能一览
@@ -282,20 +314,24 @@ UniBot 内置基于 **Vue 3 + Vite** 构建的现代化 Web 管理面板，通�
 | **⚙️ 配置管理** | 可视化编辑 `Config.toml` 和 `.env` 配置，支持 Schema 校验与分组展示 |
 | **📋 服务器管理** | 查看所有连接服务器的状态、在线玩家，远程执行指令 |
 | **👥 玩家管理** | 管理白名单绑定关系，查看所有已绑定玩家 |
-| **🧩 插件管理** | 查看已加载插件列表及其状态 |
+| **🖥️ 服务器详情** | 单服在线玩家、状态详情，远程执行指令 |
+| **🛰️ 适配器 / 插件** | 查看已安装的平台适配器与已加载插件列表及其状态 |
+| **🙋 用户管理** | 管理 WebUI 登录账户与角色权限 |
 | **📄 日志查看** | 实时滚动查看机器人运行日志，支持分级筛选 |
-| **🔐 登录认证** | JWT + 密码认证，保障管理安全 |
+| **🔐 登录认证** | JWT + 密码认证（HttpOnly Cookie），保障管理安全 |
 
 **启用方式：**
 
-在 `Config.toml` 中设置：
+1. 在 `Config.toml` 中开启 WebUI：
 
 ```toml
 [webui]
 enabled = true
 ```
 
-启动机器人后，访问 `http://<你的IP>:<PORT>/webui`（默认 `http://127.0.0.1:8000/webui`）即可打开管理面板。首次登录需在 `Config.toml` 中设置 `[api]` 下的 `token` 和密码。
+2. 启动机器人。首次启动时，机器人会自动从 GitHub Releases 下载与当前版本匹配的 WebUI 静态资源（需联网，已就绪时自动跳过）。
+3. 浏览器访问 `http://<你的IP>:<PORT>/webui`（默认 `http://127.0.0.1:8000/webui`）。
+4. **首次访问请先完成初始化**：系统会自动引导你创建管理员账户（用户名 + 密码）。之后即可通过该账户登录管理面板，无需额外配置 Token。
 
 > ⚠️ WebUI 依赖额外包，请确保已执行 `uv sync --extra webui --inexact` 或 `pip install -e ".[webui]"`。
 
@@ -332,10 +368,11 @@ UniBot
 │   ├── Managers/
 │   │   ├── Data.py                 ← 数据持久化
 │   │   ├── Server.py               ← 服务器连接管理
-│   │   ├── Environment.py          ← 环境管理
+│   │   ├── WebUi.py                ← Web UI 静态资源管理
+│   │   ├── Plugin.py               ← 插件管理
 │   │   └── Version.py              ← 版本管理
 │   ├── Api/                        ← REST API 路由
-│   │   ├── Auth.py                 ← 登录认证
+│   │   ├── Auth.py                 ← 登录认证（JWT / Cookie）
 │   │   ├── Config.py               ← 配置管理
 │   │   ├── Players.py              ← 玩家管理
 │   │   ├── Servers.py              ← 服务器管理
@@ -343,7 +380,7 @@ UniBot
 │   │   ├── Logs.py                 ← 日志查看
 │   │   ├── Status.py               ← 状态监控
 │   │   ├── Users.py                ← 用户管理
-│   │   ├── Ws.py                   ← WebSocket 推送
+│   │   ├── WebSocket.py            ← WebSocket 推送
 │   │   └── Schemas.py              ← 数据模型与校验
 │   ├── Config.py                   ← 配置模型定义
 │   ├── Network.py                  ← 网络请求工具

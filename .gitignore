@@ -11,7 +11,7 @@ uv.lock
 
 Data/
 Logs/
-WebUi/
+/WebUi/
 .**/
 .**.md
 !.github

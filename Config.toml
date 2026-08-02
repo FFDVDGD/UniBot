@@ -25,7 +25,7 @@ message_groups = ["qq_client:123456789"]
 command_minecraft_whitelist = []
 
 # Command 指令的黑名单，启用后以这个列表里的指令开头的指令将被禁止执行。
-command_minecraft_blacklist = []
+command_minecraft_blacklist = ["kill"]
 
 # 是否播报服务器开启/关闭（播报到其他服务器和 QQ 群）。
 broadcast_server = true
