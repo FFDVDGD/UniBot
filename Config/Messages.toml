@@ -5,6 +5,7 @@
 # 占位符说明（随具体消息不同，见各键注释）：
 #   {content}  消息内容    {server}  服务器名称
 #   {player}   玩家名称    {user}    用户 ID      {name} 用户名
+#   {death}    Minecraft 返回的完整死亡消息（包含死因）
 # ...
 
 [events]
@@ -17,7 +18,7 @@ player_quit = "玩家 {player} 离开了游戏。"
 player_quit_group = "玩家 {player} 离开了 [{server}] 服务器，呜……"
 fake_quit_game = "机器人 {player} 离开了游戏。"
 fake_quit_group = "机器人 {player} 离开了 [{server}] 服务器。"
-player_death = "玩家 {player} 死亡了，呜……"
+player_death = "{death}"
 sensitive_group = "检测到玩家 {player} 发送的消息包含敏感词，已丢弃！详情请看控制台。"
 chat_forward = "[{server}] <{player}> {content}"
 sensitive_reply = "检测到消息包含敏感词，已丢弃！"
