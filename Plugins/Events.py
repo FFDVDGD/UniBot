@@ -127,7 +127,7 @@ async def handle_player_death(event: PlayerDeathEvent):
     logger.debug(f'收到玩家死亡消息：{death_message}')
 
     if (not config.bot_prefix) or (not player.upper().startswith(config.bot_prefix)):
-        broadcast_message = message_config.events.player_death.format(player=player)
+        broadcast_message = message_config.events.player_death.format(player=player, death=death_message)
         if config.sync_message_between_servers:
             await server_manager.broadcast(build_server_message(name, player, broadcast_message), name)
         if config.broadcast_player:
