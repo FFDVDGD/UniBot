@@ -8,10 +8,11 @@ BotServer/Plugins/.vscode/settings.json
 .venv/
 uv.lock
 
-
+# 项目运行产生文件以及文档
 Data/
 Logs/
 /WebUi/
-.**/
+.docs/
+.dist/
 .**.md
 !.github
