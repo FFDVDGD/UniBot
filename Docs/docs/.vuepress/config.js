@@ -16,6 +16,10 @@ export default defineUserConfig({
     repo: 'MineJPGcraft/UniBot',
     docsDir: 'Docs/docs',
 
+    social: [
+      { icon: 'github', link: 'https://github.com/MineJPGcraft/UniBot' },
+    ],
+
     navbar: [
       { text: '首页', link: '/' },
       { text: '指南', link: '/guide/' },

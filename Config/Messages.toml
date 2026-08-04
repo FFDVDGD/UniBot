@@ -70,7 +70,7 @@ send_error = "向服务器 [{server_flag}] 发送指令失败：{error}"
 # 关于信息相关提示
 version_with_update = "当前版本为 {version}，发现新版本，请及时更新！"
 version_latest = "当前版本为 {version}，已是最新版本！"
-document_line = "项目文档：https://github.com/MineJPGcraft/UniBot/blob/main/README.md"
+document_line = "项目文档：https://bot.mcjpg.dev/"
 repo_line = "项目地址 https://github.com/MineJPGcraft/UniBot"
 invite_line = "欢迎加入 QQ 交流群 962802248，对这个项目感兴趣不妨点个 Star 吧！"
 check_has_update = "发现新版本 {latest}，当前版本为 {version}，请及时更新！"

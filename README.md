@@ -20,6 +20,8 @@
   <a href="https://qm.qq.com/q/B3kmvJl2xO">💬 加入 QQ 群</a>
   ·
   <a href="https://github.com/MineJPGcraft/UniBot/issues">🐛 反馈问题</a>
+  ·
+  <a href="https://bot.mcjpg.dev/">**📚 项目文档**</a>
 </p>
 
 ---
