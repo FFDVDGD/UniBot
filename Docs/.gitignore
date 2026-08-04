@@ -1,3 +1,4 @@
 docs/.vuepress/.*/
 docs/.vuepress/dist
 node_modules/
+bun.lock
