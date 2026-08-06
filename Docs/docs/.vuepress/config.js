@@ -17,8 +17,18 @@ export default defineUserConfig({
     docsDir: 'Docs/docs',
 
     social: [
+      {
+        icon: {
+          svg: '<img src="https://mcjpg.org/logo.png" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" />',
+          name: 'mcjpg',
+        },
+        link: 'https://mcjpg.org/',
+      },
       { icon: 'github', link: 'https://github.com/MineJPGcraft/UniBot' },
+      { icon: 'qq', link: 'https://qm.qq.com/q/qyq2XH6qkw', ariaLabel: '加入 QQ 群' },
     ],
+
+    navbarSocialInclude: ['github', 'mcjpg', 'qq'],
 
     navbar: [
       { text: '首页', link: '/' },
