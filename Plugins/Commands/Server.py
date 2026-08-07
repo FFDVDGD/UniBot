@@ -1,13 +1,10 @@
 from nonebot.plugin import PluginMetadata
-from nonebot_plugin_alconna import Command
-from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
-from Scripts.Config import config
+from Scripts.Extensions import Command
 from Scripts.Globals import render_template
 from Scripts.Managers import server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
-from Scripts.Rules import command_group_rule
 
 __plugin_meta__ = PluginMetadata(
     name='服务器列表',
@@ -15,28 +12,28 @@ __plugin_meta__ = PluginMetadata(
     usage='.server',
 )
 
-matcher = (
-    Command('server', '查看已连接的服务器列表。')
-    .build(rule=command_group_rule, use_cmd_start=True)
-)
 
+class ServerCommand(Command):
+    '''查看已连接的服务器列表。'''
 
-@matcher.handle()
-async def handle():
-    if config.image.mode:
+    name = 'server'
+    description = '查看已连接的服务器列表。'
+    usage = '.server'
+
+    async def handler(self):
+        return await turn_message_text(self.server_handler())
+
+    async def image_handler(self) -> bytes:
+        '''渲染服务器列表为图片，返回 PNG 字节（由框架在图像模式发送）。'''
         servers = [
             {'name': name, 'index': index}
             for index, name in enumerate(server_manager.servers.keys())
         ]
-        image = await render_template('Server', (500, 0), servers=servers)
-        await matcher.finish(UniMessage(Image(raw=image)))
-    message = await turn_message_text(server_handler())
-    await matcher.finish(message)
+        return await render_template('Server', (500, 0), servers=servers)
 
-
-async def server_handler():
-    if not server_manager.servers:
-        yield messages.commands.server.no_server
-        return
-    for index, name in enumerate(server_manager.servers.keys()):
-        yield messages.commands.server.server_line.format(index=index, name=name)
+    async def server_handler(self):
+        if not server_manager.servers:
+            yield messages.commands.server.no_server
+            return
+        for index, name in enumerate(server_manager.servers.keys()):
+            yield messages.commands.server.server_line.format(index=index, name=name)

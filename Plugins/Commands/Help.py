@@ -1,14 +1,10 @@
-from arclet.alconna import Alconna, Subcommand, command_manager
-from arclet.alconna.args import Args
 from nonebot.plugin import PluginMetadata
-from nonebot_plugin_alconna import Command, Match
-from nonebot_plugin_alconna.uniseg import Image, UniMessage
+from nonebot_plugin_alconna import Match
 
-from Scripts.Config import config
+from Scripts.Extensions import Command, command_manager
 from Scripts.Globals import render_template
 from Scripts.Managers import config_manager
 from Scripts.Messages import messages
-from Scripts.Rules import command_group_rule
 from Scripts.Utils import turn_message_text
 
 __plugin_meta__ = PluginMetadata(
@@ -17,143 +13,148 @@ __plugin_meta__ = PluginMetadata(
     usage='.help [命令名称]',
 )
 
-matcher = (
-    Command('help <command?#命令名称:str>', '查看所有可用命令的帮助信息。')
-    .build(rule=command_group_rule, use_cmd_start=True)
-)
 
-
-@matcher.handle()
-async def handle(command: Match[str]):
-    if config.image.mode:
-        if command.available:
-            detail = get_command_detail(command.result)
-            image = await render_template('Help', (600, 0), detail=detail, commands=None)
-            await matcher.finish(UniMessage(Image(raw=image)))
-        commands = get_commands_list()
-        image = await render_template('Help', (600, 0), detail=None, commands=commands)
-        await matcher.finish(UniMessage(Image(raw=image)))
-    if command.available:
-        message = await turn_message_text(detailed_handler(command.result))
-        await matcher.finish(message)
-    message = await turn_message_text(help_handler())
-    await matcher.finish(message)
-
-
-def get_commands_list() -> list[dict]:
-    '''构建命令列表数据用于图片渲染'''
-    commands = []
-    for alconna in get_enabled_commands():
-        usage = alconna.meta.usage or gen_usage(alconna)
-        description = alconna.meta.description or ''
-        subcommands = [option for option in alconna.options if isinstance(option, Subcommand)]
-        sub_list = []
-        for index, subcommand in enumerate(subcommands):
-            branch = '└─' if index == len(subcommands) - 1 else '├─'
-            sub_desc = f' — {subcommand.help_text}' if subcommand.help_text else ''
-            sub_list.append(f'{branch} {subcommand.name}{sub_desc}')
-        commands.append({'usage': usage, 'description': description, 'subcommands': sub_list})
-    return commands
-
-
-def get_command_detail(name: str) -> dict | None:
-    '''构建命令详情数据用于图片渲染'''
-    alconna = get_alconna(name)
-    if alconna is None or alconna not in get_enabled_commands():
-        return None
-    args_list = []
-    if isinstance(alconna.args, Args):
-        args_list = [{'name': arg.name, 'notice': arg.notice} for arg in alconna.args if arg.notice]
-    subcommands = [option for option in alconna.options if isinstance(option, Subcommand)]
-    sub_list = [{'name': sub.name, 'usage': sub_usage(sub), 'description': sub.help_text or ''} for sub in subcommands]
-    return {
-        'name': name,
-        'usage': alconna.meta.usage or gen_usage(alconna),
-        'description': alconna.meta.description or '',
-        'args': args_list,
-        'subcommands': sub_list,
+def get_enabled_nodes() -> list[Command]:
+    '''获取 pyproject.toml 中已启用且已登记的内置命令节点。'''
+    enabled_modules = {
+        plugin.get('module_name', plugin) if isinstance(plugin, dict) else plugin
+        for plugin in config_manager.nonebot_config.get('plugins', [])
+        if (plugin.get('enabled', True) if isinstance(plugin, dict) else True)
+        and (plugin.get('module_name', plugin) if isinstance(plugin, dict) else plugin).startswith('Plugins.Commands.')
     }
+    nodes = []
+    for command_id, command in command_manager.get_command_nodes().items():
+        if not command_id.startswith('builtin:'):
+            continue
+        module_name = f'Plugins.Commands.{command.name.capitalize()}'
+        if module_name in enabled_modules:
+            nodes.append(command)
+    return nodes
 
 
-def get_alconna(name: str) -> Alconna | None:
-    '''从 command_manager 中获取已注册的 Alconna 对象。'''
-    for command in command_manager.get_commands():
-        if command.command == name:
+def get_node(name: str) -> Command | None:
+    '''从已登记命令实例中查找指定名称的命令。'''
+    for command in get_enabled_nodes():
+        if command.name == name:
             return command
     return None
 
 
-def get_enabled_commands() -> list[Alconna]:
-    '''获取 pyproject.toml 中已启用且成功注册的内置命令。'''
-    commands = []
-    for plugin in config_manager.nonebot_config.get('plugins', []):
-        module_name = plugin if isinstance(plugin, str) else plugin.get('module_name', '')
-        enabled = True if isinstance(plugin, str) else plugin.get('enabled', True)
-        if enabled and module_name.startswith('Plugins.Commands.'):
-            alconna = get_alconna(module_name.rsplit('.', 1)[-1].lower())
-            if alconna is not None:
-                commands.append(alconna)
-    return commands
-
-
-def gen_usage(alconna: Alconna):
-    '''根据 Alconna 对象自动生成用法字符串。'''
-    parts = [alconna.command]
-    if isinstance(alconna.args, Args):
-        for arg in alconna.args:
-            parts.append(f'<*{arg.name}>' if arg.optional else f'<{arg.name}>')
+def gen_usage(command: Command) -> str:
+    '''根据结构化命令自动生成用法字符串（含子命令、参数）。'''
+    parts = [command.name]
+    for argument in command.arguments:
+        display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
+        parts.append(display)
     return ' '.join(parts)
 
 
-def sub_usage(subcommand: Subcommand):
-    '''根据子命令的参数构造用法字符串。'''
-    parts = [subcommand.name]
-    if isinstance(subcommand.args, Args):
-        for arg in subcommand.args:
-            parts.append(f'<*{arg.name}>' if arg.optional else f'<{arg.name}>')
+def sub_usage(command: Command) -> str:
+    '''根据子命令实例生成用法字符串。'''
+    parts = [command.name]
+    for argument in command.arguments:
+        display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
+        parts.append(display)
     return ' '.join(parts)
 
 
-def help_handler():
-    yield messages.commands.help.title
-    for alconna in get_enabled_commands():
-        usage = alconna.meta.usage or gen_usage(alconna)
-        description = alconna.meta.description or ''
-        yield f'    {usage} — {description}'
-        subcommands = [option for option in alconna.options if isinstance(option, Subcommand)]
-        for index, subcommand in enumerate(subcommands):
-            branch = '└─' if index == len(subcommands) - 1 else '├─'
-            subcommand_description = f' — {subcommand.help_text}' if subcommand.help_text else ''
-            yield f'    {branch} {subcommand.name}{subcommand_description}'
-    yield messages.commands.help.footnote
+def node_args(command: Command) -> list[dict]:
+    '''提取命令参数（含描述）用于图片渲染。'''
+    return [
+        {'name': argument.name, 'notice': argument.description}
+        for argument in command.arguments
+        if argument.description
+    ]
 
 
-def detailed_handler(name: str):
-    alconna = get_alconna(name)
-    if alconna is None or alconna not in get_enabled_commands():
-        yield messages.commands.help.not_found.format(name=name)
-        return
-    yield messages.commands.help.detail_title.format(name=name)
-    yield f'    {messages.commands.help.detail_usage.format(usage=alconna.meta.usage or gen_usage(alconna))}'
-    if alconna.meta.description:
-        yield f'    {messages.commands.help.detail_description.format(description=alconna.meta.description)}'
-    if isinstance(alconna.args, Args):
-        notices = [arg for arg in alconna.args if arg.notice]
+class HelpCommand(Command):
+    '''查看所有可用命令的帮助信息。'''
+
+    name = 'help'
+    description = '查看所有可用命令的帮助信息。'
+    usage = '.help [命令名称]'
+
+    def declare(self) -> None:
+        self.register_option('command', str, default=None, description='命令名称')
+
+    async def handler(self, command: Match[str]):
+        if command.available:
+            return await turn_message_text(self.detailed_handler(command.result))
+        return await turn_message_text(self.help_handler())
+
+    async def image_handler(self, command: Match[str]) -> bytes:
+        '''渲染帮助信息为图片，返回 PNG 字节（由框架在图像模式发送）。'''
+        if command.available:
+            detail = self.get_command_detail(command.result)
+            return await render_template('Help', (600, 0), detail=detail, commands=None)
+        commands = self.get_commands_list()
+        return await render_template('Help', (600, 0), detail=None, commands=commands)
+
+    def get_commands_list(self) -> list[dict]:
+        '''构建命令列表数据用于图片渲染'''
+        commands = []
+        for command in get_enabled_nodes():
+            usage = command.usage or gen_usage(command)
+            description = command.description or ''
+            sub_list = []
+            for index, subcommand in enumerate(command.subcommands):
+                branch = '└─' if index == len(command.subcommands) - 1 else '├─'
+                sub_desc = f' — {subcommand.description}' if subcommand.description else ''
+                sub_list.append(f'{branch} {subcommand.name}{sub_desc}')
+            commands.append({'usage': usage, 'description': description, 'subcommands': sub_list})
+        return commands
+
+    def get_command_detail(self, name: str) -> dict | None:
+        '''构建命令详情数据用于图片渲染'''
+        command = get_node(name)
+        if command is None:
+            return None
+        sub_list = [
+            {'name': sub.name, 'usage': sub_usage(sub), 'description': sub.description or ''}
+            for sub in command.subcommands
+        ]
+        return {
+            'name': name,
+            'usage': command.usage or gen_usage(command),
+            'description': command.description or '',
+            'args': node_args(command),
+            'subcommands': sub_list,
+        }
+
+    def help_handler(self):
+        yield messages.commands.help.title
+        for command in get_enabled_nodes():
+            usage = command.usage or gen_usage(command)
+            description = command.description or ''
+            yield f'    {usage} — {description}'
+            for index, subcommand in enumerate(command.subcommands):
+                branch = '└─' if index == len(command.subcommands) - 1 else '├─'
+                subcommand_description = f' — {subcommand.description}' if subcommand.description else ''
+                yield f'    {branch} {subcommand.name}{subcommand_description}'
+        yield messages.commands.help.footnote
+
+    def detailed_handler(self, name: str):
+        command = get_node(name)
+        if command is None:
+            yield messages.commands.help.not_found.format(name=name)
+            return
+        yield messages.commands.help.detail_title.format(name=name)
+        yield f'    {messages.commands.help.detail_usage.format(usage=command.usage or gen_usage(command))}'
+        if command.description:
+            yield f'    {messages.commands.help.detail_description.format(description=command.description)}'
+        notices = node_args(command)
         if notices:
             yield f'    {messages.commands.help.detail_args_title}'
             for arg in notices:
-                yield f'        {messages.commands.help.arg_line.format(name=arg.name, notice=arg.notice)}'
-    subcommands = [option for option in alconna.options if isinstance(option, Subcommand)]
-    if not subcommands:
-        return
-    yield f'    {messages.commands.help.detail_subcommands_title}'
-    for index, subcommand in enumerate(subcommands):
-        branch = '└─' if index == len(subcommands) - 1 else '├─'
-        continuation = '    ' if index == len(subcommands) - 1 else '│   '
-        subcommand_description = f' — {subcommand.help_text}' if subcommand.help_text else ''
-        yield f'        {branch} {sub_usage(subcommand)}{subcommand_description}'
-        if not isinstance(subcommand.args, Args):
-            continue
-        for arg in subcommand.args:
-            if arg.notice:
-                yield f'        {continuation}    {messages.commands.help.arg_line.format(name=arg.name, notice=arg.notice)}'
+                yield f'        {messages.commands.help.arg_line.format(name=arg["name"], notice=arg["notice"])}'
+        if not command.subcommands:
+            return
+        yield f'    {messages.commands.help.detail_subcommands_title}'
+        for index, subcommand in enumerate(command.subcommands):
+            branch = '└─' if index == len(node.subcommands) - 1 else '├─'
+            continuation = '    ' if index == len(node.subcommands) - 1 else '│   '
+            subcommand_description = f' — {subcommand.description}' if subcommand.description else ''
+            yield f'        {branch} {sub_usage(subcommand)}{subcommand_description}'
+            for arg in subcommand.arguments:
+                if arg.description:
+                    yield f'        {continuation}    {messages.commands.help.arg_line.format(name=arg.name, notice=arg.description)}'

@@ -1,23 +1,19 @@
 import re
-import time
 import html
 import json
 import logging
 import asyncio
-from io import BytesIO
 from pathlib import Path
 from random import choice
 
-from html2pic import Html2Pic
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, TemplateNotFound
 
 from nonebot.log import logger
 
 from .Config import config
 
-# html2pic 的传递依赖 stretchable 在导入时会调用 logging.basicConfig()，
-# 给 root logger 添加 StreamHandler，导致 uvicorn.access 日志被重复输出。
-# 在导入 html2pic 后清理 root logger 上多余的 handler，避免日志污染。
+# 兼容段：为保持一致保留 html2pic 相关日志清理（Stretchable 依赖会调用
+# logging.basicConfig() 污染 root logger，导入时清理一次）。
 logging.getLogger().handlers.clear()
 
 RESOURCES_DIR = Path(__file__).parent.parent / 'Resources'
@@ -63,24 +59,47 @@ def resolve_random(value: str) -> str:
     return _RANDOM_PATTERN.sub(lambda m: random_image(m.group(1)), value)
 
 
-environment = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), enable_async=True)
-environment.globals['random'] = random_image
-# 说明：在 CSS/HTML 模板中通过 Jinja2 插值调用，形如：
-#   background-image: {{ random("./Resources/Backgrounds") }};
+def _build_environment() -> Environment:
+    '''构建 Jinja2 环境：主题优先，内置回退。'''
+    loaders = []
+    # 主题扩展优先（choice 按顺序，前面的 loader 命中则使用主题模板）
+    if config.image.theme and config.image.theme != 'default':
+        from Scripts.Managers import extension_manager
 
-logger.debug('图片渲染器加载完毕！')
+        templates_dir = extension_manager.themes.get(config.image.theme)
+        if templates_dir is not None:
+            loaders.append(FileSystemLoader(str(templates_dir)))
+        else:
+            logger.warning(f'主题 {config.image.theme} 不存在，回退内置模板！')
+    loaders.append(FileSystemLoader(str(TEMPLATES_DIR)))
+    environment = Environment(loader=ChoiceLoader(loaders), enable_async=True)
+    environment.globals['random'] = random_image
+    return environment
 
 
-def render(html: str, css: str) -> bytes:
-    start = time.time()
-    renderer = Html2Pic(html, css)
-    image = renderer.render()
-    pil_image = image.to_pillow()
-    buffer = BytesIO()
-    pil_image.save(buffer, format='PNG', compress_level=1)
-    end = time.time()
-    logger.debug(f'图片渲染耗时：{end - start:.2f}秒')
-    return buffer.getvalue()
+# 当前生效的 Jinja2 环境；切换主题时置空以触发重建
+environment: Environment | None = None
+
+
+def _get_environment() -> Environment:
+    '''获取当前环境，惰性重建（支持主题热切换）。'''
+    global environment
+    if environment is None:
+        environment = _build_environment()
+    return environment
+
+
+def invalidate_environment() -> None:
+    '''使当前 Jinja2 环境失效，下次渲染按新主题重建（主题热切换）。'''
+    global environment
+    environment = None
+
+
+async def render(html: str, css: str) -> bytes:
+    '''委托当前渲染引擎渲染 HTML+CSS 为 PNG 字节。'''
+    from Scripts.Managers import extension_manager
+
+    return await extension_manager.renderer_manager.render(html, css, config.image.renderer)
 
 
 def encode_context(context: dict) -> dict:
@@ -90,10 +109,11 @@ def encode_context(context: dict) -> dict:
 
 async def load_style(name: str, **context) -> str:
     '''加载 base.css + 模板专属 css，并通过 Jinja2 异步渲染'''
+    env = _get_environment()
     parts = []
     for css_name in ('Base.css', f'{name}/{name}.css'):
         try:
-            template = environment.get_template(css_name)
+            template = env.get_template(css_name)
             parts.append(await template.render_async(**context))
         except TemplateNotFound:
             continue
@@ -115,9 +135,10 @@ async def render_template(template_name: str, size: tuple[int, int], **kwargs) -
         font_uri=str(FONT_PATH),
         **encode_context(kwargs),
     )
-    template = environment.get_template(f'{template_name}/{template_name}.html')
+    env = _get_environment()
+    template = env.get_template(f'{template_name}/{template_name}.html')
     html_content, css_content = await asyncio.gather(
         template.render_async(**context),
         load_style(template_name, **context),
     )
-    return await asyncio.to_thread(render, html_content, css_content)
+    return await render(html_content, css_content)

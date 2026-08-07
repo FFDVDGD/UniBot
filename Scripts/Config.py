@@ -10,6 +10,8 @@ TOML_PATH = Path('Config.toml')
 class ImageConfig(BaseModel):
     mode: bool = False
     background: str | None = None
+    renderer: str = 'html2pic'   # 当前使用的渲染引擎 name，必须是已注册的引擎
+    theme: str = 'default'       # 当前主题（'default' = 内置模板，或主题扩展 id）
 
 
 class AiConfig(BaseModel):
