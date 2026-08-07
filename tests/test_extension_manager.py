@@ -1,0 +1,113 @@
+'''ExtensionManager 测试：拓扑排序、生命周期、失败隔离、启停状态（验证点 9、14、8）。'''
+
+import asyncio
+
+import pytest
+import tomlkit
+
+from Scripts.Extensions import Extension, ExtensionState
+from Scripts.Managers import extension_manager
+
+
+class _GoodExt(Extension):
+
+    def __init__(self, ext_id: str) -> None:
+        super().__init__()
+        self._ext_id = ext_id
+        self.enabled = False
+        self.disabled = False
+
+    @property
+    def id(self) -> str:
+        return self._ext_id
+
+    async def on_enable(self) -> None:
+        self.enabled = True
+
+    async def on_disable(self) -> None:
+        self.disabled = True
+
+
+class _FailingExt(Extension):
+
+    def __init__(self, ext_id: str) -> None:
+        super().__init__()
+        self._ext_id = ext_id
+
+    @property
+    def id(self) -> str:
+        return self._ext_id
+
+    async def on_enable(self) -> None:
+        raise RuntimeError('boom')
+
+
+# ===== 服务注册 =====
+
+class TestServices:
+    def test_register_and_get_service(self):
+        service = object()
+        extension_manager.register_service('my_svc', service)
+        assert extension_manager.get_service('my_svc') is service
+        assert extension_manager.get_service('missing') is None
+
+    def test_duplicate_service_overwrites(self):
+        extension_manager.register_service('svc', object())
+        new_service = object()
+        extension_manager.register_service('svc', new_service)
+        assert extension_manager.get_service('svc') is new_service
+
+
+# ===== 生命周期 =====
+
+class TestLifecycle:
+    def test_start_enables_extensions_in_order(self):
+        a = _GoodExt('A')
+        b = _GoodExt('B')
+        # 模拟 Loader 已加载：状态进入 loaded
+        a.state = ExtensionState.loaded
+        b.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [a, b]
+        asyncio.run(extension_manager.start())
+        assert a.enabled and b.enabled
+        assert a.state is ExtensionState.enabled
+        assert b.state is ExtensionState.enabled
+
+    def test_failure_marks_failed_and_does_not_crash(self):
+        good = _GoodExt('Good')
+        failing = _FailingExt('Bad')
+        good.state = ExtensionState.loaded
+        failing.state = ExtensionState.loaded
+        # extending list so rollback tries to disable good
+        extension_manager.loader.extensions = [good, failing]
+        asyncio.run(extension_manager.start())
+        assert failing.state is ExtensionState.failed
+        # rollback disables already-enabled extensions
+        assert good.disabled is True
+
+    def test_shutdown_disables_in_reverse_order(self):
+        a = _GoodExt('A')
+        b = _GoodExt('B')
+        a.enabled = b.enabled = True
+        a.state = ExtensionState.enabled
+        b.state = ExtensionState.enabled
+        extension_manager.loader.extensions = [a, b]
+        asyncio.run(extension_manager.shutdown())
+        assert a.disabled and b.disabled
+        assert a.state is ExtensionState.disabled
+        assert b.state is ExtensionState.disabled
+
+
+# ===== 启停状态文件 =====
+
+class TestSetEnabled:
+    def test_set_enabled_writes_state_file(self, tmp_path, monkeypatch):
+        import Scripts.Managers.Extension as ext_mod
+
+        # 将 Extension 模块内的 DATA_ROOT 常量指向临时目录
+        monkeypatch.setattr(ext_mod, 'DATA_ROOT', tmp_path)
+        extension_manager.set_enabled('WeatherExt', True)
+        state_file = tmp_path / 'WeatherExt' / 'State.toml'
+        assert state_file.exists()
+        data = tomlkit.parse(state_file.read_text('Utf-8'))
+        assert data['enabled'] is True
