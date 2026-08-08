@@ -1,26 +1,19 @@
 '''UniBot 扩展系统框架包。'''
 
 from .Base import (
-    CompatibilityError,
-    DependencyError,
     Extension,
-    ExtensionError,
     ExtensionManifest,
     ExtensionMetadata,
     ExtensionState,
     ExtensionType,
-    LoadError,
-    ManifestError,
     RenderConfig,
     RenderKind,
-    StorageError,
+    manifest_from_attributes,
     parse_manifest,
 )
 from .Command import (
     Argument,
     Command,
-    CommandError,
-    CommandFieldError,
     CommandManager,
     Handler,
     ImageHandler,
@@ -29,18 +22,40 @@ from .Command import (
     command_manager,
     discover_commands,
 )
+from .Errors import (
+    CompatibilityError,
+    CommandError,
+    CommandFieldError,
+    DependencyError,
+    ExtensionError,
+    ExtensionNotBoundError,
+    LoadError,
+    ManifestError,
+    StorageError,
+)
 from .Loader import (
+    BUILTIN_DIR,
+    CONFIG_EXTENSIONS_FILE,
     CONFIG_ROOT,
     DATA_ROOT,
     EXTENSIONS_DIR,
     ExtensionLoader,
-    get_extension,
+    STATES_FILE,
+    STATES_ROOT,
+)
+from .Market import (
+    ExtensionInstallState,
+    MarketExtension,
+    MarketRelease,
+    extract_market_package,
+    safe_extract_zip,
 )
 from .Service import Service, ServiceRegistry
 from .Renderer import BaseRenderer, RendererRegistry
-from .Renderers import Html2PicRenderer, RendererManager
+from .Renderers import RendererManager
+from .Manager import ExtensionManager, extension_manager
+from .MarketManager import ExtensionMarketManager, market_manager
 from .Storage import (
-    CONFIG_FILE_NAME,
     ExtensionConfigStore,
     ExtensionDataStore,
     RESERVED_STATE_FILE,
@@ -54,6 +69,7 @@ __all__ = [
     'ExtensionError',
     'ExtensionManifest',
     'ExtensionMetadata',
+    'ExtensionNotBoundError',
     'ExtensionState',
     'ExtensionType',
     'LoadError',
@@ -61,6 +77,7 @@ __all__ = [
     'RenderConfig',
     'RenderKind',
     'StorageError',
+    'manifest_from_attributes',
     'parse_manifest',
     # Command
     'Argument',
@@ -75,11 +92,26 @@ __all__ = [
     'command_manager',
     'discover_commands',
     # Loader
+    'BUILTIN_DIR',
+    'CONFIG_EXTENSIONS_FILE',
     'CONFIG_ROOT',
     'DATA_ROOT',
     'EXTENSIONS_DIR',
     'ExtensionLoader',
-    'get_extension',
+    'STATES_FILE',
+    'STATES_ROOT',
+    # Manager
+    'ExtensionManager',
+    'extension_manager',
+    # Market
+    'ExtensionInstallState',
+    'MarketExtension',
+    'MarketRelease',
+    'extract_market_package',
+    'safe_extract_zip',
+    # MarketManager
+    'ExtensionMarketManager',
+    'market_manager',
     # Service
     'Service',
     'ServiceRegistry',
@@ -87,10 +119,8 @@ __all__ = [
     'BaseRenderer',
     'RendererRegistry',
     # Renderers
-    'Html2PicRenderer',
     'RendererManager',
     # Storage
-    'CONFIG_FILE_NAME',
     'ExtensionConfigStore',
     'ExtensionDataStore',
     'RESERVED_STATE_FILE',

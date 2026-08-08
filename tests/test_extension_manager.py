@@ -5,8 +5,7 @@ import asyncio
 import pytest
 import tomlkit
 
-from Scripts.Extensions import Extension, ExtensionState
-from Scripts.Managers import extension_manager
+from Scripts.Extensions import Extension, ExtensionState, extension_manager
 
 
 class _GoodExt(Extension):
@@ -101,13 +100,24 @@ class TestLifecycle:
 # ===== 启停状态文件 =====
 
 class TestSetEnabled:
-    def test_set_enabled_writes_state_file(self, tmp_path, monkeypatch):
-        import Scripts.Managers.Extension as ext_mod
+    def test_set_enabled_writes_config_file(self, tmp_path, monkeypatch):
+        import Scripts.Extensions.Manager as ext_mod
 
-        # 将 Extension 模块内的 DATA_ROOT 常量指向临时目录
-        monkeypatch.setattr(ext_mod, 'DATA_ROOT', tmp_path)
+        # 将 Extension 模块内的 CONFIG_EXTENSIONS_FILE 常量指向临时目录
+        config_file = tmp_path / 'Extensions.toml'
+        monkeypatch.setattr(ext_mod, 'CONFIG_EXTENSIONS_FILE', config_file)
         extension_manager.set_enabled('WeatherExt', True)
-        state_file = tmp_path / 'WeatherExt' / 'State.toml'
-        assert state_file.exists()
-        data = tomlkit.parse(state_file.read_text('Utf-8'))
-        assert data['enabled'] is True
+        assert config_file.exists()
+        data = tomlkit.parse(config_file.read_text('Utf-8'))
+        assert data['WeatherExt']['enabled'] is True
+
+    def test_set_enabled_merges_multiple_extensions(self, tmp_path, monkeypatch):
+        import Scripts.Extensions.Manager as ext_mod
+
+        config_file = tmp_path / 'Extensions.toml'
+        monkeypatch.setattr(ext_mod, 'CONFIG_EXTENSIONS_FILE', config_file)
+        extension_manager.set_enabled('WeatherExt', True)
+        extension_manager.set_enabled('List', False)
+        data = tomlkit.parse(config_file.read_text('Utf-8'))
+        assert data['WeatherExt']['enabled'] is True
+        assert data['List']['enabled'] is False

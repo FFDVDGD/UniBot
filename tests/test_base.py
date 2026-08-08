@@ -141,8 +141,7 @@ class TestStateMachine:
 
     def test_valid_transitions(self):
         ext = Extension()
-        # 模拟 Loader 注入 metadata 后状态推进
-        ext.metadata = _fake_metadata()
+        _bind_fake(ext)
         ext.transition(ExtensionState.validated)
         ext.transition(ExtensionState.loaded)
         assert ext.state is ExtensionState.loaded
@@ -153,14 +152,14 @@ class TestStateMachine:
 
     def test_invalid_transition_raises(self):
         ext = Extension()
-        ext.metadata = _fake_metadata()
+        _bind_fake(ext)
         with pytest.raises(ExtensionError):
             # discovered -> enabled 非法（缺 loaded）
             ext.transition(ExtensionState.enabled)
 
     def test_mark_failed_sets_reason(self):
         ext = Extension()
-        ext.metadata = _fake_metadata()
+        _bind_fake(ext)
         ext.mark_failed('加载失败')
         assert ext.state is ExtensionState.failed
         assert ext.failure_reason == '加载失败'
@@ -175,10 +174,25 @@ class TestExtensionBase:
         with pytest.raises(ValidationError):
             ext.config_model.model_validate({'unknown': 1})
 
-    def test_id_property_from_metadata(self):
+    def test_id_is_plain_class_attribute(self):
         ext = Extension()
-        ext.metadata = _fake_metadata()
+        assert ext.id == ''  # 未声明时基类缺省为空串
+
+        class FakeExt(Extension):
+            id = 'Fake'
+
+        assert FakeExt().id == 'Fake'
+
+    def test_id_synced_from_metadata_on_bind(self):
+        ext = Extension()
+        _bind_fake(ext)
         assert ext.id == 'WeatherExt'
+
+    def test_double_bind_raises(self):
+        ext = Extension()
+        _bind_fake(ext)
+        with pytest.raises(ExtensionError):
+            _bind_fake(ext)
 
     def test_get_config_schema_returns_schema(self):
         class Cfg(BaseModel):
@@ -216,3 +230,8 @@ extensions = []
 python = []
     ''')
     return ExtensionMetadata(manifest)
+
+
+def _bind_fake(ext: Extension) -> None:
+    '''将扩展绑定到一个伪造 metadata，供状态机/属性测试使用。'''
+    ext._bind(metadata=_fake_metadata(), config_store=None, data_store=None, api=None)

@@ -8,10 +8,32 @@ from Scripts.Managers import config_manager
 
 from .Adapters import ADAPTER_DRIVERS, BASE_DRIVER
 
+# NoneBot 内置驱动标记（`~` 为 nonebot.drivers. 缩写）对应的底层依赖包。
+# BASE_DRIVER（~fastapi）由 nonebot2[fastapi] 自带，无需额外声明。
+DRIVER_PACKAGES: dict[str, str] = {
+    '~httpx': 'httpx',
+    '~websockets': 'websockets',
+    '~aiohttp': 'aiohttp',
+    '~quart': 'quart',
+}
+
 
 def get_required_drivers(module_name: str) -> list[str]:
     '''获取指定适配器模块所需的额外驱动列表'''
     return ADAPTER_DRIVERS.get(module_name, [])
+
+
+def get_driver_package(driver: str) -> str | None:
+    '''返回驱动标记对应的底层依赖包名，若无需显式声明则返回 None'''
+    return DRIVER_PACKAGES.get(driver)
+
+
+def add_driver_dependencies(drivers: list[str]) -> None:
+    '''把驱动对应的底层依赖包写入 project.dependencies（add_dependency 内部去重）。'''
+    for driver in drivers:
+        package = get_driver_package(driver)
+        if package:
+            config_manager.add_dependency(package)
 
 
 def parse_driver(driver_value: str | list | None) -> list[str]:
@@ -47,6 +69,8 @@ def merge_driver(required_drivers: list[str]) -> tuple[str, list[str]]:
     new_drivers = current_drivers + added
     new_value = format_driver(new_drivers)
     config_manager.update_env({'DRIVER': new_value})
+    # 同步底层依赖包，确保对应驱动可正常工作（add_dependency 内部去重）
+    add_driver_dependencies(added)
     return new_value, added
 
 
@@ -86,6 +110,5 @@ def compute_redundant_drivers(uninstalling_module: str) -> list[str]:
     }
     still_needed: set[str] = set()
     for module_name in registered_modules:
-        if module_name:
-            still_needed.update(get_required_drivers(module_name))
+        still_needed.update(get_required_drivers(module_name))
     return sorted(target_drivers - still_needed)

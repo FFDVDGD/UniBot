@@ -1,21 +1,22 @@
+'''内置扩展：控制台命令指令。'''
+
+from typing import override
+
 from nonebot.log import logger
-from nonebot.plugin import PluginMetadata
 from nonebot_plugin_alconna import Match
 from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Config import config
-from Scripts.Extensions import Command
+from .. import Command, Extension
 from Scripts.Managers import server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import get_permission, turn_message_text
 
-__plugin_meta__ = PluginMetadata(
-    name='控制台命令',
-    description='向指定 Minecraft 服务器发送经过权限校验的控制台命令。',
-    usage='.command <服务器名称> <命令>',
-)
+# 创建唯一扩展实例，能力经实例装饰器登记
+extension = Extension(id='Command', name='控制台命令', version='1.0.0', types=('command',), builtin=True)
 
 
+@extension.register_command
 class CommandCommand(Command):
     '''向指定服务器发送控制台命令。'''
 
@@ -23,10 +24,12 @@ class CommandCommand(Command):
     description = '向指定服务器发送控制台命令。'
     usage = '.command <服务器名称> <命令>'
 
+    @override
     def declare(self) -> None:
         self.register_arg('server', str, description='服务器名称')
         self.register_arg('command', str, description='要执行的命令', multi=True)
 
+    @override
     async def handler(self, session: Uninfo, server: Match[str], command: Match[list[str]]):
         if not get_permission(session):
             return messages.commands.command.no_permission

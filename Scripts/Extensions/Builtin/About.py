@@ -1,21 +1,22 @@
-from nonebot.log import logger
-from nonebot.plugin import PluginMetadata
+'''内置扩展：关于信息指令。'''
 
-from Scripts.Extensions import Command, SubCommand
+from typing import override
+
+from nonebot.log import logger
+
+from .. import Command, Extension, SubCommand
 from Scripts.Globals import render_template
 from Scripts.Managers import version_manager
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
-__plugin_meta__ = PluginMetadata(
-    name='关于信息',
-    description='展示 UniBot 的版本、更新状态与项目信息。',
-    usage='.about',
-)
-
 logger.debug('加载命令 About 完毕！')
 
+# 创建唯一扩展实例，能力经实例装饰器登记
+extension = Extension(id='About', name='关于信息', version='1.0.0', types=('command',), builtin=True)
 
+
+@extension.register_command
 class AboutCommand(Command):
     '''查看关于信息。'''
 
@@ -29,18 +30,22 @@ class AboutCommand(Command):
         name = 'check'
         description = '检测是否有新版本'
 
+        @override
         async def handler(self):
             '''主动拉取最新版本并反馈检测结果'''
             return await turn_message_text(self.parent.check_handler())
 
+        @override
         async def image_handler(self) -> bytes:
             '''拉取最新版本后渲染关于信息为图片（由框架在图像模式发送）。'''
             await version_manager.fetch_latest()
             return await self.parent._render_about()
 
+    @override
     async def handler(self):
         return await turn_message_text(self.about_handler())
 
+    @override
     async def image_handler(self) -> bytes:
         '''渲染关于信息为图片，返回 PNG 字节（由框架在图像模式发送）。'''
         return await self._render_about()

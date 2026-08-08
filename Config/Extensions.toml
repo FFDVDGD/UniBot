@@ -1,0 +1,32 @@
+# 扩展启停配置
+# 在此直接编辑每个扩展的启停状态，修改后重启生效。
+# enabled = true  表示启用
+# enabled = false 表示禁用（扩展不会加载，配置与数据保留）
+# 未列出的扩展默认为启用。
+
+[About]
+enabled = true
+
+[Bound]
+enabled = true
+
+[Command]
+enabled = true
+
+[Help]
+enabled = true
+
+[List]
+enabled = true
+
+[Luck]
+enabled = true
+
+[Send]
+enabled = true
+
+[Server]
+enabled = true
+
+[WeatherExt]
+enabled = false

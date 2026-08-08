@@ -54,6 +54,8 @@ def sync_dependencies() -> None:
     command = ['uv', 'sync']
     for extra in get_enabled_extras():
         command.extend(('--extra', extra))
+    # 扩展依赖统一收口到 extensions 可选组
+    command.extend(('--extra', 'extensions'))
 
     logger.info(f'检测到依赖声明变化，正在执行：{" ".join(command)}')
     try:
@@ -69,6 +71,8 @@ def run() -> None:
     restart_attempts = 0
     restart_window_started_at = time.monotonic()
     shutdown_requested = False
+    # 启动时先同步一次依赖，确保扩展依赖（extensions 组）已安装，再快照状态
+    sync_dependencies()
     dependency_state = get_dependency_state()
     bot_environment = os.environ.copy()
     bot_environment[WATCHDOG_ENVIRONMENT] = '1'

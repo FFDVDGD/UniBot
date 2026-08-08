@@ -1,18 +1,18 @@
-from nonebot.plugin import PluginMetadata
+'''内置扩展：服务器列表指令。'''
 
-from Scripts.Extensions import Command
+from typing import override
+
+from .. import Command, Extension
 from Scripts.Globals import render_template
 from Scripts.Managers import server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
-__plugin_meta__ = PluginMetadata(
-    name='服务器列表',
-    description='展示当前与 UniBot 建立连接的 Minecraft 服务器。',
-    usage='.server',
-)
+# 创建唯一扩展实例，能力经实例装饰器登记
+extension = Extension(id='Server', name='服务器列表', version='1.0.0', types=('command',), builtin=True)
 
 
+@extension.register_command
 class ServerCommand(Command):
     '''查看已连接的服务器列表。'''
 
@@ -20,9 +20,11 @@ class ServerCommand(Command):
     description = '查看已连接的服务器列表。'
     usage = '.server'
 
+    @override
     async def handler(self):
         return await turn_message_text(self.server_handler())
 
+    @override
     async def image_handler(self) -> bytes:
         '''渲染服务器列表为图片，返回 PNG 字节（由框架在图像模式发送）。'''
         servers = [

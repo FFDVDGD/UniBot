@@ -1,23 +1,22 @@
+'''内置扩展：今日人品指令。'''
+
 import random
 from datetime import date
 from hashlib import md5
+from typing import override
 
-from nonebot.plugin import PluginMetadata
 from nonebot_plugin_uninfo import Uninfo
 
-from Scripts.Config import config
-from Scripts.Extensions import Command
+from .. import Command, Extension
 from Scripts.Globals import render_template
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
-__plugin_meta__ = PluginMetadata(
-    name='今日人品',
-    description='根据用户与日期生成稳定的今日人品和宜忌。',
-    usage='.luck',
-)
+# 创建唯一扩展实例，能力经实例装饰器登记
+extension = Extension(id='Luck', name='今日人品', version='1.0.0', types=('command',), builtin=True)
 
 
+@extension.register_command
 class LuckCommand(Command):
     '''查看今日人品值。'''
 
@@ -25,10 +24,12 @@ class LuckCommand(Command):
     description = '查看今日人品值。'
     usage = '.luck'
 
+    @override
     async def handler(self, session: Uninfo):
         luck_data = self.get_luck_data(session)
         return await turn_message_text(self.luck_handler(luck_data))
 
+    @override
     async def image_handler(self, session: Uninfo) -> bytes:
         '''渲染今日人品为图片，返回 PNG 字节（由框架在图像模式发送）。'''
         luck_data = self.get_luck_data(session)

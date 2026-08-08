@@ -1,24 +1,23 @@
-import asyncio
+'''内置扩展：在线玩家列表指令。'''
 
-from nonebot.plugin import PluginMetadata
+import asyncio
+from typing import override
 
 from nonebot_plugin_alconna import Match
 
 from Scripts.Config import config
-from Scripts.Extensions import Command
+from .. import Command, Extension
 from Scripts.Globals import player_list_cache, render_template
 from Scripts.Managers import cache_manager, server_manager
 from Scripts.Messages import messages
 from Scripts.Network import fetch_player_avatars
 from Scripts.Utils import turn_message_text
 
-__plugin_meta__ = PluginMetadata(
-    name='在线玩家',
-    description='查询已连接服务器的在线玩家列表。',
-    usage='.list [服务器名称]',
-)
+
+extension = Extension(id='List', name='在线玩家', version='1.0.0', types=('command',), builtin=True)
 
 
+@extension.register_command
 class ListCommand(Command):
     '''查看服务器在线玩家列表。'''
 
@@ -26,9 +25,11 @@ class ListCommand(Command):
     description = '查看服务器在线玩家列表。'
     usage = '.list [服务器名称]'
 
+    @override
     def declare(self) -> None:
         self.register_option('server', str, default=None, description='服务器名称')
 
+    @override
     async def handler(self, server: Match[str]):
         server_flag = server.result if server.available else None
         _, response = await self.get_players(server_flag)
@@ -36,6 +37,7 @@ class ListCommand(Command):
             return response
         return await turn_message_text(self.list_handler(response))
 
+    @override
     async def image_handler(self, server: Match[str]) -> bytes | None:
         '''渲染在线玩家列表为图片，返回 PNG 字节（由框架在图像模式发送）。
 

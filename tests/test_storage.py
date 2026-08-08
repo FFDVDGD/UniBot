@@ -21,7 +21,7 @@ class SampleConfig(BaseModel):
 
 @pytest.fixture
 def config_root(tmp_path: Path) -> Path:
-    return tmp_path / 'Config' / 'Exs' / 'WeatherExt'
+    return tmp_path / 'Config' / 'Extensions'
 
 
 @pytest.fixture
@@ -32,28 +32,35 @@ def data_root(tmp_path: Path) -> Path:
 # ===== ExtensionConfigStore =====
 
 class TestConfigStore:
-    def test_save_and_load_roundtrip(self, config_root: Path):
-        store = ExtensionConfigStore(config_root)
-        model = SampleConfig(api_key='abc', city='Beijing')
-        store.save(model)
-        loaded = store.load(SampleConfig)
-        assert loaded.api_key == 'abc'
-        assert loaded.city == 'Beijing'
+    def test_update_and_value_roundtrip(self, config_root: Path):
+        store = ExtensionConfigStore(config_root, 'WeatherExt', SampleConfig)
+        updated = store.update({'api_key': 'abc', 'city': 'Beijing'})
+        assert updated.api_key == 'abc'
+        assert updated.city == 'Beijing'
+        # 重新构造 store 从磁盘读取，验证持久化
+        reloaded = ExtensionConfigStore(config_root, 'WeatherExt', SampleConfig)
+        assert reloaded.value.api_key == 'abc'
+        assert reloaded.value.city == 'Beijing'
 
     def test_load_missing_uses_defaults(self, config_root: Path):
-        store = ExtensionConfigStore(Path(config_root) / 'other')
-        loaded = store.load(SampleConfig)
-        assert loaded.api_key == ''
-        assert loaded.city == 'Shanghai'
+        store = ExtensionConfigStore(config_root, 'Other', SampleConfig)
+        assert store.value.api_key == ''
+        assert store.value.city == 'Shanghai'
 
     def test_unknown_field_rejected_on_load(self, config_root: Path):
-        store = ExtensionConfigStore(config_root)
-        store.save(SampleConfig())
         # 手动写入未知字段
-        config_file = config_root / 'Config.toml'
+        config_root.mkdir(parents=True, exist_ok=True)
+        config_file = config_root / 'WeatherExt.toml'
         config_file.write_text('api_key = "x"\nunknown = 1\n', encoding='Utf-8')
         with pytest.raises(Exception):
-            store.load(SampleConfig)
+            ExtensionConfigStore(config_root, 'WeatherExt', SampleConfig)
+
+    def test_update_invalid_keeps_original(self, config_root: Path):
+        store = ExtensionConfigStore(config_root, 'WeatherExt', SampleConfig)
+        store.update({'api_key': 'abc', 'city': 'Beijing'})
+        with pytest.raises(Exception):
+            store.update({'city': ''})  # 空城市违反 min_length
+        assert store.value.city == 'Beijing'
 
 
 # ===== ExtensionDataStore =====

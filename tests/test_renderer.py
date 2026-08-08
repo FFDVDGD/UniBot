@@ -4,8 +4,7 @@ import asyncio
 
 import pytest
 
-from Scripts.Extensions import BaseRenderer, RendererManager
-from Scripts.Managers import extension_manager
+from Scripts.Extensions import BaseRenderer, RendererManager, extension_manager
 
 
 class _FakeRenderer(BaseRenderer):

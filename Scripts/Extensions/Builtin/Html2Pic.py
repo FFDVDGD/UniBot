@@ -1,7 +1,7 @@
-'''内置 html2pic 渲染引擎（默认/回退）。
+'''内置渲染引擎扩展：html2pic（默认/回退）。
 
-从现有 Scripts/Render.py 的同步 html2pic 逻辑迁移而来，封装为
-BaseRenderer 子类，供 RendererManager 统一管理。
+将 HTML+CSS 渲染为 PNG 字节，作为默认引擎与回退引擎。
+由 Loader 作为内置扩展加载，经实例装饰器登记渲染器。
 '''
 
 import time
@@ -9,9 +9,13 @@ from io import BytesIO
 
 from html2pic import Html2Pic
 
-from Scripts.Extensions.Renderer import BaseRenderer
+from .. import BaseRenderer, Extension
+
+# 创建唯一扩展实例，能力经实例装饰器登记
+extension = Extension(id='Html2Pic', name='html2pic 渲染引擎', version='1.0.0', types=('render',), builtin=True)
 
 
+@extension.register_renderer
 class Html2PicRenderer(BaseRenderer):
     '''使用 html2pic 库渲染 HTML+CSS 为 PNG 字节。'''
 

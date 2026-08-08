@@ -1,21 +1,20 @@
 '''扩展管理器单例：注册表、服务、渲染器、启停状态与加载编排。'''
 
+from pathlib import Path
+
 import tomlkit
 from nonebot.log import logger
 
-from Scripts.Extensions import (
+from . import (
     Extension,
     ExtensionState,
-    ExtensionType,
 )
-from Scripts.Extensions.Loader import (
-    CONFIG_ROOT,
-    DATA_ROOT,
-    EXTENSIONS_DIR,
+from .Loader import (
+    CONFIG_EXTENSIONS_FILE,
     ExtensionLoader,
-    STATE_FILE,
 )
-from Scripts.Extensions.Renderers import Html2PicRenderer, RendererManager
+from .Renderer import BaseRenderer
+from .Renderers import RendererManager
 
 
 class ExtensionManager:
@@ -23,11 +22,10 @@ class ExtensionManager:
 
     registry: dict[str, Extension] = {}
     services: dict[str, object] = {}
-    renderers: dict[str, object] = {}
-    themes: dict[str, object] = {}
+    renderers: dict[str, BaseRenderer] = {}
+    themes: dict[str, Path] = {}
 
     def __init__(self) -> None:
-        self.injector = None
         self.loader = ExtensionLoader(self)
         self.renderer_manager = RendererManager(self.get_renderer)
 
@@ -50,8 +48,7 @@ class ExtensionManager:
             except Exception as error:
                 extension.mark_failed(str(error))
                 await self._rollback(extension)
-        # 注册内置 html2pic 渲染引擎作为默认与回退
-        self.register_renderer(Html2PicRenderer())
+        # 内置 html2pic 渲染引擎由内置扩展 Html2Pic 加载并注册，此处仅完成引擎初始化
         await self.renderer_manager.setup('html2pic')
         logger.success('扩展启动完毕！')
 
@@ -93,43 +90,45 @@ class ExtensionManager:
 
     # ===== 渲染器管理 =====
 
-    def register_renderer(self, renderer: object) -> None:
+    def register_renderer(self, renderer: BaseRenderer) -> None:
         '''注册一个渲染引擎实例。'''
-        if getattr(renderer, 'name', ''):
+        if renderer.name:
             self.renderers[renderer.name] = renderer
 
-    def register_theme(self, extension_id: str, templates_dir: object) -> None:
+    def register_theme(self, extension_id: str, templates_dir: Path) -> None:
         '''注册一个主题扩展的模板目录。'''
         self.themes[extension_id] = templates_dir
 
-    def get_renderer(self, name: str) -> object | None:
+    def get_renderer(self, name: str) -> BaseRenderer | None:
         '''获取指定名称的渲染引擎实例。'''
         return self.renderers.get(name)
 
     # ===== 启停状态 =====
 
     def set_enabled(self, extension_id: str, enabled: bool) -> bool:
-        '''设置扩展启停状态（写入 State.toml，重启生效），返回是否成功。'''
-        state_path = DATA_ROOT / extension_id / STATE_FILE
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-        data = {}
-        if state_path.exists():
+        '''设置扩展启停状态（写入 Config/Extensions.toml，重启生效），返回是否成功。'''
+        config_path = CONFIG_EXTENSIONS_FILE
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        data: dict = {}
+        if config_path.exists():
             try:
-                data = tomlkit.parse(state_path.read_text('Utf-8'))
+                data = tomlkit.parse(config_path.read_text('Utf-8'))
             except Exception:
                 data = {}
-        data['enabled'] = enabled
-        state_path.write_text(tomlkit.dumps(data), encoding='Utf-8')
+        extension_config = dict(data.get(extension_id, {}))
+        extension_config['enabled'] = enabled
+        data[extension_id] = extension_config
+        config_path.write_text(tomlkit.dumps(data), encoding='Utf-8')
         logger.info(f'扩展 {extension_id} 已设置为 {"启用" if enabled else "禁用"}，重启后生效！')
         return True
 
     # ===== 展示信息 =====
 
-    def get_extension_info(self, extension_id: str) -> dict | None:
+    def get_extension_info(self, extension_id: str) -> dict:
         '''获取扩展的展示信息（供 WebUI 使用）。'''
         extension = self.registry.get(extension_id)
-        if extension is None:
-            return None
+        if extension is None or extension.metadata is None:
+            return {}
         return {
             'id': extension.metadata.id,
             'name': extension.metadata.name,

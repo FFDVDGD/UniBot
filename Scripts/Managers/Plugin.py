@@ -34,11 +34,7 @@ class PluginManager:
 
     @staticmethod
     def _can_disable(module_name: str) -> bool:
-        return (
-            module_name.startswith('Plugins.Commands.')
-            or module_name.startswith('Plugins.Expand.')
-            or not module_name.startswith('Plugins.')
-        )
+        return not module_name.startswith('Plugins.')
 
     @staticmethod
     def _plugin_info(plugin, configured: dict | None = None) -> dict:

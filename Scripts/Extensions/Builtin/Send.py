@@ -1,20 +1,20 @@
-from nonebot.plugin import PluginMetadata
+'''内置扩展：消息发送指令。'''
+
+from typing import override
+
 from nonebot_plugin_alconna import Match
 from nonebot_plugin_uninfo import Uninfo
 
-from Scripts.Config import config
-from Scripts.Extensions import Command
+from .. import Command, Extension
 from Scripts.Messages import messages
 from Scripts.Managers import data_manager, server_manager
 from Scripts.Utils import get_platform_name, get_player_name
 
-__plugin_meta__ = PluginMetadata(
-    name='消息发送',
-    description='将聊天平台中的消息广播到已连接的 Minecraft 服务器。',
-    usage='.send <消息内容>',
-)
+# 创建唯一扩展实例，能力经实例装饰器登记
+extension = Extension(id='Send', name='消息发送', version='1.0.0', types=('command',), builtin=True)
 
 
+@extension.register_command
 class SendCommand(Command):
     '''向已连接的服务器发送消息。'''
 
@@ -23,9 +23,11 @@ class SendCommand(Command):
     usage = '.send <消息内容>'
     aliases = ('mc',)
 
+    @override
     def declare(self) -> None:
         self.register_arg('message', str, description='要发送的消息内容', multi=True)
 
+    @override
     async def handler(self, session: Uninfo, message: Match[list[str]]):
         if not message.available:
             return messages.commands.send.param_error

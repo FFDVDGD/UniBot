@@ -6,6 +6,7 @@
 
 - [架构设计](/unibot/架构设计.html) — 深入了解项目结构
 - [REST API](/unibot/接口文档.html) — WebUI 后端 API 参考
+- [开发插件](/unibot/开发插件.html) — 编写自己的 UniBot 扩展
 
 ## 技术栈
 

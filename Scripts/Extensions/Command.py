@@ -5,11 +5,10 @@
 嵌套 SubCommand 类的形式声明，框架自动发现并实例化，parent 指向父命令实例。
 '''
 
-import importlib
 import inspect
 import re
 from abc import ABC
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterable, Awaitable, Callable
 from functools import wraps
 from typing import Any, Generic, TypeVar
 
@@ -19,6 +18,8 @@ from nonebot_plugin_alconna import on_alconna
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
 from Scripts.Config import config
+from Scripts.Utils import turn_message_text
+from .Errors import CommandError, CommandFieldError
 from Scripts.Rules import command_group_rule
 
 # 到内置命令的稳定前缀
@@ -38,14 +39,6 @@ ImageHandler = Callable[..., Awaitable[bytes]]
 
 # 父命令类型参数：子命令用它标注宿主命令类型，从而获得父命令方法提示
 ParentT = TypeVar('ParentT', bound='Command')
-
-
-class CommandError(Exception):
-    '''命令定义或构建阶段错误。'''
-
-
-class CommandFieldError(CommandError):
-    '''命令字段校验错误，包含扩展 id 与字段路径。'''
 
 
 def _format_path(extension_id: str, path: list[str]) -> str:
@@ -83,26 +76,6 @@ class Argument:
         # 是否接受多个值（对应 Alconna MultiVar，如 `str+`）
         self.multi = multi
 
-    def set_type(self, value_type: Any) -> 'Argument':
-        self.value_type = value_type
-        return self
-
-    def set_required(self, required: bool) -> 'Argument':
-        self.required = required
-        return self
-
-    def set_default(self, default: Any) -> 'Argument':
-        self.default = default
-        return self
-
-    def set_description(self, description: str) -> 'Argument':
-        self.description = description
-        return self
-
-    def set_multi(self, multi: bool) -> 'Argument':
-        self.multi = multi
-        return self
-
     def _resolved_type(self) -> Any:
         '''返回用于 Alconna Args 的实际类型（multi 时包装为 MultiVar）。'''
         if self.multi:
@@ -129,10 +102,6 @@ class Command(Generic[ParentT], ABC):
     def __init__(self, parent: ParentT | None = None) -> None:
         # 父命令实例，运行时由框架注入；子命令必非 None，主命令为 None
         self._parent = parent
-        # 运行时状态，仅存活于一次路由调用期间
-        self._matcher = None
-        self._finished = False
-        self._message = None
         self.arguments: list[Argument] = []
         self.subcommands: list['Command[Any]'] = []
         self._discover_subcommands()
@@ -217,18 +186,15 @@ class Command(Generic[ParentT], ABC):
     async def handler(self, *args, **kwargs) -> str | bytes | list | None:
         '''覆写以处理命令，直接返回要发送的消息内容：
         - 字符串 / 图片字节 / 消息片段列表：框架统一发送
-        - None：不发送（通常已调用过 self.finish()）
+        - 异步迭代器（async generator）：逐项收集后由框架转成多行文本发送，
+          此时 `return` 仅做提前跳出函数用，不承载要发送的消息
+        - None：不发送
         '''
         return None
 
     async def image_handler(self, *args, **kwargs) -> bytes | None:
         '''覆写以提供图片模式下渲染的 PNG 字节，由框架发送。'''
         return None
-
-    def finish(self, message) -> None:
-        '''标记命令已结束并记录要发送的内容（等价于 matcher.finish）。'''
-        self._finished = True
-        self._message = message
 
 
 class SubCommand(Command[ParentT]):
@@ -266,29 +232,19 @@ class CommandManager:
 
     # ----- 注册阶段 -----
 
-    def register_command(self, command: Command[Any], command_id: str) -> None:
-        '''登记一个命令实例（内置或扩展）。'''
+    def register_command(self, command: Command, command_id: str, *, override: bool = False) -> None:
+        '''登记一个命令实例（内置或扩展）。
+
+        `override=True` 时允许以同名 `command_id` **取代**已登记的命令（用于指令
+        扩展覆盖内置命令）；否则重复 `command_id` 视为冲突并报错。
+        '''
         if self._built:
             raise CommandError('命令管理器已构建，不能再注册命令！')
         if command_id in self._commands:
-            raise CommandError(f'命令 {command_id} 重复注册，冲突拒绝！')
+            if not override:
+                raise CommandError(f'命令 {command_id} 重复注册，冲突拒绝！')
+            logger.info(f'命令 {command_id} 被覆盖取代！')
         self._commands[command_id] = command
-
-    def register_builtin_commands(self) -> None:
-        '''从 pyproject 中已启用的内置命令模块自动发现命令类并登记。'''
-        if self._built:
-            raise CommandError('命令管理器已构建，不能再注册命令！')
-        from Scripts.Managers import config_manager
-
-        for plugin in config_manager.nonebot_config.get('plugins', []):
-            module_name = plugin if isinstance(plugin, str) else plugin.get('module_name', '')
-            enabled = True if isinstance(plugin, str) else plugin.get('enabled', True)
-            if not (enabled and module_name.startswith('Plugins.Commands.')):
-                continue
-            module = importlib.import_module(module_name)
-            for command in discover_commands(module):
-                command_id = f'{BUILTIN_PREFIX}:{command.name}'
-                self.register_command(command, command_id)
 
     def get_command(self, command_id: str) -> Command[Any] | None:
         return self._commands.get(command_id)
@@ -402,23 +358,27 @@ class CommandManager:
         '''绑定处理器并统一处理返回值。
 
         图像模式生效且命令覆写了图片处理器时优先走图片处理器，否则走文本
-        处理器。处理器直接返回要发送的内容（字符串 / 图片字节 / 片段列表），
-        或调用 self.finish() 提前结束；框架在此统一发送，命令内无需接触
-        matcher。dispatcher 通过 functools.wraps 继承 handler 的签名，使其业务
-        参数（如 Uninfo、Match）照常由 nonebot 注入。
+        处理器。处理器通过 `return` 携带要发送的内容（字符串 / 图片字节 /
+        片段列表 / 异步迭代器），框架在此统一发送，命令内无需接触 matcher。
+
+        异步迭代器（async generator）返回值会被逐项收集，并用 turn_message_text
+        转成多行文本发送；此时 `return` 仅做提前跳出函数用，不承载要发送的消息。
+        dispatcher 通过 functools.wraps 继承 handler 的签名，使其业务参数
+        （如 Uninfo、Match）照常由 nonebot 注入。
         '''
         target = image_handler if config.image.mode and type(command).image_handler is not Command.image_handler else handler
 
         @wraps(target)
         async def dispatched(*args, **kwargs):
-            command._matcher = matcher
-            command._finished = False
-            command._message = None
-            result = await target(*args, **kwargs)
-            if command._finished:
-                message = command._message
-            elif result is None:
+            # 异步生成器：不 await，逐项收集后转多行文本发送
+            if inspect.isasyncgenfunction(target):
+                await matcher.finish(await turn_message_text(target(*args, **kwargs)))
                 return
+            result = await target(*args, **kwargs)
+            if result is None:
+                return
+            elif isinstance(result, AsyncIterable):
+                message = await turn_message_text(result)
             else:
                 message = result
             # 图片处理器返回 PNG 字节，包装为图片消息发送

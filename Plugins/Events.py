@@ -19,7 +19,7 @@ from Scripts.Rules import message_group_rule
 from Scripts.Utils import check_message, get_platform_name, send_message_to_groups
 
 __plugin_meta__ = PluginMetadata(
-    name='消息互通事件',
+    name='消息互通',
     description='处理玩家事件以及聊天平台与 Minecraft 服务器之间的消息同步。',
     usage='由相关消息与服务器事件自动触发。',
 )

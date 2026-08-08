@@ -1,4 +1,5 @@
 import signal
+import asyncio
 import importlib
 from pathlib import Path
 
@@ -18,23 +19,21 @@ driver = nonebot.get_driver()
 async def startup() -> None:
     from Scripts.Api.Limiter import rate_limiter
     from Scripts.Config import config
-    from Scripts.Extensions import command_manager
+    from Scripts.Extensions import command_manager, extension_manager
     from Scripts.Managers import (
         data_manager,
-        extension_manager,
         plugin_manager,
         server_manager,
         version_manager,
         webui_manager,
     )
 
-    await version_manager.init()
     server_manager.init()
     data_manager.load()
     plugin_manager.load()
     extension_manager.load()
-    command_manager.register_builtin_commands()
     command_manager.build()
+    asyncio.create_task(version_manager.init())
 
     if config.webui.enabled:
         await webui_manager.init()
@@ -46,7 +45,8 @@ async def startup() -> None:
 @driver.on_shutdown
 async def shutdown() -> None:
     from Scripts.Api.Limiter import rate_limiter
-    from Scripts.Managers import data_manager, extension_manager
+    from Scripts.Extensions import extension_manager
+    from Scripts.Managers import data_manager
 
     await extension_manager.shutdown()
     rate_limiter.stop()

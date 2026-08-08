@@ -1,39 +1,20 @@
-'''UniBot 扩展系统：扩展基类、元数据、状态机与错误模型。'''
+'''UniBot 扩展系统：扩展基类、元数据、状态机。'''
 
-from copy import deepcopy
+from __future__ import annotations
+
 from enum import Enum
 from typing import Any
 
 from nonebot.log import logger
 from pydantic import BaseModel, ConfigDict, Field
 
-from Scripts.Extensions.Service import ServiceRegistry
-
-
-# ===== 错误模型 =====
-
-class ExtensionError(Exception):
-    '''扩展系统错误基类。'''
-
-
-class ManifestError(ExtensionError):
-    '''清单元数据解析或校验失败。'''
-
-
-class CompatibilityError(ExtensionError):
-    '''扩展与当前 UniBot 版本不兼容。'''
-
-
-class DependencyError(ExtensionError):
-    '''扩展依赖缺失或存在循环依赖。'''
-
-
-class LoadError(ExtensionError):
-    '''扩展模块导入或初始化失败。'''
-
-
-class StorageError(ExtensionError):
-    '''扩展配置或数据读写失败。'''
+from .Errors import (
+    ExtensionError,
+    ExtensionNotBoundError,
+    ManifestError,
+)
+from .Service import ServiceRegistry
+from .Storage import ExtensionConfigStore, ExtensionDataStore
 
 
 class ExtensionState(str, Enum):
@@ -43,7 +24,8 @@ class ExtensionState(str, Enum):
     validated = 'validated'     # 清单校验通过
     loaded = 'loaded'           # 模块导入并完成声明
     enabled = 'enabled'         # 已启用（on_enable 完成）
-    disabled = 'disabled'       # 已停用
+    disabled = 'disabled'       # 管理员主动禁用
+    blocked = 'blocked'         # 依赖禁用/失败导致不可用
     failed = 'failed'           # 加载或启用失败
 
 
@@ -54,6 +36,7 @@ _STATE_TRANSITIONS: dict[ExtensionState, set[ExtensionState]] = {
     ExtensionState.loaded: {ExtensionState.enabled, ExtensionState.disabled, ExtensionState.failed},
     ExtensionState.enabled: {ExtensionState.disabled, ExtensionState.failed},
     ExtensionState.disabled: {ExtensionState.enabled, ExtensionState.failed},
+    ExtensionState.blocked: {ExtensionState.enabled, ExtensionState.failed},
     ExtensionState.failed: set(),
 }
 
@@ -182,91 +165,126 @@ def parse_manifest(content: str) -> ExtensionManifest:
         raise ManifestError(f'扩展清单校验失败：{error}') from error
 
 
+def manifest_from_attributes(extension: 'Extension') -> ExtensionManifest:
+    '''从单文件扩展的类属性构建清单（无 Extension.toml 时使用）。
+
+    读取 `id`/`name`/`version`/`author`/`description`/`types` 类属性，
+    生成与 `Extension.toml` 等价的清单，供 Loader 统一校验与绑定。
+    '''
+    # id 是普通类属性，单文件扩展在类上声明或构造时传入；未声明时取到缺省空串
+    extension_id = extension.id
+    if not isinstance(extension_id, str) or not extension_id:
+        raise ManifestError('单文件扩展必须声明 id！')
+    if not extension.name:
+        raise ManifestError(f'扩展 {extension_id} 必须声明 name 类属性！')
+    if not extension.version:
+        raise ManifestError(f'扩展 {extension_id} 必须声明 version 类属性！')
+    try:
+        types = [ExtensionType(entry) for entry in extension.types]
+    except ValueError as error:
+        raise ManifestError(f'扩展 {extension_id} 存在非法类型：{extension.types}！') from error
+    return ExtensionManifest(
+        extension=ExtensionMeta(
+            id=extension_id,
+            name=extension.name,
+            version=extension.version,
+            author=extension.author,
+            description=extension.description,
+            types=types,
+        )
+    )
+
+
 # ===== Extension 基类 =====
 
 class Extension:
     '''UniBot 本地扩展基类，所有扩展必须继承并实现。
 
-    扩展通过 `@Extension.command` / `@Extension.service` / `@Extension.renderer`
-    装饰器标记能力类；`__init_subclass__` 自动从扩展子类命名空间收集这些标记
-    类（含继承得到的声明），存入类级 `commands` / `services` / `renderers`。
-    Loader 创建实例后复制声明列表，实例化各能力类并统一提交，不产生全局注册
-    副作用。
+    扩展通过实例装饰器 `@extension.register_command` / `@extension.register_service`
+    / `@extension.register_renderer` 把能力类登记到该实例。装饰器只记录声明，
+    由 Loader 实例化并提交，不产生全局注册副作用。
+
+    `Extension()` 采用两阶段绑定：模块导入期间构造的是 unbound 实例，只允许读取
+    `config_model` 和使用三个注册装饰器；`metadata`、`config`、`data`、`api`、
+    `logger` 在此阶段访问应抛出 `ExtensionNotBoundError`。Loader 校验入口与清单后
+    调用内部 `_bind()` 一次性注入这些能力并将状态切换为 bound；扩展代码不能直接
+    调用 `_bind()`，重复绑定必须失败。
     '''
 
-    # 装饰器标记属性名
-    _COMMAND_MARK = '_extension_command'
-    _SERVICE_MARK = '_extension_service'
-    _RENDERER_MARK = '_extension_renderer'
+    # 单文件扩展的元数据类属性（无 Extension.toml 时由 Loader 读取）
+    # id 通过 property 暴露：绑定后取自 metadata，未绑定取自类属性/构造参数
+    _declared_id: str = ''
+    name: str = ''
+    version: str = ''
+    author: str = ''
+    description: str = ''
+    types: tuple[str, ...] = ()
 
-    # 由扩展类声明，Loader 实例化后注入
-    metadata: ExtensionMetadata
+    @property
+    def id(self) -> str:
+        '''扩展唯一标识：绑定后来自 metadata，未绑定来自声明值。'''
+        if self.metadata is not None:
+            return self.metadata.id
+        return self._declared_id
+
+    @id.setter
+    def id(self, value: str) -> None:
+        self._declared_id = value
+
+    # 内置扩展标记：内置命令单文件扩展为 True，命令以 builtin: 前缀注册
+    builtin: bool = False
+
+    # 由扩展类声明，Loader 实例化后注入；实例上始终非 None（缺省用空配置模型）
     config_model: type[BaseModel] | None = None
-    config: BaseModel
 
     # 由 Loader 创建并注入，作用域限定在当前扩展
-    config_store: Any = None
-    data_store: Any = None
-    config_path_root: Any = None
-    data_path_root: Any = None
-
-    # 服务注册入口与带扩展名前缀的 logger
-    api: ServiceRegistry
+    metadata: ExtensionMetadata | None = None
+    config: ExtensionConfigStore | None = None
+    data: ExtensionDataStore | None = None
+    api: ServiceRegistry | None = None
     logger = logger
+
+    # 绑定状态
+    _bound: bool = False
 
     state: ExtensionState = ExtensionState.discovered
 
     # 失败原因（mark_failed 时记录）
     failure_reason: str | None = None
 
-    # 声明的能力类集合（由 __init_subclass__ 收集，Loader 实例化并提交）
-    commands: list = []
-    services: list = []
-    renderers: list = []
+    def __init__(
+        self,
+        *,
+        id: str = '',
+        name: str = '',
+        version: str = '',
+        author: str = '',
+        description: str = '',
+        types: tuple[str, ...] = (),
+        builtin: bool = False,
+        config_model: type[BaseModel] | None = None,
+    ) -> None:
+        '''初始化扩展实例。只能登记能力类，不能产生全局注册副作用。
 
-    def __init_subclass__(cls, **kwargs) -> None:
-        '''收集本类及继承得到的能力类声明到类级列表。'''
-        super().__init_subclass__(**kwargs)
-        cls.commands = list(getattr(cls, 'commands', [])) + [
-            member for member in vars(cls).values()
-            if getattr(member, cls._COMMAND_MARK, False)
-        ]
-        cls.services = list(getattr(cls, 'services', [])) + [
-            member for member in vars(cls).values()
-            if getattr(member, cls._SERVICE_MARK, False)
-        ]
-        cls.renderers = list(getattr(cls, 'renderers', [])) + [
-            member for member in vars(cls).values()
-            if getattr(member, cls._RENDERER_MARK, False)
-        ]
-
-    @staticmethod
-    def command(command_cls):
-        '''装饰器：给 Command 子类打标，供 __init_subclass__ 收集。'''
-        setattr(command_cls, Extension._COMMAND_MARK, True)
-        return command_cls
-
-    @staticmethod
-    def service(service_cls):
-        '''装饰器：给 Service 子类打标，供 __init_subclass__ 收集。'''
-        setattr(service_cls, Extension._SERVICE_MARK, True)
-        return service_cls
-
-    @staticmethod
-    def renderer(renderer_cls):
-        '''装饰器：给 BaseRenderer 子类打标，供 __init_subclass__ 收集。'''
-        setattr(renderer_cls, Extension._RENDERER_MARK, True)
-        return renderer_cls
-
-    @property
-    def id(self) -> str:
-        '''扩展唯一标识（由元信息提供）。'''
-        return self.metadata.id
-
-    def __init__(self) -> None:
-        '''初始化扩展实例。不能在此产生全局注册副作用。'''
-        if self.config_model is None:
-            self.config_model = self._default_config_model()
+        元数据可直接通过构造参数声明（`Extension(id='List', name='...')`），
+        也可由单文件扩展在子类上用类属性声明；两者等价，Loader 统一归一化。
+        多文件扩展的元数据以 `Extension.toml` 为准，无需在此传入 id。
+        '''
+        # 能力声明集合为实例私有，避免多个实例共享同一 list 导致互相污染
+        self.commands: list = []
+        self.services: list = []
+        self.renderers: list = []
+        # 构造参数优先，缺省沿用类属性声明
+        # 注意：id 通过 _declared_id 写入而非 id property，
+        # 因为子类可能把 id 重新定义为只读 property（见测试 _GoodExt）
+        self._declared_id = id or self._declared_id
+        self.name = name or self.name
+        self.version = version or self.version
+        self.author = author or self.author
+        self.description = description or self.description
+        self.types = types or self.types
+        self.builtin = builtin or self.builtin
+        self.config_model = config_model or self.config_model or self._default_config_model()
 
     @staticmethod
     def _default_config_model() -> type[BaseModel]:
@@ -275,19 +293,55 @@ class Extension:
             model_config = ConfigDict(extra='forbid')
         return EmptyConfig
 
-    # ===== 声明提交（Loader 调用，将能力类实例提交给全局注册表） =====
+    # ===== 两阶段绑定（Loader 内部调用） =====
 
-    def register_command(self, command_cls) -> None:
-        '''记录命令类到声明列表（供 Loader 实例化并提交）。'''
+    def _bind(
+        self,
+        metadata: ExtensionMetadata,
+        config_store: ExtensionConfigStore,
+        data_store: ExtensionDataStore,
+        api: ServiceRegistry,
+    ) -> None:
+        '''Loader 一次性注入绑定能力；只能调用一次，扩展代码不得直接调用。'''
+        if self._bound:
+            raise ExtensionError(f'扩展 {self.metadata.id if self.metadata else ""} 重复绑定！')
+        self.metadata = metadata
+        self.config = config_store
+        self.data = data_store
+        self.api = api
+        self._bound = True
+
+    def _require_bound(self) -> None:
+        '''访问绑定能力前校验是否已绑定，否则抛错。'''
+        if not self._bound:
+            raise ExtensionNotBoundError(
+                f'扩展 {self.metadata.id if self.metadata else "<unknown>"} '
+                '尚未绑定，无法访问该能力！'
+            )
+
+    @property
+    def config_value(self) -> BaseModel:
+        '''返回已绑定的配置模型（未绑定时抛出明确错误）。'''
+        self._require_bound()
+        assert self.config is not None
+        return self.config.value
+
+    # ===== 声明提交（实例装饰器，能力归属由装饰时使用的实例决定） =====
+
+    def register_command(self, command_cls) -> type:
+        '''实例装饰器：登记一个 Command 子类，返回该类。'''
         self.commands.append(command_cls)
+        return command_cls
 
-    def register_service(self, service_cls) -> None:
-        '''记录服务类到声明列表（供 Loader 实例化并提交）。'''
+    def register_service(self, service_cls) -> type:
+        '''实例装饰器：登记一个 Service 子类，返回该类。'''
         self.services.append(service_cls)
+        return service_cls
 
-    def register_renderer(self, renderer_cls) -> None:
-        '''记录渲染器类到声明列表（供 Loader 实例化并提交）。'''
+    def register_renderer(self, renderer_cls) -> type:
+        '''实例装饰器：登记一个 BaseRenderer 子类，返回该类。'''
         self.renderers.append(renderer_cls)
+        return renderer_cls
 
     # ===== 生命周期 =====
 
@@ -304,14 +358,14 @@ class Extension:
 
     def get_config_schema(self) -> dict:
         '''返回扩展配置的 JSON Schema（供 WebUI 动态生成表单）。'''
+        assert self.config_model is not None
         return self.config_model.model_json_schema()
 
     def update_config(self, values: dict) -> BaseModel:
         '''校验并持久化配置；校验失败抛出异常且不修改原配置。'''
-        updated = self.config_model.model_validate(values)
-        self.config_store.save(updated)
-        self.config = updated
-        return updated
+        self._require_bound()
+        assert self.config is not None
+        return self.config.update(values)
 
     # ===== 状态机 =====
 
@@ -329,10 +383,6 @@ class Extension:
         self.logger.error(f'扩展 {self.id} 加载失败：{reason}！')
         self.state = ExtensionState.failed
         self.failure_reason = reason
-
-    def clone(self) -> 'Extension':
-        '''创建当前扩展的浅拷贝（用于覆盖机制，保留业务逻辑但重置状态）。'''
-        return deepcopy(self)
 
 
 def get_unibot_version() -> str:

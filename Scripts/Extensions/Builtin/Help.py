@@ -1,35 +1,25 @@
-from nonebot.plugin import PluginMetadata
+'''内置扩展：命令帮助指令。'''
+
+from typing import override
+
 from nonebot_plugin_alconna import Match
 
-from Scripts.Extensions import Command, command_manager
+from .. import Command, Extension, command_manager
 from Scripts.Globals import render_template
-from Scripts.Managers import config_manager
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
-__plugin_meta__ = PluginMetadata(
-    name='命令帮助',
-    description='列出可用命令或展示指定命令的详细帮助。',
-    usage='.help [命令名称]',
-)
+# 创建唯一扩展实例，能力经实例装饰器登记
+extension = Extension(id='Help', name='命令帮助', version='1.0.0', types=('command',), builtin=True)
 
 
 def get_enabled_nodes() -> list[Command]:
-    '''获取 pyproject.toml 中已启用且已登记的内置命令节点。'''
-    enabled_modules = {
-        plugin.get('module_name', plugin) if isinstance(plugin, dict) else plugin
-        for plugin in config_manager.nonebot_config.get('plugins', [])
-        if (plugin.get('enabled', True) if isinstance(plugin, dict) else True)
-        and (plugin.get('module_name', plugin) if isinstance(plugin, dict) else plugin).startswith('Plugins.Commands.')
-    }
-    nodes = []
-    for command_id, command in command_manager.get_command_nodes().items():
-        if not command_id.startswith('builtin:'):
-            continue
-        module_name = f'Plugins.Commands.{command.name.capitalize()}'
-        if module_name in enabled_modules:
-            nodes.append(command)
-    return nodes
+    '''获取已登记的内置命令节点（builtin: 前缀）。'''
+    return [
+        command
+        for command_id, command in command_manager.get_command_nodes().items()
+        if command_id.startswith('builtin:')
+    ]
 
 
 def get_node(name: str) -> Command | None:
@@ -67,6 +57,7 @@ def node_args(command: Command) -> list[dict]:
     ]
 
 
+@extension.register_command
 class HelpCommand(Command):
     '''查看所有可用命令的帮助信息。'''
 
@@ -74,14 +65,17 @@ class HelpCommand(Command):
     description = '查看所有可用命令的帮助信息。'
     usage = '.help [命令名称]'
 
+    @override
     def declare(self) -> None:
         self.register_option('command', str, default=None, description='命令名称')
 
+    @override
     async def handler(self, command: Match[str]):
         if command.available:
             return await turn_message_text(self.detailed_handler(command.result))
         return await turn_message_text(self.help_handler())
 
+    @override
     async def image_handler(self, command: Match[str]) -> bytes:
         '''渲染帮助信息为图片，返回 PNG 字节（由框架在图像模式发送）。'''
         if command.available:
@@ -151,8 +145,8 @@ class HelpCommand(Command):
             return
         yield f'    {messages.commands.help.detail_subcommands_title}'
         for index, subcommand in enumerate(command.subcommands):
-            branch = '└─' if index == len(node.subcommands) - 1 else '├─'
-            continuation = '    ' if index == len(node.subcommands) - 1 else '│   '
+            branch = '└─' if index == len(command.subcommands) - 1 else '├─'
+            continuation = '    ' if index == len(command.subcommands) - 1 else '│   '
             subcommand_description = f' — {subcommand.description}' if subcommand.description else ''
             yield f'        {branch} {sub_usage(subcommand)}{subcommand_description}'
             for arg in subcommand.arguments:

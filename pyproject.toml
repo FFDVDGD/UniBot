@@ -6,28 +6,28 @@ readme = "README.md"
 requires-python = ">=3.11, <4.0"
 dependencies = [
     "httpx>=0.28.1",
+    "packaging>=24.0",
     "nonebot2[fastapi]>=2.2.1",
     "nonebot-adapter-minecraft>=1.8.2",
     "nonebot-plugin-alconna>=0.62.0",
     "nonebot-plugin-uninfo>=0.11.0",
     "nonebot-adapter-onebot>=2.4.6",
-    "packaging>=24.0",
 ]
 
 [project.optional-dependencies]
-image = [
-    "html2pic>=0.2.2",
-    "jinja2>=3.1.6",
-    "pillow>=12.0.0",
-]
+# image = [
+#     "html2pic>=0.2.2",
+#     "jinja2>=3.1.6",
+#     "pillow>=12.0.0",
+# ]
 webui = [
     "psutil>=6.0.0",
     "tomlkit>=0.13.0",
     "PyJWT>=2.8.0",
     "bcrypt>=4.0.0",
 ]
-ai = [
-    "openai>=2.46.0",
+extensions = [
+    # 占位
 ]
 
 [tool.uv]
@@ -39,16 +39,6 @@ webui_version = 'v0.0.5'
 
 [tool.nonebot]
 plugins = [
-    { module_name = "Plugins.Commands.About", enabled = true },
-    { module_name = "Plugins.Commands.Bound", enabled = true },
-    { module_name = "Plugins.Commands.Command", enabled = true },
-    { module_name = "Plugins.Commands.Help", enabled = true },
-    { module_name = "Plugins.Commands.List", enabled = true },
-    { module_name = "Plugins.Commands.Luck", enabled = true },
-    { module_name = "Plugins.Commands.Send", enabled = true },
-    { module_name = "Plugins.Commands.Server", enabled = true },
-    { module_name = "Plugins.Expand.Ai", enabled = false },
-    { module_name = "Plugins.Expand.Keywords", enabled = false },
     { module_name = "Plugins.Events", enabled = true },
 ]
 

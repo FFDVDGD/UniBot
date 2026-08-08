@@ -1,0 +1,21 @@
+[manifest]
+schema_version = 1
+
+[extension]
+id = "WeatherExt"
+name = "天气扩展"
+version = "1.0.0"
+author = "UniBot"
+description = "示例扩展：演示 API 服务注册与新增指令。"
+types = ["api", "command"]
+
+[compatibility]
+unibot = ">=0.0.5"
+
+[dependencies]
+extensions = []
+python = []
+
+[render]
+kind = []
+theme_name = ""

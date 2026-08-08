@@ -1,10 +1,15 @@
 '''API 服务基类与受限服务注册入口。
 
 扩展通过继承 `Service` 定义可被其它扩展或内置代码复用的服务能力，
-由 `@Extension.service` 装饰器标记，Loader 统一实例化并提交到全局注册表。
+由 `@extension.register_service` 装饰器标记，Loader 统一实例化并提交到全局注册表。
 '''
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .Manager import ExtensionManager
 
 
 class Service:
@@ -17,7 +22,7 @@ class Service:
 class ServiceRegistry:
     '''扩展的服务注册入口，将服务写入全局 ExtensionManager。'''
 
-    def __init__(self, manager) -> None:
+    def __init__(self, manager: ExtensionManager) -> None:
         self._manager = manager
 
     def register(self, name: str, service: Any) -> None:

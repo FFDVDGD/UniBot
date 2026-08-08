@@ -2,7 +2,12 @@
 
 覆盖机制已由 CommandPatch/override_command 重构为类继承：扩展继承内置命令
 类，覆写类属性或 handler 即可，无需冲突检测（派生类天然覆盖基类）。
+`@override` 仅作为编码惯例标记，不做运行时强制校验。
 '''
+
+from typing import override
+
+import pytest
 
 from Scripts.Extensions import Command, SubCommand
 
@@ -14,6 +19,7 @@ class BuiltinListCommand(Command):
     description = '查看服务器在线玩家列表。'
     usage = '.list [服务器名称]'
 
+    @override
     def declare(self) -> None:
         self.register_option('server', str, default=None, description='服务器名称')
 
@@ -51,6 +57,7 @@ class TestClassOverride:
         class OverrideHandler(BuiltinListCommand):
             name = 'list'
 
+            @override
             async def handler(self) -> str | None:
                 return '覆写'
 
@@ -71,3 +78,25 @@ class TestClassOverride:
         assert override.description == '覆写后的描述'
         assert base.usage == '.list [服务器名称]'
         assert override.usage == '.list all'
+
+
+# ===== command_id 覆盖取代 =====
+
+class TestCommandIdOverride:
+    def test_register_override_replaces_existing(self):
+        from Scripts.Extensions import CommandManager
+
+        manager = CommandManager()
+        manager.register_command(BuiltinListCommand(), 'builtin:list')
+        manager.register_command(_OverrideListCommand(), 'builtin:list', override=True)
+        command = manager.get_command('builtin:list')
+        assert command is not None
+        assert command.description == '覆写后的描述'
+
+    def test_register_duplicate_without_override_raises(self):
+        from Scripts.Extensions import CommandError, CommandManager
+
+        manager = CommandManager()
+        manager.register_command(BuiltinListCommand(), 'builtin:list')
+        with pytest.raises(CommandError):
+            manager.register_command(_OverrideListCommand(), 'builtin:list')

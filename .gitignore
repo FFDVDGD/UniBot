@@ -15,4 +15,5 @@ Logs/
 .docs/
 .dist/
 .**.md
+AGENT.md
 !.github

@@ -1,20 +1,19 @@
 '''渲染器管理：管理引擎实例、并发上限、单次渲染超时与默认引擎回退。'''
 
 import asyncio
-from typing import Any
+from collections.abc import Callable
 
 from nonebot.log import logger
 
-from Scripts.Extensions import BaseRenderer
-from Scripts.Extensions.Renderers.Html2Pic import Html2PicRenderer
+from .. import BaseRenderer
 
-__all__ = ['Html2PicRenderer', 'RendererManager']
+__all__ = ['RendererManager']
 
 
 class RendererManager:
     '''统一管理渲染引擎实例，负责 setup / render / shutdown、并发与超时。'''
 
-    def __init__(self, get_renderer_factory: Any) -> None:
+    def __init__(self, get_renderer_factory: Callable[[str], BaseRenderer | None]) -> None:
         # 从扩展管理器获取渲染引擎实例的函数：name -> BaseRenderer | None
         self._get_renderer = get_renderer_factory
         # 已 setup 的引擎实例：name -> BaseRenderer

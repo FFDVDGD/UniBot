@@ -1,5 +1,7 @@
 '''指令注册测试：命令类发现、嵌套子命令与字段校验（验证点 3、4、11）。'''
 
+from typing import override
+
 import pytest
 
 from Scripts.Extensions import (
@@ -18,6 +20,7 @@ class WeatherCommand(Command):
     name = 'weather'
     description = '天气'
 
+    @override
     def declare(self) -> None:
         self.register_arg('city', str, description='城市')
 
@@ -25,6 +28,7 @@ class WeatherCommand(Command):
         name = 'today'
         description = '今天'
 
+        @override
         def declare(self) -> None:
             self.register_arg('city', str, required=False, default='SH')
 
@@ -106,6 +110,7 @@ class TestCommandValidation:
         class DupArg(Command):
             name = 'dup'
 
+            @override
             def declare(self) -> None:
                 self.register_arg('city', str)
                 self.register_arg('city', str)
@@ -118,6 +123,7 @@ class TestCommandValidation:
         class NoDefault(Command):
             name = 'nodefault'
 
+            @override
             def declare(self) -> None:
                 self.register_arg('city', str, required=False)
 

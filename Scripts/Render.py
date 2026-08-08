@@ -64,7 +64,7 @@ def _build_environment() -> Environment:
     loaders = []
     # 主题扩展优先（choice 按顺序，前面的 loader 命中则使用主题模板）
     if config.image.theme and config.image.theme != 'default':
-        from Scripts.Managers import extension_manager
+        from Scripts.Extensions import extension_manager
 
         templates_dir = extension_manager.themes.get(config.image.theme)
         if templates_dir is not None:
@@ -97,7 +97,7 @@ def invalidate_environment() -> None:
 
 async def render(html: str, css: str) -> bytes:
     '''委托当前渲染引擎渲染 HTML+CSS 为 PNG 字节。'''
-    from Scripts.Managers import extension_manager
+    from Scripts.Extensions import extension_manager
 
     return await extension_manager.renderer_manager.render(html, css, config.image.renderer)
 

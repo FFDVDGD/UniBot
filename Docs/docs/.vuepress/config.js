@@ -60,6 +60,7 @@ export default defineUserConfig({
             '/unibot/',
             '/unibot/架构设计.md',
             '/unibot/接口文档.md',
+            '/unibot/开发插件.md',
           ],
         },
       ],

@@ -17,6 +17,16 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 | **Satori** | Satori | 通用协议，可对接 Chronocat 等 |
 | **Minecraft** | Minecraft | 通过鹊桥协议与服务器互通 |
 
+## 安装与依赖自动同步
+
+通过 **WebUI → 适配器** 安装平台适配器时，UniBot 会自动完成三件事：
+
+1. 把适配器包（如 `nonebot-adapter-onebot`）写入 `pyproject.toml` 的 `dependencies`；
+2. 在 `.env` 的 `DRIVER` 中追加适配器所需的驱动（如 `~httpx`、`~websockets`）；
+3. **自动把驱动所需底层依赖包**（如 `websockets`）同步写入 `pyproject.toml` 的 `dependencies`，确保重启后驱动可正常工作。
+
+以上依赖声明变化会在重启时由 Watchdog 通过 `uv sync` 自动落地安装。卸载适配器时，仅移除注册与 `DRIVER` 中多余的驱动，不删除依赖声明，避免误删被其他依赖引用的包。
+
 ## 快速导航
 
 - [接入聊天平台](/adapter/platforms.html) — 各平台适配器的配置字段与对接方式

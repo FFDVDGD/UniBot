@@ -1,22 +1,22 @@
-from nonebot.plugin import PluginMetadata
+'''内置扩展：玩家绑定指令。'''
 
-from nonebot_plugin_uninfo import Uninfo
+from typing import override
+
 from nonebot_plugin_alconna import At, Match
+from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Config import config
-from Scripts.Extensions import Command, SubCommand
+from .. import Command, Extension, SubCommand
 from Scripts.Globals import render_template
 from Scripts.Managers import data_manager, server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import check_player, get_permission
 
-__plugin_meta__ = PluginMetadata(
-    name='玩家绑定',
-    description='管理聊天用户与 Minecraft 玩家及白名单的绑定关系。',
-    usage='.bound [玩家名|子命令]',
-)
+# 创建唯一扩展实例，能力经实例装饰器登记
+extension = Extension(id='Bound', name='玩家绑定', version='1.0.0', types=('command',), builtin=True)
 
 
+@extension.register_command
 class BoundCommand(Command):
     '''管理玩家白名单绑定。'''
 
@@ -30,6 +30,8 @@ class BoundCommand(Command):
         name = 'list'
         description = '列出所有绑定'
 
+        @override
+        @override
         async def handler(self, session: Uninfo):
             if not get_permission(session):
                 return messages.commands.bound.no_permission
@@ -39,6 +41,7 @@ class BoundCommand(Command):
                 f'  {user} -> {'、'.join(players)}' for user, players in data_manager.players.items()
             )
 
+        @override
         async def image_handler(self, session: Uninfo) -> bytes | None:
             '''渲染绑定列表为图片，返回 PNG 字节（由框架在图像模式发送）。'''
             if not get_permission(session):
@@ -57,9 +60,11 @@ class BoundCommand(Command):
         name = 'query'
         description = '查询指定用户的绑定'
 
+        @override
         def declare(self) -> None:
             self.register_option('user_id', At | str, default=None, description='用户')
 
+        @override
         async def handler(self, session: Uninfo, user_id: Match[At | str]):
             target_user = user_id.result if user_id.available else str(session.user.id)
             if isinstance(target_user, At):
@@ -75,9 +80,11 @@ class BoundCommand(Command):
         name = 'remove'
         description = '移除指定绑定'
 
+        @override
         def declare(self) -> None:
             self.register_option('player', At | str, default=None, description='玩家')
 
+        @override
         async def handler(self, session: Uninfo, player: Match[str]):
             current_user = str(session.user.id)
             if not player.available:
@@ -94,10 +101,12 @@ class BoundCommand(Command):
         name = 'append'
         description = '为指定用户添加绑定'
 
+        @override
         def declare(self) -> None:
             self.register_arg('user_id', At | str, description='用户')
             self.register_arg('player', str, description='玩家')
 
+        @override
         async def handler(self, session: Uninfo, user_id: At | str, player: str):
             if not get_permission(session):
                 return messages.commands.bound.no_permission
@@ -105,9 +114,11 @@ class BoundCommand(Command):
                 user_id.target if isinstance(user_id, At) else user_id, player
             )
 
+    @override
     def declare(self) -> None:
         self.register_option('player', str, default=None, description='要绑定的玩家名')
 
+    @override
     async def handler(self, session: Uninfo, player: Match[str]):
         '''处理 .bound <player>'''
         if not player.available:
@@ -164,5 +175,3 @@ class BoundCommand(Command):
         for player in bounded:
             await server_manager.execute(f'{config.whitelist_command} remove {player}')
         return messages.commands.bound.remove_self_all
-
-

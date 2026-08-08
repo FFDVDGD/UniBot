@@ -1,8 +1,12 @@
 '''渲染引擎基类与渲染器注册表。'''
 
-from typing import Any
+from __future__ import annotations
 
-from nonebot.log import logger
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .Manager import ExtensionManager
 
 
 class BaseRenderer:
@@ -24,13 +28,13 @@ class BaseRenderer:
 class RendererRegistry:
     '''渲染器注册表：收集引擎与主题声明。'''
 
-    def __init__(self, manager) -> None:
+    def __init__(self, manager: ExtensionManager) -> None:
         self._manager = manager
 
     def register(self, renderer: BaseRenderer) -> None:
         '''注册一个渲染引擎实例。'''
         self._manager.register_renderer(renderer)
 
-    def register_theme(self, extension_id: str, templates_dir: Any) -> None:
+    def register_theme(self, extension_id: str, templates_dir: Path) -> None:
         '''注册一个主题扩展的模板目录。'''
         self._manager.register_theme(extension_id, templates_dir)
