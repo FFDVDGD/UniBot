@@ -21,7 +21,7 @@
   ·
   <a href="https://github.com/MineJPGcraft/UniBot/issues">🐛 反馈问题</a>
   ·
-  <a href="https://bot.mcjpg.dev/">**📚 项目文档**</a>
+  <a href="https://bot.mcjpg.dev/">📚 项目文档</a>
 </p>
 
 ---
