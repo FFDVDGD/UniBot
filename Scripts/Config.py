@@ -10,8 +10,8 @@ TOML_PATH = Path('Config.toml')
 class ImageConfig(BaseModel):
     mode: bool = False
     background: str | None = None
-    renderer: str = 'html2pic'   # 当前使用的渲染引擎 name，必须是已注册的引擎
-    theme: str = 'default'       # 当前主题（'default' = 内置模板，或主题扩展 id）
+    renderer: str = 'html2pic'  # 当前使用的渲染引擎 name，必须是已注册的引擎
+    theme: str = 'default'  # 当前主题（'default' = 内置模板，或主题扩展 id）
 
 
 class AiConfig(BaseModel):
@@ -84,7 +84,7 @@ config = Config.model_validate(merged)
 
 
 def _merge_toml(content: str) -> dict:
-    '''解析 Config.toml 文本内容，并合并到模型默认值上'''
+    """解析 Config.toml 文本内容，并合并到模型默认值上。"""
     toml_data = tomlkit.parse(content)
     merged = get_plugin_config(Config).model_dump()
     merged.update(toml_data)
@@ -92,7 +92,7 @@ def _merge_toml(content: str) -> dict:
 
 
 def validate_config_content(content: str) -> str | None:
-    '''校验 Config.toml 文本内容是否可被正确加载，返回错误信息（合法返回 None）'''
+    """校验 Config.toml 文本内容是否可被正确加载，返回错误信息（合法返回 None）。"""
     try:
         Config.model_validate(_merge_toml(content))
     except Exception as error:
@@ -101,8 +101,7 @@ def validate_config_content(content: str) -> str | None:
 
 
 def reload_config():
-    '''从磁盘重新读取 Config.toml，热更新全局 config 对象（保持对象引用不变）'''
+    """从磁盘重新读取 Config.toml，热更新全局 config 对象（保持对象引用不变）。"""
     updated_config = Config.model_validate(_merge_toml(TOML_PATH.read_text('Utf-8')))
     for field_name in Config.model_fields:
         setattr(config, field_name, getattr(updated_config, field_name))
-

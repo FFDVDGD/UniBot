@@ -1,4 +1,4 @@
-'''内置扩展：控制台命令指令。'''
+"""内置扩展：控制台命令指令。"""
 
 from typing import override
 
@@ -6,9 +6,9 @@ from nonebot.log import logger
 from nonebot_plugin_alconna import Match
 from nonebot_plugin_uninfo import Uninfo
 
+from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Extensions import Command, Extension
-from Scripts.Managers import server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import get_permission, turn_message_text
 
@@ -18,7 +18,7 @@ extension = Extension(id='Command', name='控制台命令', version='1.0.0', typ
 
 @extension.register_command
 class CommandCommand(Command):
-    '''向指定服务器发送控制台命令。'''
+    """向指定服务器发送控制台命令。"""
 
     name = 'command'
     description = '向指定服务器发送控制台命令。'
@@ -50,14 +50,18 @@ class CommandCommand(Command):
         return command
 
     async def command_handler(self, server_flag, command):
+        server_service = Globals.server_service
+        if server_service is None:
+            yield messages.commands.command.no_server
+            return
         if not (parsed_command := self.parse_command(command)):
             yield messages.commands.command.command_forbidden.format(command=command)
             return
         if server_flag == '*':
-            if not server_manager.servers:
+            if not server_service.servers:
                 yield messages.commands.command.no_server
                 return
-            for name, bot in server_manager.servers.items():
+            for name, bot in server_service.servers.items():
                 yield messages.commands.command.send_all_title
                 try:
                     result = await bot.send_rcon_command(command=parsed_command)
@@ -67,7 +71,7 @@ class CommandCommand(Command):
                     logger.warning(f'向服务器 [{name}] 发送指令失败：{error}')
                     yield messages.commands.command.send_failed.format(name=name)
             return
-        bot = server_manager.get_server(server_flag)
+        bot = server_service.get_server(server_flag)
         if bot is None:
             yield messages.commands.command.server_not_found.format(server_flag=server_flag)
             return

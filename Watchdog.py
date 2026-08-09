@@ -24,22 +24,20 @@ EXTRA_CONFIG_FIELDS = {
 
 
 def read_toml(path: Path) -> dict:
-    '''读取 TOML 文件。'''
+    """读取 TOML 文件。"""
     return tomllib.loads(path.read_text('Utf-8'))
 
 
 def get_enabled_extras() -> list[str]:
-    '''获取当前配置中已启用的可选功能。'''
+    """获取当前配置中已启用的可选功能。"""
     config = read_toml(CONFIG_PATH)
     return [
-        extra
-        for extra, (section, field) in EXTRA_CONFIG_FIELDS.items()
-        if config.get(section, {}).get(field, False)
+        extra for extra, (section, field) in EXTRA_CONFIG_FIELDS.items() if config.get(section, {}).get(field, False)
     ]
 
 
 def get_dependency_state() -> tuple[list, dict, tuple[str, ...]]:
-    '''获取影响 uv 同步结果的依赖声明。'''
+    """获取影响 uv 同步结果的依赖声明。"""
     project = read_toml(PYPROJECT_PATH).get('project', {})
     return (
         project.get('dependencies', []),
@@ -49,7 +47,7 @@ def get_dependency_state() -> tuple[list, dict, tuple[str, ...]]:
 
 
 def sync_dependencies() -> None:
-    '''使用 uv 同步项目依赖和已启用的可选功能。'''
+    """使用 uv 同步项目依赖和已启用的可选功能。"""
     command = ['uv', 'sync']
     for extra in get_enabled_extras():
         command.extend(('--extra', extra))
@@ -66,7 +64,7 @@ def sync_dependencies() -> None:
 
 
 def run() -> None:
-    '''守护机器人进程，处理异常退出与 WebUI 重启请求。'''
+    """守护机器人进程，处理异常退出与 WebUI 重启请求。"""
     restart_attempts = 0
     restart_window_started_at = time.monotonic()
     shutdown_requested = False

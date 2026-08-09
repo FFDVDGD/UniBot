@@ -1,4 +1,4 @@
-'''内置扩展：今日人品指令。'''
+"""内置扩展：今日人品指令。"""
 
 import random
 from datetime import date
@@ -18,7 +18,7 @@ extension = Extension(id='Luck', name='今日人品', version='1.0.0', types=('c
 
 @extension.register_command
 class LuckCommand(Command):
-    '''查看今日人品值。'''
+    """查看今日人品值。"""
 
     name = 'luck'
     description = '查看今日人品值。'
@@ -31,7 +31,7 @@ class LuckCommand(Command):
 
     @override
     async def image_handler(self, session: Uninfo) -> bytes:
-        '''渲染今日人品为图片，返回 PNG 字节（由框架在图像模式发送）。'''
+        """渲染今日人品为图片，返回 PNG 字节（由框架在图像模式发送）。"""
         luck_data = self.get_luck_data(session)
         return await render_template('Luck', (500, 0), **luck_data)
 

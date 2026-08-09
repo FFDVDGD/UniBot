@@ -22,7 +22,7 @@ log_seq_counter = 0
 
 
 async def broadcast_event(event_type: str, data: dict):
-    '''向所有订阅了该事件的 WebSocket 客户端推送消息'''
+    """向所有订阅了该事件的 WebSocket 客户端推送消息。"""
     message = {'type': event_type, 'data': data}
     disconnected = []
     for websocket, subscribed_events in ws_clients.items():
@@ -36,7 +36,7 @@ async def broadcast_event(event_type: str, data: dict):
 
 
 def log_sink(message):
-    '''loguru sink，将日志推送到 WebSocket 客户端并写入缓存'''
+    """loguru sink，将日志推送到 WebSocket 客户端并写入缓存。"""
     global log_seq_counter
     record = message.record
     log_seq_counter += 1
@@ -61,7 +61,7 @@ def log_sink(message):
 
 @router.websocket('/ws')
 async def websocket_endpoint(websocket: WebSocket):
-    '''WebSocket 端点，支持订阅日志、服务器、玩家、系统事件'''
+    """WebSocket 端点，支持订阅日志、服务器、玩家、系统事件。"""
     # 通过 cookie 中的 access_token 验证身份（fallback 到 query 参数兼容旧版）
     token = websocket.cookies.get('unibot_access_token', '') or websocket.query_params.get('token', '')
     if not token:
@@ -80,8 +80,9 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.debug('WebUI WebSocket 客户端已连接！')
 
     async def status_pusher():
-        '''定期向订阅了 status 事件的当前客户端推送运行状态'''
+        """定期向订阅了 status 事件的当前客户端推送运行状态。"""
         from .Status import get_status_data  # 延迟导入避免循环依赖
+
         while True:
             await asyncio.sleep(STATUS_PUSH_INTERVAL)
             if 'status' not in ws_clients.get(websocket, set()):

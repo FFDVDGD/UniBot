@@ -1,9 +1,10 @@
-'''结构化命令注册与构建。
+"""
+结构化命令注册与构建。
 
 命令以类声明：继承 Command 定义主命令，类属性声明元数据，覆写 declare()
 注册参数与子命令，覆写 handler()/image_handler() 提供业务逻辑。子命令通过
 嵌套 SubCommand 类的形式声明，框架自动发现并实例化，parent 指向父命令实例。
-'''
+"""
 
 import inspect
 import re
@@ -18,9 +19,10 @@ from nonebot_plugin_alconna import on_alconna
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
 from Scripts.Config import config
-from Scripts.Utils import turn_message_text
-from .Errors import CommandError, CommandFieldError
 from Scripts.Rules import command_group_rule
+from Scripts.Utils import turn_message_text
+
+from .Errors import CommandError, CommandFieldError
 
 # 到内置命令的稳定前缀
 BUILTIN_PREFIX = 'builtin'
@@ -42,22 +44,21 @@ ParentT = TypeVar('ParentT', bound='Command')
 
 
 def _format_path(extension_id: str, path: list[str]) -> str:
-    '''格式化字段路径，如 `WeatherExt.command.weather.argument.city`。'''
+    """格式化字段路径，如 `WeatherExt.command.weather.argument.city`。"""
     return f'{extension_id}.' + '.'.join(path)
 
 
 def _validate_name(value: str, extension_id: str, path: list[str]) -> None:
-    '''校验命令/别名/参数名合法。'''
+    """校验命令/别名/参数名合法。"""
     if not _NAME_PATTERN.match(value):
-        raise CommandFieldError(
-            f'{_format_path(extension_id, path)} 名称不合法：{value}（仅允许小写字母/数字/下划线）'
-        )
+        raise CommandFieldError(f'{_format_path(extension_id, path)} 名称不合法：{value}（仅允许小写字母/数字/下划线）')
 
 
 # ===== 参数构建器 =====
 
+
 class Argument:
-    '''单个参数的结构化定义。'''
+    """单个参数的结构化定义。"""
 
     def __init__(
         self,
@@ -77,7 +78,7 @@ class Argument:
         self.multi = multi
 
     def _resolved_type(self) -> Any:
-        '''返回用于 Alconna Args 的实际类型（multi 时包装为 MultiVar）。'''
+        """返回用于 Alconna Args 的实际类型（multi 时包装为 MultiVar）。"""
         if self.multi:
             return MultiVar(self.value_type, '+')
         return self.value_type
@@ -85,14 +86,16 @@ class Argument:
 
 # ===== 命令基类 =====
 
-class Command(Generic[ParentT], ABC):
-    '''命令基类：子类继承并声明元数据，覆写 declare() 注册参数与子命令，
-    覆写 handler()/image_handler() 提供业务逻辑。子命令通过嵌套 SubCommand
-    类的形式声明，框架自动发现并实例化。
 
-    父命令 `parent` 通过泛型标注：`class Check(SubCommand['AboutCommand'])`
-    使 `self.parent` 提示为 `AboutCommand`（非 None），从而自动补全父命令方法。
-    '''
+class Command(Generic[ParentT], ABC):
+    """
+    命令基类：子类继承并声明元数据，覆写 declare() 注册参数与子命令，
+        覆写 handler()/image_handler() 提供业务逻辑。子命令通过嵌套 SubCommand
+        类的形式声明，框架自动发现并实例化。
+
+        父命令 `parent` 通过泛型标注：`class Check(SubCommand['AboutCommand'])`
+        使 `self.parent` 提示为 `AboutCommand`（非 None），从而自动补全父命令方法。
+    """
 
     name: str = ''
     description: str = ''
@@ -103,13 +106,13 @@ class Command(Generic[ParentT], ABC):
         # 父命令实例，运行时由框架注入；子命令必非 None，主命令为 None
         self._parent = parent
         self.arguments: list[Argument] = []
-        self.subcommands: list['Command[Any]'] = []
+        self.subcommands: list[Command[Any]] = []
         self._discover_subcommands()
         self.declare()
 
     @property
     def parent(self) -> ParentT:
-        '''父命令实例（子命令必非 None，可放心访问父命令方法）。'''
+        """父命令实例（子命令必非 None，可放心访问父命令方法）。"""
         if self._parent is None:
             raise CommandError('当前命令没有父命令！')
         return self._parent
@@ -117,7 +120,7 @@ class Command(Generic[ParentT], ABC):
     # ===== 声明 =====
 
     def declare(self) -> None:
-        '''覆写以注册参数与子命令。'''
+        """覆写以注册参数与子命令。"""
 
     def register_arg(
         self,
@@ -129,7 +132,7 @@ class Command(Generic[ParentT], ABC):
         description: str = '',
         multi: bool = False,
     ) -> Argument:
-        '''注册一个参数。'''
+        """注册一个参数。"""
         argument = Argument(name, value_type, required, default, description, multi)
         self.arguments.append(argument)
         return argument
@@ -143,7 +146,7 @@ class Command(Generic[ParentT], ABC):
         description: str = '',
         multi: bool = False,
     ) -> Argument:
-        '''注册一个可选参数。'''
+        """注册一个可选参数。"""
         return self.register_arg(
             name,
             value_type,
@@ -154,12 +157,12 @@ class Command(Generic[ParentT], ABC):
         )
 
     def register_subcommand(self, subcommand: 'Command[Any]') -> 'Command[Any]':
-        '''显式注册一个子命令。'''
+        """显式注册一个子命令。"""
         self.subcommands.append(subcommand)
         return subcommand
 
     def _discover_subcommands(self) -> None:
-        '''自动发现嵌套的 SubCommand 子类并实例化，parent 指向自身。'''
+        """自动发现嵌套的 SubCommand 子类并实例化，parent 指向自身。"""
         for _, member in inspect.getmembers(self.__class__, inspect.isclass):
             if member is SubCommand or not issubclass(member, SubCommand):
                 continue
@@ -184,29 +187,31 @@ class Command(Generic[ParentT], ABC):
     # ===== 处理器 =====
 
     async def handler(self, *args, **kwargs) -> AsyncIterable | str | bytes | list | None:
-        '''覆写以处理命令，直接返回要发送的消息内容：
-        - 字符串 / 图片字节 / 消息片段列表：框架统一发送
-        - 异步迭代器（async generator）：逐项收集后由框架转成多行文本发送，
-          此时 `return` 仅做提前跳出函数用，不承载要发送的消息
-        - None：不发送
-        '''
+        """
+        覆写以处理命令，直接返回要发送的消息内容：
+                - 字符串 / 图片字节 / 消息片段列表：框架统一发送
+                - 异步迭代器（async generator）：逐项收集后由框架转成多行文本发送，
+                  此时 `return` 仅做提前跳出函数用，不承载要发送的消息
+                - None：不发送。
+        """
         return None
 
     async def image_handler(self, *args, **kwargs) -> bytes | None:
-        '''覆写以提供图片模式下渲染的 PNG 字节，由框架发送。'''
+        """覆写以提供图片模式下渲染的 PNG 字节，由框架发送。"""
         return None
 
 
 class SubCommand(Command[ParentT]):
-    '''子命令基类：嵌套声明于父命令类内，parent 指向父命令实例。
+    """
+    子命令基类：嵌套声明于父命令类内，parent 指向父命令实例。
 
-    为获得父命令的方法提示，请用泛型标注父类型：
-    `class Check(SubCommand['AboutCommand'])`。不标注时退化为基础 Command 提示。
-    '''
+        为获得父命令的方法提示，请用泛型标注父类型：
+        `class Check(SubCommand['AboutCommand'])`。不标注时退化为基础 Command 提示。
+    """
 
 
 def discover_commands(module) -> list[Command[Any]]:
-    '''扫描模块中非抽象、非 SubCommand 的 Command 子类并实例化。'''
+    """扫描模块中非抽象、非 SubCommand 的 Command 子类并实例化。"""
     commands = []
     for _, member in inspect.getmembers(module, inspect.isclass):
         if member is Command or member is SubCommand or not issubclass(member, Command):
@@ -219,8 +224,9 @@ def discover_commands(module) -> list[Command[Any]]:
 
 # ===== 命令管理器 =====
 
+
 class CommandManager:
-    '''统一收集并构建所有命令 matcher。'''
+    """统一收集并构建所有命令 matcher。"""
 
     command_id_separator = ':'
 
@@ -233,11 +239,12 @@ class CommandManager:
     # ----- 注册阶段 -----
 
     def register_command(self, command: Command, command_id: str, *, override: bool = False) -> None:
-        '''登记一个命令实例（内置或扩展）。
+        """
+        登记一个命令实例（内置或扩展）。
 
-        `override=True` 时允许以同名 `command_id` **取代**已登记的命令（用于指令
-        扩展覆盖内置命令）；否则重复 `command_id` 视为冲突并报错。
-        '''
+                `override=True` 时允许以同名 `command_id` **取代**已登记的命令（用于指令
+                扩展覆盖内置命令）；否则重复 `command_id` 视为冲突并报错。
+        """
         if self._built:
             raise CommandError('命令管理器已构建，不能再注册命令！')
         if command_id in self._commands:
@@ -250,13 +257,13 @@ class CommandManager:
         return self._commands.get(command_id)
 
     def get_command_nodes(self) -> dict[str, Command[Any]]:
-        '''返回全部已登记命令：稳定 command_id -> 命令实例。'''
+        """返回全部已登记命令：稳定 command_id -> 命令实例。"""
         return dict(self._commands)
 
     # ----- 校验阶段 -----
 
     def _validate_node(self, command: Command[Any], extension_id: str, path: list[str]) -> None:
-        '''校验单个命令实例的字段合法性。'''
+        """校验单个命令实例的字段合法性。"""
         _validate_name(command.name, extension_id, path + ['name'])
 
         seen_names: set[str] = set()
@@ -264,35 +271,29 @@ class CommandManager:
             argument_path = path + ['argument', argument.name]
             _validate_name(argument.name, extension_id, argument_path)
             if argument.name in seen_names:
-                raise CommandFieldError(
-                    f'{_format_path(extension_id, argument_path)} 参数名重复！'
-                )
+                raise CommandFieldError(f'{_format_path(extension_id, argument_path)} 参数名重复！')
             seen_names.add(argument.name)
             if argument.required is False and argument.default is UNSET:
-                raise CommandFieldError(
-                    f'{_format_path(extension_id, argument_path)} 可选参数必须提供默认值！'
-                )
+                raise CommandFieldError(f'{_format_path(extension_id, argument_path)} 可选参数必须提供默认值！')
 
         seen_subcommands: set[str] = set()
         for subcommand in command.subcommands:
             subcommand_path = path + ['subcommand', subcommand.name]
             _validate_name(subcommand.name, extension_id, subcommand_path)
             if subcommand.name in seen_subcommands:
-                raise CommandFieldError(
-                    f'{_format_path(extension_id, subcommand_path)} 子命令名重复！'
-                )
+                raise CommandFieldError(f'{_format_path(extension_id, subcommand_path)} 子命令名重复！')
             seen_subcommands.add(subcommand.name)
             self._validate_node(subcommand, extension_id, subcommand_path)
 
     def validate(self) -> None:
-        '''校验全部命令定义，失败时不注册任何 matcher。'''
+        """校验全部命令定义，失败时不注册任何 matcher。"""
         for command_id, command in self._commands.items():
             extension_id = self._command_extension(command_id)
             self._validate_node(command, extension_id, ['command', command.name])
 
     @staticmethod
     def _command_extension(command_id: str) -> str:
-        '''从 command_id 中提取扩展 id（如 `extension:WeatherExt:weather`）。'''
+        """从 command_id 中提取扩展 id（如 `extension:WeatherExt:weather`）。"""
         parts = command_id.split(CommandManager.command_id_separator)
         if len(parts) >= 3 and parts[0] == 'extension':
             return parts[1]
@@ -301,27 +302,29 @@ class CommandManager:
     # ----- 构建阶段 -----
 
     def _build_args(self, command: Command[Any]) -> Args:
-        '''将参数定义转换为 Alconna Args。
+        """
+        将参数定义转换为 Alconna Args。
 
-        可选参数标记为可选（`name?`）。仅当声明了非 None 的 `default` 时才把它
-        直接注入 Alconna，让 Alconna 在用户未提供时填充 `Match.result`；
-        `default` 为 None 或未声明时不注入，避免 Alconna 把默认值塞进
-        `all_matched_args` 导致 `Match.available` 恒为 True（无法区分「用户显式
-        提供」与「走默认」）。因此 `default=None` 的可选参数 `available` 仍准确。
-        '''
+                可选参数标记为可选（`name?`）。仅当声明了非 None 的 `default` 时才把它
+                直接注入 Alconna，让 Alconna 在用户未提供时填充 `Match.result`；
+                `default` 为 None 或未声明时不注入，避免 Alconna 把默认值塞进
+                `all_matched_args` 导致 `Match.available` 恒为 True（无法区分「用户显式
+                提供」与「走默认」）。因此 `default=None` 的可选参数 `available` 仍准确。
+        """
         args = Args()
         for argument in command.arguments:
             value_type = argument._resolved_type()
             if argument.required:
                 args.add(argument.name, value=value_type)
-            elif argument.default is not UNSET and argument.default is not None:
+                continue
+            if argument.default is not UNSET and argument.default is not None:
                 args.add(f'{argument.name}?', value=value_type, default=argument.default)
-            else:
-                args.add(f'{argument.name}?', value=value_type)
+                continue
+            args.add(f'{argument.name}?', value=value_type)
         return args
 
     def _build_subcommand(self, subcommand: Command[Any]) -> Subcommand:
-        '''将子命令实例转换为 Alconna Subcommand。'''
+        """将子命令实例转换为 Alconna Subcommand。"""
         return Subcommand(
             subcommand.name,
             self._build_args(subcommand),
@@ -329,11 +332,12 @@ class CommandManager:
         )
 
     def _build_matcher(self, command_id: str, command: Command[Any]) -> None:
-        '''为一个命令实例构建 Alconna matcher 并绑定 handler。
+        """
+        为一个命令实例构建 Alconna matcher 并绑定 handler。
 
-        图像模式开启且命令声明了 image_handler 时，自动绑定图片处理器并直接
-        发送渲染结果；否则回退到文本 handler。
-        '''
+                图像模式开启且命令声明了 image_handler 时，自动绑定图片处理器并直接
+                发送渲染结果；否则回退到文本 handler。
+        """
         subcommands = [self._build_subcommand(sub) for sub in command.subcommands]
         alconna = Alconna(
             command.name,
@@ -351,9 +355,7 @@ class CommandManager:
             skip_for_unmatch=True,
             aliases=tuple(command.aliases) if command.aliases else None,
         )
-        matcher.assign('$main')(
-            self._route(matcher, command.image_handler, command.handler, command)
-        )
+        matcher.assign('$main')(self._route(matcher, command.image_handler, command.handler, command))
         for subcommand in command.subcommands:
             matcher.assign(subcommand.name)(
                 self._route(matcher, subcommand.image_handler, subcommand.handler, subcommand)
@@ -363,18 +365,21 @@ class CommandManager:
 
     @staticmethod
     def _route(matcher, image_handler, handler: Handler, command: Command[Any]) -> Handler:
-        '''绑定处理器并统一处理返回值。
+        """
+        绑定处理器并统一处理返回值。
 
-        图像模式生效且命令覆写了图片处理器时优先走图片处理器，否则走文本
-        处理器。处理器通过 `return` 携带要发送的内容（字符串 / 图片字节 /
-        片段列表 / 异步迭代器），框架在此统一发送，命令内无需接触 matcher。
+                图像模式生效且命令覆写了图片处理器时优先走图片处理器，否则走文本
+                处理器。处理器通过 `return` 携带要发送的内容（字符串 / 图片字节 /
+                片段列表 / 异步迭代器），框架在此统一发送，命令内无需接触 matcher。
 
-        异步迭代器（async generator）返回值会被逐项收集，并用 turn_message_text
-        转成多行文本发送；此时 `return` 仅做提前跳出函数用，不承载要发送的消息。
-        dispatcher 通过 functools.wraps 继承 handler 的签名，使其业务参数
-        （如 Uninfo、Match）照常由 nonebot 注入。
-        '''
-        target = image_handler if config.image.mode and type(command).image_handler is not Command.image_handler else handler
+                异步迭代器（async generator）返回值会被逐项收集，并用 turn_message_text
+                转成多行文本发送；此时 `return` 仅做提前跳出函数用，不承载要发送的消息。
+                dispatcher 通过 functools.wraps 继承 handler 的签名，使其业务参数
+                （如 Uninfo、Match）照常由 nonebot 注入。
+        """
+        target = (
+            image_handler if config.image.mode and type(command).image_handler is not Command.image_handler else handler
+        )
 
         @wraps(target)
         async def dispatched(*args, **kwargs):
@@ -385,10 +390,9 @@ class CommandManager:
             result = await target(*args, **kwargs)
             if result is None:
                 return
-            elif isinstance(result, AsyncIterable):
+            message = result
+            if isinstance(result, AsyncIterable):
                 message = await turn_message_text(result)
-            else:
-                message = result
             # 图片处理器返回 PNG 字节，包装为图片消息发送
             if isinstance(message, bytes):
                 message = UniMessage(Image(raw=message))
@@ -397,7 +401,7 @@ class CommandManager:
         return dispatched
 
     def build(self) -> list:
-        '''校验全部命令并构建 matcher，任一失败则整体失败。'''
+        """校验全部命令并构建 matcher，任一失败则整体失败。"""
         if self._built:
             return self._matchers
         self.validate()

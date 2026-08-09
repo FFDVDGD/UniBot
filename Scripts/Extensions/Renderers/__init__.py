@@ -1,17 +1,17 @@
-'''渲染器管理：管理引擎实例、并发上限、单次渲染超时与默认引擎回退。'''
+"""渲染器管理：管理引擎实例、并发上限、单次渲染超时与默认引擎回退。"""
 
 import asyncio
 from collections.abc import Callable
 
 from nonebot.log import logger
 
-from .. import BaseRenderer
+from ..Renderer import BaseRenderer
 
 __all__ = ['RendererManager']
 
 
 class RendererManager:
-    '''统一管理渲染引擎实例，负责 setup / render / shutdown、并发与超时。'''
+    """统一管理渲染引擎实例，负责 setup / render / shutdown、并发与超时。"""
 
     def __init__(self, get_renderer_factory: Callable[[str], BaseRenderer | None]) -> None:
         # 从扩展管理器获取渲染引擎实例的函数：name -> BaseRenderer | None
@@ -24,13 +24,13 @@ class RendererManager:
         self._default_timeout = 60.0
 
     def configure(self, name: str, concurrency: int = 1, timeout: float | None = None) -> None:
-        '''配置指定引擎的并发上限与单次渲染超时。'''
+        """配置指定引擎的并发上限与单次渲染超时。"""
         self._semaphores[name] = asyncio.Semaphore(max(1, concurrency))
         if timeout is not None:
             self._timeouts[name] = timeout
 
     async def setup(self, name: str) -> BaseRenderer | None:
-        '''初始化并启用指定引擎，失败时回退默认引擎。'''
+        """初始化并启用指定引擎，失败时回退默认引擎。"""
         renderer = self._get_renderer(name)
         if renderer is None:
             logger.warning(f'渲染引擎 {name} 不存在，回退默认引擎 html2pic！')
@@ -49,7 +49,7 @@ class RendererManager:
         return renderer
 
     async def render(self, html: str, css: str, name: str | None = None) -> bytes:
-        '''使用指定引擎渲染 HTML+CSS 为 PNG 字节，带并发上限与超时。'''
+        """使用指定引擎渲染 HTML+CSS 为 PNG 字节，带并发上限与超时。"""
         engine_name = name or 'html2pic'
         renderer = self._active.get(engine_name)
         if renderer is None:
@@ -62,7 +62,7 @@ class RendererManager:
             return await asyncio.wait_for(renderer.render(html, css), timeout=timeout)
 
     async def shutdown(self) -> None:
-        '''清理全部已启用引擎。'''
+        """清理全部已启用引擎。"""
         for renderer in self._active.values():
             try:
                 await renderer.shutdown()

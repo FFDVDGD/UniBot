@@ -1,13 +1,12 @@
-import signal
 import asyncio
 import importlib
+import signal
 from pathlib import Path
 
 import nonebot
 from nonebot.log import logger
 
 from Scripts import Process
-
 
 LOG_PATH = Path('Logs/')
 
@@ -23,12 +22,10 @@ async def startup() -> None:
     from Scripts.Managers import (
         data_manager,
         plugin_manager,
-        server_manager,
         version_manager,
         webui_manager,
     )
 
-    server_manager.init()
     data_manager.load()
     plugin_manager.load()
     extension_manager.load()
@@ -54,7 +51,7 @@ async def shutdown() -> None:
 
 
 def register_adapters(driver, adapters: list[dict]) -> None:
-    '''注册已配置的 NoneBot 适配器。'''
+    """注册已配置的 NoneBot 适配器。"""
     for adapter in adapters:
         try:
             module = importlib.import_module(adapter['module_name'])
@@ -69,7 +66,7 @@ def register_adapters(driver, adapters: list[dict]) -> None:
 
 
 def load_plugins(plugins: list[str | dict]) -> None:
-    '''加载已启用的 NoneBot 插件。'''
+    """加载已启用的 NoneBot 插件。"""
     for plugin in plugins:
         module_name = plugin if isinstance(plugin, str) else plugin.get('module_name', '')
         enabled = plugin if isinstance(plugin, str) else plugin.get('enabled', True)
@@ -78,12 +75,12 @@ def load_plugins(plugins: list[str | dict]) -> None:
 
 
 def exit_on_sigterm(_signal_number: int, _frame: object) -> None:
-    '''使用预期退出码结束机器人进程。'''
+    """使用预期退出码结束机器人进程。"""
     raise SystemExit(Process.get_exit_code())
 
 
 def main():
-    '''初始化并运行机器人进程。'''
+    """初始化并运行机器人进程。"""
     # NoneBot 初始化必须在本地模块导入之前完成。
     from Scripts.Config import config as bot_config
     from Scripts.Managers import config_manager, webui_manager

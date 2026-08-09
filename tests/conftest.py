@@ -1,4 +1,4 @@
-'''测试全局配置：初始化 NoneBot 并准备扩展系统测试环境。'''
+"""测试全局配置：初始化 NoneBot 并准备扩展系统测试环境。"""
 
 import sys
 from pathlib import Path
@@ -18,13 +18,13 @@ nonebot.init()
 
 @pytest.fixture(scope='session', autouse=True)
 def _init_nonebot():
-    '''所有测试开始前初始化 NoneBot。'''
+    """所有测试开始前初始化 NoneBot。"""
     nonebot.init()
 
 
 @pytest.fixture(autouse=True)
 def _isolate_extension_manager():
-    '''每个测试前清空扩展管理器状态，避免测试间相互污染。'''
+    """每个测试前清空扩展管理器状态，避免测试间相互污染。"""
     from Scripts.Extensions import command_manager, extension_manager
 
     extension_manager.registry.clear()

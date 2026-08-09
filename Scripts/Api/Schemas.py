@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
-
 # ===== Auth =====
+
 
 class SetupRequest(BaseModel):
     username: str
@@ -35,6 +35,7 @@ class UpdateProfileRequest(BaseModel):
 
 # ===== Users =====
 
+
 class CreateUserRequest(BaseModel):
     username: str
     password: str
@@ -53,6 +54,7 @@ class ResetPasswordRequest(BaseModel):
 
 # ===== Servers =====
 
+
 class ExecuteCommandRequest(BaseModel):
     command: str
 
@@ -63,12 +65,14 @@ class BroadcastRequest(BaseModel):
 
 # ===== Players =====
 
+
 class BindPlayerRequest(BaseModel):
     user: str
     player: str
 
 
 # ===== Plugins =====
+
 
 class InstallPluginRequest(BaseModel):
     name: str
@@ -80,6 +84,7 @@ class UpgradePluginRequest(BaseModel):
 
 
 # ===== Config / Environment =====
+
 
 class NoneBotItemRequest(BaseModel):
     name: str

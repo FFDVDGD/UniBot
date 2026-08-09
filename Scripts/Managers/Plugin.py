@@ -3,12 +3,12 @@ import time
 import nonebot
 from nonebot.log import logger
 
-from Scripts.Network import request
 from Scripts.Managers import config_manager
+from Scripts.Network import request
 
 
 class PluginManager:
-    '''插件管理器，管理 pyproject.toml 中登记的插件、依赖插件与插件市场'''
+    """插件管理器，管理 pyproject.toml 中登记的插件、依赖插件与插件市场。"""
 
     # 市场数据缓存时长（秒）
     MARKET_CACHE_TTL = 600
@@ -19,11 +19,11 @@ class PluginManager:
     market_cache_time: float = 0
 
     def load(self):
-        '''记录插件管理器已完成初始化。'''
+        """记录插件管理器已完成初始化。"""
         logger.success('加载插件管理器完毕！')
 
     def _configured_plugins(self) -> list[dict]:
-        '''获取 pyproject.toml 中登记的插件配置。'''
+        """获取 pyproject.toml 中登记的插件配置。"""
         configured_plugins = []
         for plugin in config_manager.nonebot_config.get('plugins', []):
             if isinstance(plugin, str):
@@ -59,7 +59,7 @@ class PluginManager:
         }
 
     def get_installed_plugins(self) -> list[dict]:
-        '''获取登记插件和未登记依赖插件的详细信息。'''
+        """获取登记插件和未登记依赖插件的详细信息。"""
         loaded_plugins = {plugin.module_name: plugin for plugin in nonebot.get_loaded_plugins()}
         plugins = []
         configured_modules = set()
@@ -76,14 +76,14 @@ class PluginManager:
         return plugins
 
     def get_plugin_detail(self, name: str) -> dict | None:
-        '''获取指定插件详情'''
+        """获取指定插件详情。"""
         for plugin in self.get_installed_plugins():
             if plugin['name'] == name or plugin['module_name'] == name:
                 return plugin
         return None
 
     async def set_enabled(self, name: str, enabled: bool) -> bool:
-        '''设置可管理插件的启停状态，重启后生效。'''
+        """设置可管理插件的启停状态，重启后生效。"""
         plugin = self.get_plugin_detail(name)
         if not plugin or not plugin['can_disable']:
             return False
@@ -95,13 +95,9 @@ class PluginManager:
     # ===== 插件市场 =====
 
     async def fetch_market(self, force: bool = False) -> list[dict]:
-        '''获取插件市场数据（带缓存），请求失败时返回空列表'''
+        """获取插件市场数据（带缓存），请求失败时返回空列表。"""
         now = time.time()
-        if (
-            not force
-            and self.market_cache
-            and now - self.market_cache_time < self.MARKET_CACHE_TTL
-        ):
+        if not force and self.market_cache and now - self.market_cache_time < self.MARKET_CACHE_TTL:
             return self.market_cache
         data = await request(self.MARKET_URL)
         if not isinstance(data, list):
@@ -113,7 +109,7 @@ class PluginManager:
         return self.market_cache
 
     async def install(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
-        '''从市场安装插件：登记依赖并注册插件，重启后由 Watchdog 自动 uv sync 安装'''
+        """从市场安装插件：登记依赖并注册插件，重启后由 Watchdog 自动 uv sync 安装。"""
         package = f'{project_link}=={version}' if version else project_link
         config_manager.add_dependency(package)
         config_manager.add_plugin(module_name)
@@ -121,7 +117,7 @@ class PluginManager:
         return True, '安装成功，重启后生效'
 
     async def upgrade(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
-        '''升级市场插件：更新依赖登记并确保注册，重启后由 Watchdog 自动 uv sync 更新'''
+        """升级市场插件：更新依赖登记并确保注册，重启后由 Watchdog 自动 uv sync 更新。"""
         package = f'{project_link}=={version}' if version else project_link
         config_manager.remove_dependency(project_link)
         config_manager.add_dependency(package)
@@ -130,7 +126,7 @@ class PluginManager:
         return True, '升级成功，重启后生效'
 
     async def uninstall(self, project_link: str, module_name: str) -> tuple[bool, str]:
-        '''卸载市场插件：移除登记，重启后由 Watchdog 自动 uv sync 卸载'''
+        """卸载市场插件：移除登记，重启后由 Watchdog 自动 uv sync 卸载。"""
         config_manager.remove_plugin(module_name)
         config_manager.remove_dependency(project_link)
         logger.success(f'登记卸载插件 {project_link} 成功！')

@@ -1,10 +1,11 @@
-'''内置渲染引擎扩展：html2pic（默认/回退）。
+"""
+内置渲染引擎扩展：html2pic（默认/回退）。
 
 将 HTML+CSS 渲染为 PNG 字节，作为默认引擎与回退引擎。
 由 Loader 作为内置扩展加载，经实例装饰器登记渲染器。
-'''
+"""
 
-import time
+import asyncio
 from io import BytesIO
 
 from html2pic import Html2Pic
@@ -17,27 +18,25 @@ extension = Extension(id='Html2Pic', name='html2pic 渲染引擎', version='1.0.
 
 @extension.register_renderer
 class Html2PicRenderer(BaseRenderer):
-    '''使用 html2pic 库渲染 HTML+CSS 为 PNG 字节。'''
+    """使用 html2pic 库渲染 HTML+CSS 为 PNG 字节。"""
 
     name = 'html2pic'
 
     async def setup(self) -> None:
-        '''无外部资源需要初始化。'''
+        """无外部资源需要初始化。"""
 
     async def render(self, html: str, css: str) -> bytes:
-        '''渲染为 PNG 字节（在线程池中执行同步 html2pic 调用）。'''
+        """渲染为 PNG 字节（在线程池中执行同步 html2pic 调用）。"""
         return await self._render_sync(html, css)
 
     async def shutdown(self) -> None:
-        '''无外部资源需要清理。'''
+        """无外部资源需要清理。"""
 
     @staticmethod
     async def _render_sync(html: str, css: str) -> bytes:
-        '''在线程池中执行同步 html2pic 渲染。'''
-        import asyncio
+        """在线程池中执行同步 html2pic 渲染。"""
 
         def do_render() -> bytes:
-            start = time.time()
             renderer = Html2Pic(html, css)
             image = renderer.render()
             pil_image = image.to_pillow()

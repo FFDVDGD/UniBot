@@ -1,4 +1,4 @@
-'''内置扩展：命令帮助指令。'''
+"""内置扩展：命令帮助指令。"""
 
 from typing import override
 
@@ -14,7 +14,7 @@ extension = Extension(id='Help', name='命令帮助', version='1.0.0', types=('c
 
 
 def get_enabled_nodes() -> list[Command]:
-    '''获取已登记的内置命令节点（builtin: 前缀）。'''
+    """获取已登记的内置命令节点（builtin: 前缀）。"""
     return [
         command
         for command_id, command in command_manager.get_command_nodes().items()
@@ -23,7 +23,7 @@ def get_enabled_nodes() -> list[Command]:
 
 
 def get_node(name: str) -> Command | None:
-    '''从已登记命令实例中查找指定名称的命令。'''
+    """从已登记命令实例中查找指定名称的命令。"""
     for command in get_enabled_nodes():
         if command.name == name:
             return command
@@ -31,7 +31,7 @@ def get_node(name: str) -> Command | None:
 
 
 def gen_usage(command: Command) -> str:
-    '''根据结构化命令自动生成用法字符串（含子命令、参数）。'''
+    """根据结构化命令自动生成用法字符串（含子命令、参数）。"""
     parts = [command.name]
     for argument in command.arguments:
         display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
@@ -40,7 +40,7 @@ def gen_usage(command: Command) -> str:
 
 
 def sub_usage(command: Command) -> str:
-    '''根据子命令实例生成用法字符串。'''
+    """根据子命令实例生成用法字符串。"""
     parts = [command.name]
     for argument in command.arguments:
         display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
@@ -49,7 +49,7 @@ def sub_usage(command: Command) -> str:
 
 
 def node_args(command: Command) -> list[dict]:
-    '''提取命令参数（含描述）用于图片渲染。'''
+    """提取命令参数（含描述）用于图片渲染。"""
     return [
         {'name': argument.name, 'notice': argument.description}
         for argument in command.arguments
@@ -59,7 +59,7 @@ def node_args(command: Command) -> list[dict]:
 
 @extension.register_command
 class HelpCommand(Command):
-    '''查看所有可用命令的帮助信息。'''
+    """查看所有可用命令的帮助信息。"""
 
     name = 'help'
     description = '查看所有可用命令的帮助信息。'
@@ -77,7 +77,7 @@ class HelpCommand(Command):
 
     @override
     async def image_handler(self, command: Match[str]) -> bytes:
-        '''渲染帮助信息为图片，返回 PNG 字节（由框架在图像模式发送）。'''
+        """渲染帮助信息为图片，返回 PNG 字节（由框架在图像模式发送）。"""
         if command.available:
             detail = self.get_command_detail(command.result)
             return await render_template('Help', (600, 0), detail=detail, commands=None)
@@ -85,7 +85,7 @@ class HelpCommand(Command):
         return await render_template('Help', (600, 0), detail=None, commands=commands)
 
     def get_commands_list(self) -> list[dict]:
-        '''构建命令列表数据用于图片渲染'''
+        """构建命令列表数据用于图片渲染。"""
         commands = []
         for command in get_enabled_nodes():
             usage = command.usage or gen_usage(command)
@@ -99,7 +99,7 @@ class HelpCommand(Command):
         return commands
 
     def get_command_detail(self, name: str) -> dict | None:
-        '''构建命令详情数据用于图片渲染'''
+        """构建命令详情数据用于图片渲染。"""
         command = get_node(name)
         if command is None:
             return None

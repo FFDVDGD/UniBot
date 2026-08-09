@@ -1,4 +1,4 @@
-'''指令注册测试：命令类发现、嵌套子命令与字段校验（验证点 3、4、11）。'''
+"""指令注册测试：命令类发现、嵌套子命令与字段校验（验证点 3、4、11）。"""
 
 from typing import override
 
@@ -15,7 +15,7 @@ from Scripts.Extensions import (
 
 
 class WeatherCommand(Command):
-    '''天气命令。'''
+    """天气命令。"""
 
     name = 'weather'
     description = '天气'
@@ -38,6 +38,7 @@ async def handler(*args, **kwargs):
 
 
 # ===== 命令类发现与收集 =====
+
 
 class TestCommandDiscovery:
     def test_discover_commands_instantiates_command_class(self):
@@ -71,6 +72,7 @@ class TestCommandDiscovery:
 
 # ===== 注册接口 =====
 
+
 class TestRegistration:
     def test_register_arg(self):
         command = WeatherCommand()
@@ -95,6 +97,7 @@ class TestRegistration:
 
 
 # ===== CommandManager 校验 =====
+
 
 class TestCommandValidation:
     def _manager(self, command: Command) -> CommandManager:
@@ -159,7 +162,8 @@ class TestCommandValidation:
             manager.register_command(WeatherCommand(), 'builtin:weather')
 
     def test_optional_args_do_not_inject_default(self):
-        '''default 为 None 的可选参数不应向 Alconna 注入默认值，否则 available 恒 True。'''
+        """default 为 None 的可选参数不应向 Alconna 注入默认值，否则 available 恒 True。"""
+
         class OptionalCmd(Command):
             name = 'opt'
 
@@ -176,10 +180,12 @@ class TestCommandValidation:
         assert arg_list[0].optional is True
         # 未注入默认值：field.default 保持 inspect._empty
         from inspect import _empty
+
         assert arg_list[0].field.default is _empty
 
     def test_optional_args_inject_non_none_default(self):
-        '''声明了非 None default 的可选参数，直接注入 Alconna，由 Alconna 填充。'''
+        """声明了非 None default 的可选参数，直接注入 Alconna，由 Alconna 填充。"""
+
         class DefaultCmd(Command):
             name = 'defcmd'
 

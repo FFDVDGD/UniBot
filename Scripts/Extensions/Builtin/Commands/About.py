@@ -1,4 +1,4 @@
-'''内置扩展：关于信息指令。'''
+"""内置扩展：关于信息指令。"""
 
 from typing import override
 
@@ -18,26 +18,26 @@ extension = Extension(id='About', name='关于信息', version='1.0.0', types=('
 
 @extension.register_command
 class AboutCommand(Command):
-    '''查看关于信息。'''
+    """查看关于信息。"""
 
     name = 'about'
     description = '查看关于信息。'
     usage = '.about'
 
     class Check(SubCommand['AboutCommand']):
-        '''检测是否有新版本。'''
+        """检测是否有新版本。"""
 
         name = 'check'
         description = '检测是否有新版本'
 
         @override
         async def handler(self):
-            '''主动拉取最新版本并反馈检测结果'''
+            """主动拉取最新版本并反馈检测结果。"""
             return await turn_message_text(self.parent.check_handler())
 
         @override
         async def image_handler(self) -> bytes:
-            '''拉取最新版本后渲染关于信息为图片（由框架在图像模式发送）。'''
+            """拉取最新版本后渲染关于信息为图片（由框架在图像模式发送）。"""
             await version_manager.fetch_latest()
             return await self.parent._render_about()
 
@@ -47,14 +47,16 @@ class AboutCommand(Command):
 
     @override
     async def image_handler(self) -> bytes:
-        '''渲染关于信息为图片，返回 PNG 字节（由框架在图像模式发送）。'''
+        """渲染关于信息为图片，返回 PNG 字节（由框架在图像模式发送）。"""
         return await self._render_about()
 
     async def _render_about(self) -> bytes:
-        '''渲染当前版本信息的模板图片。'''
+        """渲染当前版本信息的模板图片。"""
         return await render_template(
-            'About', (500, 0),
-            version=version_manager.version, has_update=version_manager.check_update(),
+            'About',
+            (500, 0),
+            version=version_manager.version,
+            has_update=version_manager.check_update(),
         )
 
     async def about_handler(self):

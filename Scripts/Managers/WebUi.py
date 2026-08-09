@@ -7,11 +7,12 @@ from fastapi.responses import RedirectResponse
 from nonebot.log import logger
 
 from Scripts.Network import github_download
+
 from .Config import config_manager
 
 
 class WebUiManager:
-    '''WebUI 管理面板：负责 API 路由挂载、前端静态资源的版本校验/下载与静态文件挂载'''
+    """WebUI 管理面板：负责 API 路由挂载、前端静态资源的版本校验/下载与静态文件挂载。"""
 
     app: FastAPI | None = None
 
@@ -20,24 +21,21 @@ class WebUiManager:
 
     @property
     def version(self) -> str:
-        '''当前期望的 WebUI 版本（来自 pyproject.toml [unibot] webui_version）'''
+        """当前期望的 WebUI 版本（来自 pyproject.toml [unibot] webui_version）。"""
         return config_manager.webui_version
 
     def read_local_version(self) -> str:
-        '''读取本地已下载的 WebUI 版本'''
+        """读取本地已下载的 WebUI 版本。"""
         if self.version_file.exists():
             return self.version_file.read_text('Utf-8').strip()
         return ''
 
     def is_ready(self) -> bool:
-        '''检查本地 WebUI 是否已下载且版本匹配'''
-        return (
-            (self.webui_dir / 'index.html').exists()
-            and self.read_local_version() == self.version
-        )
+        """检查本地 WebUI 是否已下载且版本匹配。"""
+        return (self.webui_dir / 'index.html').exists() and self.read_local_version() == self.version
 
     async def ensure_downloaded(self) -> bool:
-        '''确保 WebUI 静态资源已下载且版本匹配，否则重新下载'''
+        """确保 WebUI 静态资源已下载且版本匹配，否则重新下载。"""
         if not self.version:
             logger.warning('未配置 WebUI 版本，跳过下载！')
             return False
@@ -63,7 +61,7 @@ class WebUiManager:
         return True
 
     def mount(self, app: FastAPI):
-        '''挂载 WebUI API 路由到 /webui 前缀下（需在 nonebot.init() 之后、nonebot.run() 之前调用）'''
+        """挂载 WebUI API 路由到 /webui 前缀下（需在 nonebot.init() 之后、nonebot.run() 之前调用）。"""
         from Scripts.Api import api_router, setup_cors
         from Scripts.Api.WebSocket import log_sink
 
@@ -74,7 +72,7 @@ class WebUiManager:
         logger.success('WebUI API 路由挂载完毕！')
 
     def mount_static(self):
-        '''挂载 WebUI 静态文件到 /webui/ 路径，未命中的前端路由自动回退到 index.html'''
+        """挂载 WebUI 静态文件到 /webui/ 路径，未命中的前端路由自动回退到 index.html。"""
         if self.app is None:
             logger.warning('WebUI 尚未挂载 API 路由，无法挂载静态文件！')
             return
@@ -84,14 +82,14 @@ class WebUiManager:
 
         @self.app.get('/', include_in_schema=False)
         async def root_redirect():
-            '''根路径重定向到 /webui/'''
+            """根路径重定向到 /webui/。"""
             return RedirectResponse(url='/webui')
 
         self.app.frontend('/webui', directory=self.webui_dir, fallback='index.html')
-        logger.success(f'WebUI 静态文件挂载完毕！访问下方根路径即可打开 WebUi 使用。')
+        logger.success('WebUI 静态文件挂载完毕！访问下方根路径即可打开 WebUi 使用。')
 
     async def init(self):
-        '''初始化：校验并下载 WebUI 静态资源，随后挂载静态文件'''
+        """初始化：校验并下载 WebUI 静态资源，随后挂载静态文件。"""
         try:
             await self.ensure_downloaded()
             self.mount_static()

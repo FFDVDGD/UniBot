@@ -1,8 +1,9 @@
-'''平台与适配器目录的内置常量。
+"""
+平台与适配器目录的内置常量。
 
 包含 NoneBot 官方/社区适配器元数据、驱动映射，以及受保护的模块集合。
 WebUI 通过 `ADAPTER_CATALOG` 渲染安装/卸载列表。
-'''
+"""
 
 # 所有可选平台（用于 WebUI 中的 platform_list 配置项）
 PLATFORM_OPTIONS = [

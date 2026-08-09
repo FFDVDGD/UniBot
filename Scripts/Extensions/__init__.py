@@ -1,4 +1,4 @@
-'''UniBot 扩展系统框架包。'''
+"""UniBot 扩展系统框架包。"""
 
 from .Base import (
     Extension,
@@ -12,20 +12,20 @@ from .Base import (
     parse_manifest,
 )
 from .Command import (
+    UNSET,
     Argument,
     Command,
     CommandManager,
     Handler,
     ImageHandler,
     SubCommand,
-    UNSET,
     command_manager,
     discover_commands,
 )
 from .Errors import (
-    CompatibilityError,
     CommandError,
     CommandFieldError,
+    CompatibilityError,
     DependencyError,
     ExtensionError,
     ExtensionNotBoundError,
@@ -39,10 +39,11 @@ from .Loader import (
     CONFIG_ROOT,
     DATA_ROOT,
     EXTENSIONS_DIR,
-    ExtensionLoader,
     STATES_FILE,
     STATES_ROOT,
+    ExtensionLoader,
 )
+from .Manager import ExtensionManager, extension_manager
 from .Market import (
     ExtensionInstallState,
     MarketExtension,
@@ -50,15 +51,14 @@ from .Market import (
     extract_market_package,
     safe_extract_zip,
 )
-from .Service import Service, ServiceRegistry
+from .MarketManager import ExtensionMarketManager, market_manager
 from .Renderer import BaseRenderer, RendererRegistry
 from .Renderers import RendererManager
-from .Manager import ExtensionManager, extension_manager
-from .MarketManager import ExtensionMarketManager, market_manager
+from .Service import Service, ServiceRegistry
 from .Storage import (
+    RESERVED_STATE_FILE,
     ExtensionConfigStore,
     ExtensionDataStore,
-    RESERVED_STATE_FILE,
 )
 
 __all__ = [

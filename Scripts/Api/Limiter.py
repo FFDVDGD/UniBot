@@ -1,5 +1,5 @@
-import time
 import asyncio
+import time
 from collections import defaultdict
 
 from fastapi import HTTPException, Request
@@ -7,7 +7,7 @@ from nonebot.log import logger
 
 
 class RateLimiter:
-    '''IP 限流器：监测访问频率，异常 IP 自动封禁一段时间'''
+    """IP 限流器：监测访问频率，异常 IP 自动封禁一段时间。"""
 
     def __init__(
         self,
@@ -26,13 +26,11 @@ class RateLimiter:
         self.cleanup_interval = cleanup_interval
 
         # {ip: {"timestamps": [float, ...], "banned_until": float | None, "ban_count": int}}
-        self.records: dict[str, dict] = defaultdict(
-            lambda: {'timestamps': [], 'banned_until': None, 'ban_count': 0}
-        )
+        self.records: dict[str, dict] = defaultdict(lambda: {'timestamps': [], 'banned_until': None, 'ban_count': 0})
         self.cleanup_task: asyncio.Task | None = None
 
     def get_client_ip(self, request: Request) -> str:
-        '''从请求中获取客户端真实 IP'''
+        """从请求中获取客户端真实 IP。"""
         forwarded = request.headers.get('X-Forwarded-For')
         if forwarded:
             return forwarded.split(',')[0].strip()
@@ -45,7 +43,7 @@ class RateLimiter:
         return 'unknown'
 
     def is_banned(self, ip: str) -> bool:
-        '''检查 IP 是否在封禁期内'''
+        """检查 IP 是否在封禁期内。"""
         record = self.records.get(ip)
         if not record or not record['banned_until']:
             return False
@@ -55,7 +53,7 @@ class RateLimiter:
         return True
 
     def record_request(self, ip: str):
-        '''记录一次请求，清理过期时间戳，判断是否触发封禁'''
+        """记录一次请求，清理过期时间戳，判断是否触发封禁。"""
         now = time.time()
         record = self.records[ip]
         timestamps = record['timestamps']
@@ -74,13 +72,15 @@ class RateLimiter:
             ban_duration = int(self.base_ban_seconds * (self.backoff_factor ** (record['ban_count'] - 1)))
             ban_duration = min(ban_duration, self.max_ban_seconds)
             record['banned_until'] = now + ban_duration
-            logger.warning(f'IP [{ip}] 请求频率异常（{len(timestamps)} 次/{self.window_seconds}s），第 {record["ban_count"]} 次封禁 {ban_duration}s！')
+            logger.warning(
+                f'IP [{ip}] 请求频率异常（{len(timestamps)} 次/{self.window_seconds}s），第 {record["ban_count"]} 次封禁 {ban_duration}s！'
+            )
             return False
 
         return True
 
     async def check(self, request: Request):
-        '''FastAPI 依赖：检查当前 IP 是否触发限流'''
+        """FastAPI 依赖：检查当前 IP 是否触发限流。"""
         client_ip = self.get_client_ip(request)
 
         # 若本地则忽略
@@ -104,7 +104,7 @@ class RateLimiter:
             )
 
     async def cleanup_loop(self):
-        '''定时清理过期数据，防止内存泄漏'''
+        """定时清理过期数据，防止内存泄漏。"""
         while True:
             await asyncio.sleep(self.cleanup_interval)
             now = time.time()
@@ -134,13 +134,13 @@ class RateLimiter:
                 logger.debug(f'限流器清理了 {len(expired_ips)} 个过期 IP 记录。')
 
     def start(self):
-        '''启动后台清理任务'''
+        """启动后台清理任务。"""
         if self.cleanup_task is None:
             self.cleanup_task = asyncio.create_task(self.cleanup_loop())
             logger.debug('限流器后台清理任务已启动。')
 
     def stop(self):
-        '''停止后台清理任务'''
+        """停止后台清理任务。"""
         if self.cleanup_task is not None:
             self.cleanup_task.cancel()
             self.cleanup_task = None

@@ -1,4 +1,4 @@
-'''存储测试：独立数据边界、路径越界、原子写、State.toml 保护（验证点 15、16）。'''
+"""存储测试：独立数据边界、路径越界、原子写、State.toml 保护（验证点 15、16）。"""
 
 from pathlib import Path
 
@@ -6,10 +6,10 @@ import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
 from Scripts.Extensions import (
+    RESERVED_STATE_FILE,
     ExtensionConfigStore,
     ExtensionDataStore,
     StorageError,
-    RESERVED_STATE_FILE,
 )
 
 
@@ -30,6 +30,7 @@ def data_root(tmp_path: Path) -> Path:
 
 
 # ===== ExtensionConfigStore =====
+
 
 class TestConfigStore:
     def test_update_and_value_roundtrip(self, config_root: Path):
@@ -64,6 +65,7 @@ class TestConfigStore:
 
 
 # ===== ExtensionDataStore =====
+
 
 class TestDataStore:
     def test_write_and_read_text(self, data_root: Path):

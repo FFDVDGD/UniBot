@@ -5,8 +5,10 @@ import tomlkit
 
 
 class MessageGroup:
-    '''嵌套消息表，支持 messages.<表>.<子表>.<键> 链式访问消息文本
-    占位符使用 Python str.format 语法，如 messages.xxx.yyy.format(player='Steve')'''
+    """
+    嵌套消息表，支持 messages.<表>.<子表>.<键> 链式访问消息文本
+        占位符使用 Python str.format 语法，如 messages.xxx.yyy.format(player='Steve')。
+    """
 
     __slots__ = ('_data',)
 
@@ -30,17 +32,15 @@ MESSAGES_TOML_PATH = Path('Config') / 'Messages.toml'
 
 
 def load_messages() -> MessageGroup:
-    '''从 Messages.toml 加载消息配置，文件缺失则抛错'''
+    """从 Messages.toml 加载消息配置，文件缺失则抛错。"""
     if not MESSAGES_TOML_PATH.exists():
-        raise FileNotFoundError(
-            f'消息配置文件 {MESSAGES_TOML_PATH} 不存在，请创建后按需填写！'
-        )
+        raise FileNotFoundError(f'消息配置文件 {MESSAGES_TOML_PATH} 不存在，请创建后按需填写！')
     toml_data = tomlkit.parse(MESSAGES_TOML_PATH.read_text('Utf-8'))
     return MessageGroup(dict(toml_data))
 
 
 def reload_messages() -> None:
-    '''重新加载消息配置，供保存后热更新'''
+    """重新加载消息配置，供保存后热更新。"""
 
     global messages
 
@@ -48,4 +48,3 @@ def reload_messages() -> None:
 
 
 messages = load_messages()
-

@@ -1,9 +1,10 @@
-import re
 import asyncio
+import re
 from collections.abc import AsyncIterable, Iterable
 
 from nonebot.log import logger
-from nonebot_plugin_alconna import Target, SupportScope as AlconnaSupportScope
+from nonebot_plugin_alconna import SupportScope as AlconnaSupportScope
+from nonebot_plugin_alconna import Target
 from nonebot_plugin_uninfo import SupportScope as UninfoSupportScope
 
 from .Config import config
@@ -42,12 +43,12 @@ def get_player_name(name: str) -> str | None:
 
 
 def get_platform_name(scope: str) -> str:
-    '''获取平台的可读名称'''
+    """获取平台的可读名称。"""
     return scope_mapping.get(scope, '未知平台')
 
 
 async def send_message_to_groups(message: str) -> bool:
-    '''向配置中的所有平台群组发送消息'''
+    """向配置中的所有平台群组发送消息。"""
     send_tasks = []
     try:
         for group_info in config.message_groups:
@@ -69,11 +70,10 @@ async def send_message_to_groups(message: str) -> bool:
 
 
 def get_permission(session) -> bool:
-    '''检查用户是否为超级用户或管理员'''
+    """检查用户是否为超级用户或管理员。"""
     uid = str(session.user.id)
     if uid in config.superusers:
         return True
-    if config.admin_superusers and session.member:
-        if session.member.role:
-            return session.member.role.id in ('OWNER', 'ADMINISTRATOR')
+    if config.admin_superusers and session.member and session.member.role:
+        return session.member.role.id in ('OWNER', 'ADMINISTRATOR')
     return False

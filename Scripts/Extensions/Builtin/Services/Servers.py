@@ -1,39 +1,61 @@
-import re
+"""内置服务：Minecraft 服务器交互。"""
+
 import asyncio
+import re
+from typing import override
 
 from nonebot import get_adapter
-from nonebot.log import logger
-from nonebot.adapters.minecraft import Adapter as MCAdapter, Bot
+from nonebot.adapters.minecraft import Adapter as MCAdapter
+from nonebot.adapters.minecraft import Bot
 from nonebot.adapters.minecraft.message import Message
+from nonebot.log import logger
 
-from ..Config import config
+from Scripts import Globals
+from Scripts.Extensions import Extension, Service
+
+extension = Extension(id='Servers', name='Minecraft 服务器服务', version='1.0.0', types=('api',))
 
 
-class ServerManager:
-    '''Minecraft 服务器管理器，封装与 Minecraft 的交互'''
-    def init(self):
-        self.adapter = get_adapter(MCAdapter)
-        self.servers = self.adapter.bots
+@extension.register_service
+class ServerService(Service):
+    """封装 Minecraft 服务器查询、指令执行与消息广播能力。"""
 
-    def get_server(self, server_flag: str | int):
-        '''通过名称或编号获取 Minecraft 机器人'''
-        if self.servers is None:
-            return
-        if isinstance(server_flag, int) or (isinstance(server_flag, str) and server_flag.isdigit()):
+    name = 'server'
+
+    def __init__(self) -> None:
+        self.servers: dict[str, Bot] = {}
+
+    @override
+    async def on_enable(self) -> None:
+        """服务启动时绑定 Minecraft 适配器的机器人集合。"""
+        adapter = get_adapter(MCAdapter)
+        self.servers = adapter.bots  # pyright: ignore[reportAttributeAccessIssue]
+        Globals.server_service = self
+
+    @override
+    async def on_disable(self) -> None:
+        """服务关闭时释放适配器机器人集合引用。"""
+        if Globals.server_service is self:
+            Globals.server_service = None
+        self.servers = {}
+
+    def get_server(self, server_flag: str | int) -> Bot | None:
+        """通过名称或编号获取 Minecraft 机器人。"""
+        if isinstance(server_flag, int) or server_flag.isdigit():
             names = list(self.servers.keys())
             index = int(server_flag) - 1
             if 0 <= index < len(names):
                 return self.servers[names[index]]
-        return self.servers.get(str(server_flag), None)
+        return self.servers.get(str(server_flag))
 
-    def check_online(self):
-        '''是否有 Minecraft 服务器在线'''
+    def check_online(self) -> bool:
+        """是否有 Minecraft 服务器在线。"""
         return bool(self.servers)
 
     async def gather(self, get_task, filter_function=None):
-        if self.servers is None:
-            return
-        names, tasks = [], []
+        """并发调用所有符合条件的 Minecraft 服务器。"""
+        names: list[str] = []
+        tasks = []
         for name, server in self.servers.items():
             if filter_function is None or filter_function(server):
                 names.append(name)
@@ -42,7 +64,7 @@ class ServerManager:
         return {names[index]: result for index, result in enumerate(results)}
 
     async def execute(self, command: str, server_flag: str | int | None = None):
-        '''执行 Minecraft 指令，server_flag 为 None 时广播到所有服务器'''
+        """执行 Minecraft 指令，server_flag 为 None 时广播到所有服务器。"""
 
         async def get_task(server: Bot):
             try:
@@ -54,11 +76,11 @@ class ServerManager:
             bot = self.get_server(server_flag)
             if bot is not None:
                 return {bot.self_id: await bot.send_rcon_command(command=command)}
-            return
+            return None
         return await self.gather(get_task)
 
     async def get_status(self, server: Bot) -> dict:
-        '''获取 Minecraft 服务器状态'''
+        """获取 Minecraft 服务器状态。"""
         try:
             status = await server.get_status()
         except Exception as error:
@@ -96,7 +118,7 @@ class ServerManager:
         }
 
     async def get_player_list(self, server: Bot) -> tuple[list[str], int]:
-        '''通过 RCON 指令获取并解析服务器玩家列表'''
+        """通过 RCON 指令获取并解析服务器玩家列表。"""
         try:
             result = await server.send_rcon_command(command='list')
         except Exception as error:
@@ -114,7 +136,7 @@ class ServerManager:
         return players, max_players
 
     async def broadcast(self, message: Message | str, except_server: str = ''):
-        '''广播消息到所有服务器（除 except_server 外）'''
+        """广播消息到所有服务器（除 except_server 外）。"""
 
         async def get_task(server: Bot):
             try:
@@ -123,6 +145,3 @@ class ServerManager:
                 logger.warning(f'向服务器 [{server.self_id}] 广播消息失败：{error}')
 
         return await self.gather(get_task, lambda server: server.self_id != except_server)
-
-
-server_manager = ServerManager()

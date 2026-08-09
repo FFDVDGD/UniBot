@@ -1,4 +1,4 @@
-'''渲染扩展测试（A4）：渲染器注册、RendererManager 激活/回退/清理、主题注册。'''
+"""渲染扩展测试（A4）：渲染器注册、RendererManager 激活/回退/清理、主题注册。"""
 
 import asyncio
 
@@ -8,7 +8,6 @@ from Scripts.Extensions import BaseRenderer, RendererManager, extension_manager
 
 
 class _FakeRenderer(BaseRenderer):
-
     def __init__(self, name: str) -> None:
         self.name = name
         self.setup_called = False
@@ -27,6 +26,7 @@ class _FakeRenderer(BaseRenderer):
 
 
 # ===== 渲染器注册 =====
+
 
 class TestRendererRegistration:
     def test_register_and_get_renderer(self):
@@ -50,6 +50,7 @@ class TestRendererRegistration:
 
 
 # ===== RendererManager =====
+
 
 class TestRendererManager:
     def test_setup_activates_renderer(self):

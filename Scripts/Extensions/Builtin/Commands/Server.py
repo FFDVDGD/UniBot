@@ -1,10 +1,10 @@
-'''内置扩展：服务器列表指令。'''
+"""内置扩展：服务器列表指令。"""
 
 from typing import override
 
+from Scripts import Globals
 from Scripts.Extensions import Command, Extension
 from Scripts.Globals import render_template
-from Scripts.Managers import server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
@@ -14,7 +14,7 @@ extension = Extension(id='Server', name='服务器列表', version='1.0.0', type
 
 @extension.register_command
 class ServerCommand(Command):
-    '''查看已连接的服务器列表。'''
+    """查看已连接的服务器列表。"""
 
     name = 'server'
     description = '查看已连接的服务器列表。'
@@ -26,16 +26,19 @@ class ServerCommand(Command):
 
     @override
     async def image_handler(self) -> bytes:
-        '''渲染服务器列表为图片，返回 PNG 字节（由框架在图像模式发送）。'''
+        """渲染服务器列表为图片，返回 PNG 字节（由框架在图像模式发送）。"""
+        server_service = Globals.server_service
         servers = [
             {'name': name, 'index': index}
-            for index, name in enumerate(server_manager.servers.keys())
+            for index, name in enumerate(server_service.servers.keys() if server_service else ())
         ]
         return await render_template('Server', (500, 0), servers=servers)
 
     async def server_handler(self):
-        if not server_manager.servers:
+        server_service = Globals.server_service
+        servers = server_service.servers if server_service else {}
+        if not servers:
             yield messages.commands.server.no_server
             return
-        for index, name in enumerate(server_manager.servers.keys()):
+        for index, name in enumerate(servers.keys()):
             yield messages.commands.server.server_line.format(index=index, name=name)

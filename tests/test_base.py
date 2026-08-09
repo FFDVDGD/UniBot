@@ -1,4 +1,4 @@
-'''A0 契约测试：错误模型、状态机、清单校验。'''
+"""A0 契约测试：错误模型、状态机、清单校验。"""
 
 import pytest
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -11,12 +11,12 @@ from Scripts.Extensions import (
     parse_manifest,
 )
 
-
 # ===== manifest 校验 =====
+
 
 class TestManifestParsing:
     def test_valid_manifest(self):
-        content = '''
+        content = """
 [manifest]
 schema_version = 1
 
@@ -34,7 +34,7 @@ unibot = ">=0.0.5"
 [dependencies]
 extensions = ["OtherExt"]
 python = []
-        '''
+"""
         manifest = parse_manifest(content)
         assert manifest.extension.id == 'WeatherExt'
         assert manifest.extension.types == ['api', 'command']
@@ -42,7 +42,7 @@ python = []
         assert manifest.dependencies.extensions == ['OtherExt']
 
     def test_invalid_id_rejected(self):
-        content = '''
+        content = """
 [manifest]
 schema_version = 1
 
@@ -60,12 +60,12 @@ unibot = ">=0.0.5"
 [dependencies]
 extensions = []
 python = []
-        '''
+"""
         with pytest.raises(ManifestError):
             parse_manifest(content)
 
     def test_invalid_type_rejected(self):
-        content = '''
+        content = """
 [manifest]
 schema_version = 1
 
@@ -83,12 +83,12 @@ unibot = ">=0.0.5"
 [dependencies]
 extensions = []
 python = []
-        '''
+"""
         with pytest.raises(ManifestError):
             parse_manifest(content)
 
     def test_unknown_field_rejected(self):
-        content = '''
+        content = """
 [manifest]
 schema_version = 1
 
@@ -107,12 +107,12 @@ unibot = ">=0.0.5"
 [dependencies]
 extensions = []
 python = []
-        '''
+"""
         with pytest.raises(ManifestError):
             parse_manifest(content)
 
     def test_missing_required_field_rejected(self):
-        content = '''
+        content = """
 [manifest]
 schema_version = 1
 
@@ -128,12 +128,13 @@ unibot = ">=0.0.5"
 [dependencies]
 extensions = []
 python = []
-        '''
+"""
         with pytest.raises(ManifestError):
             parse_manifest(content)
 
 
 # ===== 状态机 =====
+
 
 class TestStateMachine:
     def test_default_state_is_discovered(self):
@@ -166,6 +167,7 @@ class TestStateMachine:
 
 
 # ===== Extension 基类 =====
+
 
 class TestExtensionBase:
     def test_default_config_model_rejects_unknown_fields(self):
@@ -207,10 +209,11 @@ class TestExtensionBase:
 
 # ===== 工具函数 =====
 
+
 def _fake_metadata():
     from Scripts.Extensions import ExtensionMetadata
 
-    manifest = parse_manifest('''
+    manifest = parse_manifest("""
 [manifest]
 schema_version = 1
 
@@ -228,10 +231,10 @@ unibot = ">=0.0.5"
 [dependencies]
 extensions = []
 python = []
-    ''')
+""")
     return ExtensionMetadata(manifest)
 
 
 def _bind_fake(ext: Extension) -> None:
-    '''将扩展绑定到一个伪造 metadata，供状态机/属性测试使用。'''
+    """将扩展绑定到一个伪造 metadata，供状态机/属性测试使用。"""
     ext._bind(metadata=_fake_metadata(), config_store=None, data_store=None, api=None)

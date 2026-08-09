@@ -1,12 +1,13 @@
-import jwt
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
+import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from nonebot.log import logger
 
 from Scripts.Managers import data_manager
+
 from .Limiter import rate_limiter
 from .Schemas import (
     ChangePasswordRequest,
@@ -24,7 +25,7 @@ COOKIE_FLAG_KEY = 'unibot_authenticated'
 
 
 def set_auth_cookies(response: JSONResponse, access_token: str, refresh_token: str | None = None):
-    '''设置 HttpOnly 安全 cookie（access_token 短期 + refresh_token 长期）'''
+    """设置 HttpOnly 安全 cookie（access_token 短期 + refresh_token 长期）。"""
     response.set_cookie(
         key=COOKIE_ACCESS_KEY,
         value=access_token,
@@ -56,13 +57,15 @@ def set_auth_cookies(response: JSONResponse, access_token: str, refresh_token: s
 
 
 def clear_auth_cookies(response: JSONResponse):
-    '''清除所有认证 cookie。
+    """
+    清除所有认证 cookie。
 
-    delete_cookie 内部会以 max_age=0 重新下发同名 cookie，
-    浏览器收到后立即删除；无需额外传 max_age / expires。
-    '''
+        delete_cookie 内部会以 max_age=0 重新下发同名 cookie，
+        浏览器收到后立即删除；无需额外传 max_age / expires。
+    """
     for key in (COOKIE_ACCESS_KEY, COOKIE_REFRESH_KEY, COOKIE_FLAG_KEY):
         response.delete_cookie(key=key, path='/webui')
+
 
 router = APIRouter(
     prefix='/api/auth',
@@ -81,28 +84,28 @@ setup_lock = asyncio.Lock()
 
 
 def create_access_token(user_id: str, role: str) -> str:
-    '''签发 access_token'''
+    """签发 access_token。"""
     payload = {
         'sub': user_id,
         'role': role,
         'type': 'access',
-        'exp': datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS),
+        'exp': datetime.now(UTC) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS),
     }
     return jwt.encode(payload, data_manager.secret_key, algorithm='HS256')
 
 
 def create_refresh_token(user_id: str) -> str:
-    '''签发 refresh_token'''
+    """签发 refresh_token。"""
     payload = {
         'sub': user_id,
         'type': 'refresh',
-        'exp': datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        'exp': datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
     }
     return jwt.encode(payload, data_manager.secret_key, algorithm='HS256')
 
 
 async def get_current_user(request: Request, authorization: str | None = Header(None)) -> dict:
-    '''解析 JWT，返回当前用户对象（优先从 Authorization header，fallback 到 cookie）'''
+    """解析 JWT，返回当前用户对象（优先从 Authorization header，fallback 到 cookie）。"""
     token = None
     if authorization and authorization.startswith('Bearer '):
         token = authorization[7:]
@@ -125,23 +128,25 @@ async def get_current_user(request: Request, authorization: str | None = Header(
 
 
 def require_role(*roles: str):
-    '''角色校验依赖工厂'''
+    """角色校验依赖工厂。"""
+
     async def checker(user: dict = Depends(get_current_user)):
         if user['role'] not in roles:
             raise HTTPException(status_code=403, detail='权限不足')
         return user
+
     return checker
 
 
 @router.get('/status', summary='获取认证状态')
 async def auth_status():
-    '''返回系统是否已初始化（无需认证），供登录页决定是否展示初始化入口'''
+    """返回系统是否已初始化（无需认证），供登录页决定是否展示初始化入口。"""
     return {'code': 0, 'data': {'initialized': data_manager.is_initialized}, 'message': 'ok'}
 
 
 @router.post('/setup', summary='首次初始化')
 async def setup(body: SetupRequest):
-    '''首次初始化：创建管理员账户，仅在无任何用户时可用'''
+    """首次初始化：创建管理员账户，仅在无任何用户时可用。"""
     async with setup_lock:
         if data_manager.is_initialized:
             return {'code': 1, 'data': None, 'message': '系统已初始化，禁止重复创建管理员账户'}
@@ -154,28 +159,30 @@ async def setup(body: SetupRequest):
 
 @router.post('/login', summary='用户登录')
 async def login(body: LoginRequest):
-    '''用户名密码登录，通过 HttpOnly cookie 下发 JWT'''
+    """用户名密码登录，通过 HttpOnly cookie 下发 JWT。"""
     user_data = data_manager.get_user_by_username(body.username)
     if not user_data or not data_manager.verify_password(body.password, user_data['password_hash']):
         return {'code': 1, 'data': None, 'message': '用户名或密码错误'}
     await data_manager.update_last_login(user_data['user_id'])
     access_token = create_access_token(user_data['user_id'], user_data['role'])
     refresh_token = create_refresh_token(user_data['user_id'])
-    response = JSONResponse({
-        'code': 0,
-        'data': {
-            'user': data_manager.public_user_info(user_data),
-            'expires_in': ACCESS_TOKEN_EXPIRE_HOURS * 3600,
-        },
-        'message': 'ok',
-    })
+    response = JSONResponse(
+        {
+            'code': 0,
+            'data': {
+                'user': data_manager.public_user_info(user_data),
+                'expires_in': ACCESS_TOKEN_EXPIRE_HOURS * 3600,
+            },
+            'message': 'ok',
+        }
+    )
     set_auth_cookies(response, access_token, refresh_token)
     return response
 
 
 @router.post('/refresh', summary='刷新 Token')
 async def refresh(request: Request, body: RefreshRequest):
-    '''使用 refresh_token 换取新的 access_token（优先从 cookie 读取）'''
+    """使用 refresh_token 换取新的 access_token（优先从 cookie 读取）。"""
     refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or body.refresh_token
     if not refresh_token:
         return {'code': 401, 'data': None, 'message': '缺少 refresh_token'}
@@ -191,25 +198,26 @@ async def refresh(request: Request, body: RefreshRequest):
     if not user_data:
         return {'code': 401, 'data': None, 'message': '用户不存在'}
     access_token = create_access_token(user_data['user_id'], user_data['role'])
-    response = JSONResponse({
-        'code': 0,
-        'data': {'expires_in': ACCESS_TOKEN_EXPIRE_HOURS * 3600},
-        'message': 'ok',
-    })
+    response = JSONResponse(
+        {
+            'code': 0,
+            'data': {'expires_in': ACCESS_TOKEN_EXPIRE_HOURS * 3600},
+            'message': 'ok',
+        }
+    )
     set_auth_cookies(response, access_token)  # 刷新 access_token cookie
     return response
 
 
 @router.post('/logout', summary='退出登录')
 async def logout(request: Request, body: LogoutRequest | None = None):
-    '''使当前 refresh_token 失效并清除 cookie。
+    """
+    使当前 refresh_token 失效并清除 cookie。
 
-    无论请求体或 cookie 是否存在，都会强制清空所有认证 cookie，
-    以保证客户端在任何情况下退出登录后都不会残留凭证。
-    '''
-    refresh_token = (
-        request.cookies.get(COOKIE_REFRESH_KEY) or (body.refresh_token if body else '') or ''
-    )
+        无论请求体或 cookie 是否存在，都会强制清空所有认证 cookie，
+        以保证客户端在任何情况下退出登录后都不会残留凭证。
+    """
+    refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or (body.refresh_token if body else '') or ''
     if refresh_token:
         revoked_tokens.add(refresh_token)
     response = JSONResponse({'code': 0, 'data': None, 'message': 'ok'})
@@ -219,13 +227,13 @@ async def logout(request: Request, body: LogoutRequest | None = None):
 
 @router.get('/me', summary='获取当前用户信息')
 async def get_me(user: dict = Depends(get_current_user)):
-    '''获取当前登录用户信息'''
+    """获取当前登录用户信息。"""
     return {'code': 0, 'data': data_manager.public_user_info(user), 'message': 'ok'}
 
 
 @router.put('/password', summary='修改密码')
 async def change_password(body: ChangePasswordRequest, user: dict = Depends(get_current_user)):
-    '''修改当前用户密码'''
+    """修改当前用户密码。"""
     if not data_manager.verify_password(body.old_password, user['password_hash']):
         return {'code': 1, 'data': None, 'message': '原密码错误'}
     await data_manager.reset_password(user['user_id'], body.new_password)
@@ -234,6 +242,6 @@ async def change_password(body: ChangePasswordRequest, user: dict = Depends(get_
 
 @router.put('/profile', summary='修改昵称')
 async def update_profile(body: UpdateProfileRequest, user: dict = Depends(get_current_user)):
-    '''修改当前用户昵称'''
+    """修改当前用户昵称。"""
     await data_manager.update_user(user['user_id'], nickname=body.nickname)
     return {'code': 0, 'data': None, 'message': 'ok'}

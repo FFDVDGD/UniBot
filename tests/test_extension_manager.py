@@ -1,4 +1,4 @@
-'''ExtensionManager 测试：拓扑排序、生命周期、失败隔离、启停状态（验证点 9、14、8）。'''
+"""ExtensionManager 测试：拓扑排序、生命周期、失败隔离、启停状态（验证点 9、14、8）。"""
 
 import asyncio
 from typing import override
@@ -9,11 +9,19 @@ import tomlkit
 from Scripts.Extensions import Extension, ExtensionState, Service, ServiceRegistry, extension_manager
 
 
-class _GoodExt(Extension):
+def _bind_registry(extension: Extension) -> ServiceRegistry:
+    """为生命周期测试建立最小服务注册表绑定。"""
+    registry = ServiceRegistry(extension_manager)
+    extension._api = registry
+    extension._bound = True
+    return registry
 
+
+class _GoodExt(Extension):
     def __init__(self, ext_id: str) -> None:
         super().__init__()
         self._ext_id = ext_id
+        _bind_registry(self)
         self.enabled = False
         self.disabled = False
 
@@ -32,10 +40,10 @@ class _GoodExt(Extension):
 
 
 class _FailingExt(Extension):
-
     def __init__(self, ext_id: str) -> None:
         super().__init__()
         self._ext_id = ext_id
+        _bind_registry(self)
 
     @property
     @override
@@ -52,7 +60,8 @@ class _TypedService(Service):
 
 
 class _LifecycleService(Service):
-    '''记录服务生命周期调用。'''
+    """记录服务生命周期调用。"""
+
     name = 'lifecycle'
 
     def __init__(self) -> None:
@@ -69,12 +78,11 @@ class _LifecycleService(Service):
 
 
 class _ServiceExt(Extension):
-
     def __init__(self, ext_id: str, service: Service) -> None:
         super().__init__()
         self._ext_id = ext_id
-        self.api = ServiceRegistry(extension_manager)
-        self.api.register(service.name or type(service).__name__, service)
+        registry = _bind_registry(self)
+        registry.register(service.name or type(service).__name__, service)
 
     @property
     @override
@@ -83,6 +91,7 @@ class _ServiceExt(Extension):
 
 
 # ===== 服务注册 =====
+
 
 class TestServices:
     def test_register_and_get_service(self):
@@ -118,6 +127,7 @@ class TestServices:
 
 
 # ===== 生命周期 =====
+
 
 class TestLifecycle:
     def test_start_enables_extensions_in_order(self):
@@ -171,6 +181,7 @@ class TestLifecycle:
 
 
 # ===== 启停状态文件 =====
+
 
 class TestSetEnabled:
     def test_set_enabled_writes_config_file(self, tmp_path, monkeypatch):

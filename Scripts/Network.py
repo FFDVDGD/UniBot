@@ -41,7 +41,7 @@ async def request(url: str):
 
 
 async def download(url: str) -> BytesIO | None:
-    '''下载单个 URL 的文件内容，成功返回 BytesIO，失败返回 False'''
+    """下载单个 URL 的文件内容，成功返回 BytesIO，失败返回 False。"""
     try:
         download_bytes = BytesIO()
         async with client.stream('GET', url) as stream:
@@ -58,7 +58,7 @@ async def download(url: str) -> BytesIO | None:
 
 
 async def github_download(url: str) -> BytesIO | None:
-    '''下载 GitHub 文件，依次尝试加速镜像，全部失败后回退到原始地址直连'''
+    """下载 GitHub 文件，依次尝试加速镜像，全部失败后回退到原始地址直连。"""
     candidate_urls = [mirror + url for mirror in GITHUB_MIRRORS]
     candidate_urls.append(url)
     for candidate_url in candidate_urls:
@@ -68,7 +68,7 @@ async def github_download(url: str) -> BytesIO | None:
 
 
 async def fetch_player_avatar(name: str, size: int) -> tuple[bytes, str] | None:
-    '''获取玩家头像（带内存缓存），依次尝试多个头像 CDN，全部失败后回退到史蒂夫默认头像'''
+    """获取玩家头像（带内存缓存），依次尝试多个头像 CDN，全部失败后回退到史蒂夫默认头像。"""
     cache_key = (name, size)
     if cache_key in avatar_cache:
         return avatar_cache[cache_key]
@@ -88,7 +88,7 @@ async def fetch_player_avatar(name: str, size: int) -> tuple[bytes, str] | None:
 
 
 async def fetch_player_avatars(player_names: list[str], size: int = AVATAR_SIZE) -> dict[str, tuple]:
-    '''并发获取多个玩家头像，返回 {玩家名: (图片内容, Content-Type)}，获取失败的玩家不在结果中'''
+    """并发获取多个玩家头像，返回 {玩家名: (图片内容, Content-Type)}，获取失败的玩家不在结果中。"""
     semaphore = asyncio.Semaphore(MAX_AVATAR_CONCURRENCY)
 
     async def fetch_one(player_name: str) -> tuple[str, tuple] | None:

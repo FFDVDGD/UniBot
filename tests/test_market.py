@@ -1,13 +1,13 @@
-'''A8 市场安全解压与安装事务测试。
+"""
+A8 市场安全解压与安装事务测试。
 
 验证方案 item 19：SHA-256 不匹配、清单不一致、路径穿越、符号链接、超出文件限制时，
 当前扩展版本不发生改变。
-'''
+"""
 
 import hashlib
 import io
 import zipfile
-from pathlib import Path
 
 import pytest
 
@@ -16,11 +16,11 @@ from Scripts.Extensions import (
     extract_market_package,
     safe_extract_zip,
 )
-from Scripts.Extensions.Market import MAX_ARCHIVE_FILES, MAX_ARCHIVE_TOTAL
+from Scripts.Extensions.Market import MAX_ARCHIVE_FILES
 
 
 def _make_zip(files: dict[str, bytes]) -> bytes:
-    '''生成内存 zip（files: 相对路径 -> 内容）。'''
+    """生成内存 zip（files: 相对路径 -> 内容）。"""
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
         for name, content in files.items():
@@ -29,8 +29,8 @@ def _make_zip(files: dict[str, bytes]) -> bytes:
 
 
 def _valid_manifest() -> str:
-    '''生成一份合法的 Extension.toml 内容。'''
-    return '''
+    """生成一份合法的 Extension.toml 内容。"""
+    return """
 [manifest]
 schema_version = 1
 
@@ -48,10 +48,11 @@ unibot = "*"
 [dependencies]
 extensions = []
 python = []
-'''
+"""
 
 
 # ===== 安全解压 =====
+
 
 class TestSafeExtractZip:
     def test_extract_plain(self, tmp_path):
@@ -100,12 +101,15 @@ class TestSafeExtractZip:
 
 # ===== 解压 + 清单读取 =====
 
+
 class TestExtractMarketPackage:
     def test_extract_with_manifest(self, tmp_path):
-        archive = _make_zip({
-            'TestExt/Extension.toml': _valid_manifest().encode(),
-            'TestExt/__init__.py': b'pass',
-        })
+        archive = _make_zip(
+            {
+                'TestExt/Extension.toml': _valid_manifest().encode(),
+                'TestExt/__init__.py': b'pass',
+            }
+        )
         manifest = extract_market_package(archive, tmp_path)
         assert manifest.extension.id == 'TestExt'
         assert (tmp_path / 'TestExt' / '__init__.py').exists()
@@ -116,9 +120,11 @@ class TestExtractMarketPackage:
             extract_market_package(archive, tmp_path)
 
     def test_manifest_not_at_root_rejected(self, tmp_path):
-        archive = _make_zip({
-            'TestExt/sub/Extension.toml': _valid_manifest().encode(),
-        })
+        archive = _make_zip(
+            {
+                'TestExt/sub/Extension.toml': _valid_manifest().encode(),
+            }
+        )
         with pytest.raises(ManifestError):
             extract_market_package(archive, tmp_path)
 
@@ -130,8 +136,9 @@ class TestExtractMarketPackage:
 
 # ===== SHA-256 =====
 
+
 def test_sha256_mismatch_rejected(monkeypatch):
-    '''SHA-256 与下载内容不匹配时抛 ManifestError。'''
+    """SHA-256 与下载内容不匹配时抛 ManifestError。"""
     from Scripts.Extensions.MarketManager import ExtensionMarketManager
 
     manager = ExtensionMarketManager()
@@ -141,18 +148,17 @@ def test_sha256_mismatch_rejected(monkeypatch):
         return io.BytesIO(archive)
 
     async def run():
-        return await manager._download_release(
-            'https://example.com/x.zip', hashlib.sha256(b'wrong').hexdigest()
-        )
+        return await manager._download_release('https://example.com/x.zip', hashlib.sha256(b'wrong').hexdigest())
 
     monkeypatch.setattr('Scripts.Extensions.MarketManager.github_download', fake_download)
     with pytest.raises(ManifestError):
         import asyncio
+
         asyncio.run(run())
 
 
 def test_sha256_match_ok(monkeypatch):
-    '''SHA-256 匹配时下载成功。'''
+    """SHA-256 匹配时下载成功。"""
     from Scripts.Extensions.MarketManager import ExtensionMarketManager
 
     manager = ExtensionMarketManager()
@@ -162,11 +168,10 @@ def test_sha256_match_ok(monkeypatch):
         return io.BytesIO(archive)
 
     async def run():
-        return await manager._download_release(
-            'https://example.com/x.zip', hashlib.sha256(archive).hexdigest()
-        )
+        return await manager._download_release('https://example.com/x.zip', hashlib.sha256(archive).hexdigest())
 
     monkeypatch.setattr('Scripts.Extensions.MarketManager.github_download', fake_download)
     import asyncio
+
     result = asyncio.run(run())
     assert result == archive

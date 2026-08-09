@@ -1,4 +1,4 @@
-'''扩展发现、依赖拓扑排序与导入加载。'''
+"""扩展发现、依赖拓扑排序与导入加载。"""
 
 from __future__ import annotations
 
@@ -56,7 +56,8 @@ MANIFEST_FILE = 'Extension.toml'
 
 @dataclass
 class DiscoveredExtension:
-    '''发现阶段收集的扩展元信息，供校验、拓扑排序与加载统一访问。'''
+    """发现阶段收集的扩展元信息，供校验、拓扑排序与加载统一访问。"""
+
     manifest: ExtensionManifest
     directory: Path
     single_file: bool
@@ -67,7 +68,7 @@ class DiscoveredExtension:
 
 
 class ExtensionLoader:
-    '''扫描、校验、排序并加载扩展。'''
+    """扫描、校验、排序并加载扩展。"""
 
     def __init__(self, manager: ExtensionManager) -> None:
         self.manager = manager
@@ -81,7 +82,7 @@ class ExtensionLoader:
         self._enabled_config: dict | None = None
 
     def load(self) -> list[Extension]:
-        '''执行完整加载流程：发现 -> 校验 -> 拓扑排序 -> 导入 -> 声明 -> on_load。'''
+        """执行完整加载流程：发现 -> 校验 -> 拓扑排序 -> 导入 -> 声明 -> on_load。"""
         self._builtin_command_classes.clear()
         self._enabled_config = None
         self._discover()
@@ -94,7 +95,7 @@ class ExtensionLoader:
 
     # ===== 发现 =====
     def _discover(self) -> None:
-        '''分别扫描内置扩展子目录与用户扩展目录，解析清单。'''
+        """分别扫描内置扩展子目录与用户扩展目录，解析清单。"""
         for subpackage in ('Commands', 'Renderers', 'Services'):
             self._scan_directory(BUILTIN_DIR / subpackage, builtin=True)
         if EXTENSIONS_DIR.exists():
@@ -103,7 +104,7 @@ class ExtensionLoader:
         logger.info('用户扩展目录不存在，跳过用户扩展加载！')
 
     def _scan_directory(self, directory: Path, builtin: bool) -> None:
-        '''扫描目录下的单文件扩展与扩展目录并解析清单。'''
+        """扫描目录下的单文件扩展与扩展目录并解析清单。"""
         for entry in directory.iterdir():
             if entry.name.startswith('.') or entry.name.startswith('_'):
                 continue
@@ -113,7 +114,7 @@ class ExtensionLoader:
                 self._discover_single_file(entry, builtin=builtin)
 
     def _discover_directory(self, directory: Path) -> None:
-        '''发现多文件扩展目录：读取 Extension.toml 并校验 id 与目录名一致。'''
+        """发现多文件扩展目录：读取 Extension.toml 并校验 id 与目录名一致。"""
         manifest_path = directory / MANIFEST_FILE
         if not manifest_path.exists():
             logger.warning(f'扩展目录 {directory.name} 缺少 {MANIFEST_FILE}，已跳过！')
@@ -126,9 +127,7 @@ class ExtensionLoader:
         extension_id = manifest.extension.id
         # 校验 id 与目录名完全一致（含大小写）
         if extension_id != directory.name:
-            logger.error(
-                f'扩展 id {extension_id} 与目录名 {directory.name} 不一致，已跳过！'
-            )
+            logger.error(f'扩展 id {extension_id} 与目录名 {directory.name} 不一致，已跳过！')
             return
         enabled = self._read_enabled(directory.name)
         self._discovered[extension_id] = DiscoveredExtension(
@@ -140,17 +139,16 @@ class ExtensionLoader:
         logger.debug(f'发现扩展 {extension_id} v{manifest.extension.version}！')
 
     def _discover_single_file(self, file: Path, builtin: bool = False) -> None:
-        '''发现单文件扩展：导入模块读取类属性构建清单，校验 id 与文件名一致。
+        """
+        发现单文件扩展：导入模块读取类属性构建清单，校验 id 与文件名一致。
 
         内置扩展分布在 `Builtin/` 下的固定子目录（Commands/Renderers/Services），
-        模块 id 以子包名作前缀（如 `Commands.About`）；用户扩展位于
-        `Extensions/` 根目录，模块 id 即文件名。
-        '''
+        模块 id 以子包名作前缀（如 `Commands.About`）；用户扩展位于 `Extensions/` 根目录，模块 id 即文件名。
+        """
         extension_id = file.stem
+        module_path = f'Extensions.{extension_id}'
         if builtin:
             module_path = f'Scripts.Extensions.Builtin.{file.parent.name}.{extension_id}'
-        else:
-            module_path = f'Extensions.{extension_id}'
         try:
             extension = self._import_single_file(module_path, extension_id)
         except Exception as error:
@@ -162,9 +160,7 @@ class ExtensionLoader:
             logger.error(f'单文件扩展 {extension_id} 元数据校验失败：{error}，已跳过！')
             return
         if manifest.extension.id != extension_id:
-            logger.error(
-                f'单文件扩展 id {manifest.extension.id} 与文件名 {extension_id} 不一致，已跳过！'
-            )
+            logger.error(f'单文件扩展 id {manifest.extension.id} 与文件名 {extension_id} 不一致，已跳过！')
             return
         enabled = self._read_enabled(extension_id)
         self._discovered[extension_id] = DiscoveredExtension(
@@ -178,23 +174,21 @@ class ExtensionLoader:
         logger.debug(f'发现单文件扩展 {extension_id} v{manifest.extension.version}！')
 
     def _read_enabled(self, extension_id: str) -> bool:
-        '''读取 Config/Extensions.toml 中扩展的启停标志，缺失时默认启用。'''
+        """读取 Config/Extensions.toml 中扩展的启停标志，缺失时默认启用。"""
         # 缓存解析结果，发现阶段多次调用时只读一次文件
         if self._enabled_config is None:
-            if not CONFIG_EXTENSIONS_FILE.exists():
-                self._enabled_config = {}
-            else:
+            self._enabled_config = {}
+            if CONFIG_EXTENSIONS_FILE.exists():
                 try:
                     self._enabled_config = tomlkit.parse(CONFIG_EXTENSIONS_FILE.read_text('Utf-8'))
                 except Exception as error:
                     logger.warning(f'扩展启停配置读取失败：{error}，全部默认启用！')
-                    self._enabled_config = {}
         return bool(self._enabled_config.get(extension_id, {}).get('enabled', True))
 
     # ===== 校验 =====
 
     def _validate_all(self) -> None:
-        '''校验发现的扩展：版本兼容性、Python 依赖、入口模块命名。'''
+        """校验发现的扩展：版本兼容性、Python 依赖、入口模块命名。"""
         for extension_id, info in self._discovered.items():
             manifest = info.manifest
             self._validate_compatibility(extension_id, manifest)
@@ -202,7 +196,7 @@ class ExtensionLoader:
                 self._validate_entry_module(extension_id, info.directory)
 
     def _validate_compatibility(self, extension_id: str, manifest) -> None:
-        '''校验扩展与当前 UniBot 版本的兼容性。'''
+        """校验扩展与当前 UniBot 版本的兼容性。"""
         from packaging.specifiers import SpecifierSet
 
         constraint = manifest.compatibility.unibot
@@ -212,32 +206,27 @@ class ExtensionLoader:
         try:
             specifier = SpecifierSet(constraint)
         except Exception as error:
-            raise CompatibilityError(
-                f'扩展 {extension_id} 的版本约束非法：{constraint}（{error}）'
-            ) from error
+            raise CompatibilityError(f'扩展 {extension_id} 的版本约束非法：{constraint}（{error}）') from error
         current_version = get_unibot_version()
         if current_version and current_version not in specifier:
-            raise CompatibilityError(
-                f'扩展 {extension_id} 需要 UniBot {constraint}，当前为 {current_version}！'
-            )
+            raise CompatibilityError(f'扩展 {extension_id} 需要 UniBot {constraint}，当前为 {current_version}！')
 
     @staticmethod
     def _validate_entry_module(extension_id: str, directory: Path) -> None:
-        '''校验多文件扩展目录存在 __init__.py 入口。'''
+        """校验多文件扩展目录存在 __init__.py 入口。"""
         entry_module = directory / '__init__.py'
         if not entry_module.exists():
-            raise ManifestError(
-                f'扩展 {extension_id} 缺少入口模块 __init__.py！'
-            )
+            raise ManifestError(f'扩展 {extension_id} 缺少入口模块 __init__.py！')
 
     # ===== 拓扑排序 =====
 
     def _topological_sort(self) -> list[str]:
-        '''建立依赖图并进行拓扑排序，检测缺失依赖与循环依赖。
+        """
+        建立依赖图并进行拓扑排序，检测缺失依赖与循环依赖。
 
         内置扩展（`builtin: 前缀声明`）优先于用户扩展排序，确保覆盖命令所需的
         内置命令类先被登记，用户扩展随后才能判定并取代内置命令。
-        '''
+        """
         extension_ids = set(self._discovered.keys())
         order: list[str] = []
         visited: dict[str, int] = {}  # 0=临时标记, 1=已加入
@@ -253,9 +242,7 @@ class ExtensionLoader:
             dependencies = self._discovered[extension_id].manifest.dependencies.extensions
             for dependency_id in dependencies:
                 if dependency_id not in extension_ids:
-                    raise DependencyError(
-                        f'扩展 {extension_id} 依赖缺失：{dependency_id}！'
-                    )
+                    raise DependencyError(f'扩展 {extension_id} 依赖缺失：{dependency_id}！')
                 visit(dependency_id, stack)
             stack.pop()
             visited[extension_id] = 1
@@ -273,11 +260,12 @@ class ExtensionLoader:
     # ===== 导入与加载 =====
 
     def _import_and_load(self, order: list[str]) -> None:
-        '''按拓扑顺序导入模块、获取扩展实例并执行声明与 on_load。
+        """
+        按拓扑顺序导入模块、获取扩展实例并执行声明与 on_load。
 
         主动禁用的扩展直接进入 `disabled`，不导入入口、不绑定、不注册。
         依赖被禁用/失败的扩展进入 `blocked`，记录阻塞原因。
-        '''
+        """
         blocked_reasons: dict[str, str] = {}
         for extension_id in order:
             info = self._discovered[extension_id]
@@ -317,7 +305,6 @@ class ExtensionLoader:
                 continue
             self.extensions.append(extension)
             self.manager.registry[extension_id] = extension
-            assert extension.metadata is not None
             logger.success(f'加载扩展 {extension_id} v{extension.metadata.version} 完毕！')
 
     def _bind(
@@ -328,15 +315,14 @@ class ExtensionLoader:
         *,
         builtin: bool = False,
     ) -> None:
-        '''构建作用域受限的存储与注册入口并注入到扩展实例。
+        """
+        构建作用域受限的存储与注册入口并注入到扩展实例。
 
         内置扩展的数据存储直接指向 `Data` 根目录；用户扩展保持在
         `Data/Exs/<id>/`（DATA_ROOT）目录式存储下，避免与运行时数据目录混淆。
-        '''
+        """
         assert extension.config_model is not None
-        config_store = ExtensionConfigStore(
-            CONFIG_ROOT, extension_id, extension.config_model
-        )
+        config_store = ExtensionConfigStore(CONFIG_ROOT, extension_id, extension.config_model)
         api = ServiceRegistry(self.manager)
         store_path = Path('Data') if builtin else DATA_ROOT / extension_id
         data_store = ExtensionDataStore(store_path)
@@ -348,7 +334,7 @@ class ExtensionLoader:
         )
 
     def _find_blocked_dependency(self, extension_id: str, blocked_reasons: dict) -> str | None:
-        '''查找扩展的依赖是否被禁用/失败，返回阻塞原因或 None。'''
+        """查找扩展的依赖是否被禁用/失败，返回阻塞原因或 None。"""
         manifest = self._discovered[extension_id].manifest
         for dependency_id in manifest.dependencies.extensions:
             if dependency_id in blocked_reasons:
@@ -359,16 +345,16 @@ class ExtensionLoader:
         return None
 
     def _register_display(self, extension_id: str, info: DiscoveredExtension, state: ExtensionState, reason: str):
-        '''注册一个未绑定的展示实例（disabled/blocked），供 WebUI 展示状态。'''
+        """注册一个未绑定的展示实例（disabled/blocked），供 WebUI 展示状态。"""
         extension = Extension()
-        extension.metadata = ExtensionMetadata(info.manifest)
+        extension._set_metadata(ExtensionMetadata(info.manifest))
         extension.state = state
         extension.failure_reason = reason if reason else None
         self.manager.registry[extension_id] = extension
 
     @staticmethod
     def _import_extension(extension_id: str, info: DiscoveredExtension) -> Extension:
-        '''导入扩展入口模块并获取 extension 实例。'''
+        """导入扩展入口模块并获取 extension 实例。"""
         if info.single_file:
             return ExtensionLoader._import_single_file(info.module_path, extension_id)
         module = importlib.import_module(f'Extensions.{extension_id}')
@@ -376,13 +362,13 @@ class ExtensionLoader:
 
     @staticmethod
     def _import_single_file(module_path: str, extension_id: str) -> Extension:
-        '''导入单文件扩展模块并获取 extension 实例。'''
+        """导入单文件扩展模块并获取 extension 实例。"""
         module = importlib.import_module(module_path)
         return ExtensionLoader._resolve_extension(module, extension_id)
 
     @staticmethod
     def _resolve_extension(module, extension_id: str) -> Extension:
-        '''从模块中解析唯一 extension 实例并校验类型。'''
+        """从模块中解析唯一 extension 实例并校验类型。"""
         extension = getattr(module, 'extension', None)
         if extension is None:
             raise LoadError(f'扩展 {extension_id} 未导出 extension 实例！')
@@ -391,15 +377,14 @@ class ExtensionLoader:
         return extension
 
     def _commit_services(self, extension: Extension) -> None:
-        '''实例化并提交装饰器声明的服务到扩展的 api 注册表。'''
-        assert extension.api is not None
+        """实例化并提交装饰器声明的服务到扩展的 api 注册表。"""
         for service_cls in extension.services:
             service = service_cls()
             name = getattr(service, 'name', '') or service_cls.__name__
             extension.api.register(name, service)
 
     def _commit_renderers(self, extension: Extension) -> None:
-        '''实例化并提交装饰器声明的渲染器到全局注册表。'''
+        """实例化并提交装饰器声明的渲染器到全局注册表。"""
         renderer_registry = RendererRegistry(self.manager)
         for renderer_cls in extension.renderers:
             renderer_registry.register(renderer_cls())
@@ -428,7 +413,7 @@ class ExtensionLoader:
             command_manager.register_command(command, command_id)
 
     def _find_builtin_override(self, command_cls: type) -> type | None:
-        '''若命令类继承自某内置命令类，返回该内置类；否则返回 None。'''
+        """若命令类继承自某内置命令类，返回该内置类；否则返回 None。"""
         for builtin_cls in self._builtin_command_classes:
             if command_cls is builtin_cls:
                 continue

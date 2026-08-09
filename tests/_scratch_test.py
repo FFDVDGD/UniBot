@@ -1,4 +1,5 @@
-'''临时验证 property 泛型 + 返回式 handler。'''
+"""临时验证 property 泛型 + 返回式 handler。"""
+
 from typing import Any, Generic, TypeVar, cast
 
 T = TypeVar('T', bound='Command')

@@ -26,7 +26,7 @@ api_router.include_router(ws_router)
 
 
 def setup_cors(app):
-    '''配置 CORS，仅允许同源或开发环境 localhost:5173'''
+    """配置 CORS，仅允许同源或开发环境 localhost:5173。"""
     app.add_middleware(
         CORSMiddleware,
         allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173'],

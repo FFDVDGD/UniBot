@@ -1,9 +1,10 @@
-'''内置指令重构测试：单文件扩展经 Loader 加载产生 builtin: 前缀（验证点 3、4、11）。
+"""
+内置指令重构测试：单文件扩展经 Loader 加载产生 builtin: 前缀（验证点 3、4、11）。
 
 真实内置扩展（Extensions/*.py）依赖 config/Globals/Managers/Messages 等运行时模块，
 测试不直接导入，改用轻量假命令类 + 假扩展实例，验证 Loader._commit_commands 的
 内置命令前缀逻辑与 CommandManager 结构。
-'''
+"""
 
 from typing import override
 
@@ -14,7 +15,7 @@ from Scripts.Extensions.Loader import ExtensionLoader
 
 
 def _make_extension(command_cls: type) -> 'object':
-    '''构造一个声明了单个命令类的假扩展实例。'''
+    """构造一个声明了单个命令类的假扩展实例。"""
     from Scripts.Extensions import Extension
 
     extension = Extension()
@@ -23,10 +24,11 @@ def _make_extension(command_cls: type) -> 'object':
 
 
 def _commit(commands: dict[str, 'object'], builtin: bool = True):
-    '''用假扩展实例驱动 Loader._commit_commands，模拟扩展声明阶段。
+    """
+    用假扩展实例驱动 Loader._commit_commands，模拟扩展声明阶段。
 
-    Loader 将命令注册到全局 command_manager 单例（conftest 已按测试清空）。
-    '''
+        Loader 将命令注册到全局 command_manager 单例（conftest 已按测试清空）。
+    """
     loader = ExtensionLoader(command_manager)
     for extension_id, extension in commands.items():
         loader._commit_commands(extension_id, extension, builtin=builtin)
@@ -39,6 +41,7 @@ def _build_all(manager: CommandManager):
 
 
 # ===== 假命令类 =====
+
 
 class _AboutCommand(Command):
     name = 'about'
@@ -122,18 +125,21 @@ def _build_all(manager: CommandManager):
 
 # ===== 收集 =====
 
+
 class TestBuiltinCollection:
     def test_all_enabled_commands_registered(self):
-        manager = _commit({
-            'About': _make_extension(_AboutCommand),
-            'Bound': _make_extension(_BoundCommand),
-            'Command': _make_extension(_ConsoleCommand),
-            'Help': _make_extension(_HelpCommand),
-            'List': _make_extension(_ListCommand),
-            'Luck': _make_extension(_LuckCommand),
-            'Send': _make_extension(_SendCommand),
-            'Server': _make_extension(_ServerCommand),
-        })
+        manager = _commit(
+            {
+                'About': _make_extension(_AboutCommand),
+                'Bound': _make_extension(_BoundCommand),
+                'Command': _make_extension(_ConsoleCommand),
+                'Help': _make_extension(_HelpCommand),
+                'List': _make_extension(_ListCommand),
+                'Luck': _make_extension(_LuckCommand),
+                'Send': _make_extension(_SendCommand),
+                'Server': _make_extension(_ServerCommand),
+            }
+        )
         nodes = manager.get_command_nodes()
         names = {node.name for node in nodes.values()}
         assert names == {'about', 'bound', 'command', 'help', 'list', 'luck', 'send', 'server'}
@@ -144,8 +150,7 @@ class TestBuiltinCollection:
         assert all(cid.startswith('builtin:') for cid in nodes)
 
     def test_extension_prefix_used_for_non_builtin(self):
-        '''非内置扩展命令使用 extension: 前缀。'''
-        from Scripts.Extensions import Extension
+        """非内置扩展命令使用 extension: 前缀。"""
 
         extension = _make_extension(_SendCommand)
         manager = _commit({'WeatherExt': extension}, builtin=False)
@@ -159,6 +164,7 @@ class TestBuiltinCollection:
 
 
 # ===== 结构 =====
+
 
 class TestBuiltinStructure:
     def test_command_has_multi_argument(self):
@@ -198,21 +204,24 @@ class TestBuiltinStructure:
         assert node.description
 
     def test_build_creates_matchers(self):
-        manager = _commit({
-            'About': _make_extension(_AboutCommand),
-            'Bound': _make_extension(_BoundCommand),
-            'Command': _make_extension(_ConsoleCommand),
-            'Help': _make_extension(_HelpCommand),
-            'List': _make_extension(_ListCommand),
-            'Luck': _make_extension(_LuckCommand),
-            'Send': _make_extension(_SendCommand),
-            'Server': _make_extension(_ServerCommand),
-        })
+        manager = _commit(
+            {
+                'About': _make_extension(_AboutCommand),
+                'Bound': _make_extension(_BoundCommand),
+                'Command': _make_extension(_ConsoleCommand),
+                'Help': _make_extension(_HelpCommand),
+                'List': _make_extension(_ListCommand),
+                'Luck': _make_extension(_LuckCommand),
+                'Send': _make_extension(_SendCommand),
+                'Server': _make_extension(_ServerCommand),
+            }
+        )
         _build_all(manager)
         assert len(manager._matchers) == 8
 
 
 # ===== 单文件清单构建 =====
+
 
 class TestManifestFromAttributes:
     def test_builds_manifest_from_class_attributes(self):
@@ -230,7 +239,7 @@ class TestManifestFromAttributes:
         assert manifest.extension.types == [ExtensionType('command')]
 
     def test_builds_manifest_from_constructor_kwargs(self):
-        '''直接实例化 Extension 并传入元数据参数，无需继承。'''
+        """直接实例化 Extension 并传入元数据参数，无需继承。"""
         from Scripts.Extensions import Extension, ExtensionType, manifest_from_attributes
 
         extension = Extension(id='Fake', name='假扩展', version='1.0.0', types=('command',))

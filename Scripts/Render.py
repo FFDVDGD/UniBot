@@ -1,13 +1,12 @@
-import re
+import asyncio
 import html
 import json
 import logging
-import asyncio
+import re
 from pathlib import Path
 from random import choice
 
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, TemplateNotFound
-
 from nonebot.log import logger
 
 from .Config import config
@@ -23,15 +22,16 @@ TEMPLATES_DIR = RESOURCES_DIR / 'Images'
 # 支持的图片扩展名
 _IMAGE_SUFFIXES = {'.png', '.jpg', '.jpeg', '.webp', '.bmp'}
 # 匹配字符串中的 random("...") 或 random('...') 调用
-_RANDOM_PATTERN = re.compile(r'''random\(\s*['"]([^'"]+)['"]\s*\)''')
+_RANDOM_PATTERN = re.compile(r"""random\(\s*['"]([^'"]+)['"]\s*\)""")
 
 
 def random_image(directory_path: str) -> str:
-    '''从指定目录中随机挑选一张图片，返回完整的 url("...") 字符串。
+    """
+    从指定目录中随机挑选一张图片，返回完整的 url("...") 字符串。
 
-    在 CSS 模板中可写作：background-image: random("./Resources/Backgrounds");
-    路径相对于项目根目录（即 Resources 的父目录）解析。
-    '''
+        在 CSS 模板中可写作：background-image: random("./Resources/Backgrounds");
+        路径相对于项目根目录（即 Resources 的父目录）解析。
+    """
     path = Path(directory_path)
     if not path.is_absolute():
         # 以项目根目录（Bot.py 所在目录）为基准解析相对路径
@@ -49,18 +49,19 @@ def random_image(directory_path: str) -> str:
 
 
 def resolve_random(value: str) -> str:
-    '''解析字符串中的 random("dir") 调用，替换为实际的随机图片 url("...")。
+    """
+    解析字符串中的 random("dir") 调用，替换为实际的随机图片 url("...")。
 
-    用于让 Config.toml 等静态配置也能使用 random 语法，
-    例如：background = 'random("./Resources/Backgrounds")'
-    '''
+        用于让 Config.toml 等静态配置也能使用 random 语法，
+        例如：background = 'random("./Resources/Backgrounds")'。
+    """
     if not value or 'random(' not in value:
         return value
     return _RANDOM_PATTERN.sub(lambda m: random_image(m.group(1)), value)
 
 
 def _build_environment() -> Environment:
-    '''构建 Jinja2 环境：主题优先，内置回退。'''
+    """构建 Jinja2 环境：主题优先，内置回退。"""
     loaders = []
     # 主题扩展优先（choice 按顺序，前面的 loader 命中则使用主题模板）
     if config.image.theme and config.image.theme != 'default':
@@ -69,7 +70,7 @@ def _build_environment() -> Environment:
         templates_dir = extension_manager.themes.get(config.image.theme)
         if templates_dir is not None:
             loaders.append(FileSystemLoader(str(templates_dir)))
-        else:
+        if templates_dir is None:
             logger.warning(f'主题 {config.image.theme} 不存在，回退内置模板！')
     loaders.append(FileSystemLoader(str(TEMPLATES_DIR)))
     environment = Environment(loader=ChoiceLoader(loaders), enable_async=True)
@@ -82,7 +83,7 @@ environment: Environment | None = None
 
 
 def _get_environment() -> Environment:
-    '''获取当前环境，惰性重建（支持主题热切换）。'''
+    """获取当前环境，惰性重建（支持主题热切换）。"""
     global environment
     if environment is None:
         environment = _build_environment()
@@ -90,13 +91,13 @@ def _get_environment() -> Environment:
 
 
 def invalidate_environment() -> None:
-    '''使当前 Jinja2 环境失效，下次渲染按新主题重建（主题热切换）。'''
+    """使当前 Jinja2 环境失效，下次渲染按新主题重建（主题热切换）。"""
     global environment
     environment = None
 
 
 async def render(html: str, css: str) -> bytes:
-    '''委托当前渲染引擎渲染 HTML+CSS 为 PNG 字节。'''
+    """委托当前渲染引擎渲染 HTML+CSS 为 PNG 字节。"""
     from Scripts.Extensions import extension_manager
 
     return await extension_manager.renderer_manager.render(html, css, config.image.renderer)
@@ -108,7 +109,7 @@ def encode_context(context: dict) -> dict:
 
 
 async def load_style(name: str, **context) -> str:
-    '''加载 base.css + 模板专属 css，并通过 Jinja2 异步渲染'''
+    """加载 base.css + 模板专属 css，并通过 Jinja2 异步渲染。"""
     env = _get_environment()
     parts = []
     for css_name in ('Base.css', f'{name}/{name}.css'):
@@ -121,16 +122,18 @@ async def load_style(name: str, **context) -> str:
 
 
 async def render_template(template_name: str, size: tuple[int, int], **kwargs) -> bytes:
-    '''渲染模板为 PNG 图片字节
+    """
+    渲染模板为 PNG 图片字节
 
-    template_name: 模板名称，如 'List'，对应 Resources/Images/List/List.html 和 List.css
-    size: (width, height)
-    '''
+        template_name: 模板名称，如 'List'，对应 Resources/Images/List/List.html 和 List.css
+        size: (width, height)。
+    """
     width, height = size
     background = config.image.background or 'linear-gradient(150deg, #2e4a30 0%, #1d3524 55%, #12241a 100%)'
     background = resolve_random(background)
     context = dict(
-        width=width, height=height,
+        width=width,
+        height=height,
         background=background,
         font_uri=str(FONT_PATH),
         **encode_context(kwargs),

@@ -3,31 +3,32 @@ import asyncio
 from nonebot.log import logger
 
 from Scripts.Network import request
+
 from .Config import config_manager
 
 LATEST_RELEASE_API = 'https://api.github.com/repos/MineJPGcraft/UniBot/releases/latest'
 
 
 class VersionManager:
-    '''版本管理器，负责读取当前版本并检测 GitHub 上的最新发布版本'''
+    """版本管理器，负责读取当前版本并检测 GitHub 上的最新发布版本。"""
 
     version: str = ''
     latest_version: str | None = None
 
     def check_update(self) -> bool:
-        '''当前版本是否落后于最新版本'''
+        """当前版本是否落后于最新版本。"""
         if self.latest_version is None:
             return False
         return self.latest_version != self.version
 
     async def init(self):
-        '''记录当前版本，并在后台异步拉取最新版本'''
+        """记录当前版本，并在后台异步拉取最新版本。"""
         self.version = config_manager.version
         logger.info(f'监测到当前为 {self.version} 版本。')
         asyncio.create_task(self.fetch_latest())
 
     async def fetch_latest(self) -> bool:
-        '''从 GitHub 拉取最新发布版本，成功返回 True'''
+        """从 GitHub 拉取最新发布版本，成功返回 True。"""
         latest_data = await request(LATEST_RELEASE_API)
         if not latest_data:
             logger.warning('获取最新版本失败，请检查网络稍后再试！')

@@ -1,7 +1,6 @@
-from .Cache import cache_manager
-from .Data import data_manager
-from .Config import config_manager
-from .Plugin import plugin_manager
-from .Server import server_manager
-from .Version import version_manager
-from .WebUi import webui_manager
+from .Cache import cache_manager as cache_manager
+from .Config import config_manager as config_manager
+from .Data import data_manager as data_manager
+from .Plugin import plugin_manager as plugin_manager
+from .Version import version_manager as version_manager
+from .WebUi import webui_manager as webui_manager

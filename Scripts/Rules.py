@@ -1,6 +1,5 @@
 from nonebot.rule import Rule
-
-from nonebot_plugin_uninfo import Uninfo, SupportScope
+from nonebot_plugin_uninfo import SupportScope, Uninfo
 
 from .Config import config
 

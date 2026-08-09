@@ -1,10 +1,11 @@
-'''扩展 Python 依赖聚合：扫描扩展清单，同步到 pyproject.toml 的 extensions 组。
+"""
+扩展 Python 依赖聚合：扫描扩展清单，同步到 pyproject.toml 的 extensions 组。
 
 扩展通过 `Extension.toml` 的 `[dependencies].python` 声明第三方 Python 库。
 本模块把所有扩展的依赖聚合去重后写入 `pyproject.toml` 的
 `[project.optional-dependencies].extensions` 组，供 `uv sync --extra extensions`
 统一安装。卸载扩展后再次聚合，避免残留无用依赖。
-'''
+"""
 
 import tomllib
 from pathlib import Path
@@ -20,7 +21,7 @@ EXTENSIONS_EXTRA = 'extensions'
 
 
 def _read_extension_dependencies(manifest_path: Path) -> list[str]:
-    '''读取单个扩展清单中的 [dependencies].python 依赖列表。'''
+    """读取单个扩展清单中的 [dependencies].python 依赖列表。"""
     try:
         data = tomllib.loads(manifest_path.read_text('Utf-8'))
     except (OSError, tomllib.TOMLDecodeError):
@@ -31,7 +32,7 @@ def _read_extension_dependencies(manifest_path: Path) -> list[str]:
 
 
 def collect_extension_dependencies() -> list[str]:
-    '''扫描 Extensions/ 下所有扩展目录，聚合去重所有 Python 依赖。'''
+    """扫描 Extensions/ 下所有扩展目录，聚合去重所有 Python 依赖。"""
     if not EXTENSIONS_DIR.exists():
         return []
     collected: list[str] = []
@@ -50,7 +51,7 @@ def collect_extension_dependencies() -> list[str]:
 
 
 def sync_extension_dependencies() -> None:
-    '''读取 pyproject.toml，把收集到的扩展依赖写入 extensions 可选组并写回。'''
+    """读取 pyproject.toml，把收集到的扩展依赖写入 extensions 可选组并写回。"""
     if not PYPROJECT_PATH.exists():
         return
     body = tomlkit.parse(PYPROJECT_PATH.read_text('Utf-8'))

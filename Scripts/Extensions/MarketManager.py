@@ -1,10 +1,11 @@
-'''扩展市场管理器：注册表获取、安全安装/卸载事务与安装状态持久化。
+"""
+扩展市场管理器：注册表获取、安全安装/卸载事务与安装状态持久化。
 
 市场扩展从 GitHub Release 以源码 zip 分发。安装流程：
 下载 → SHA-256 校验 → 安全解压 → 清单校验 → 临时目录原子替换。
 任一步失败都不得改变当前扩展版本（可回滚事务）。
 安装状态统一写入 `Data/Extension/States.toml`。
-'''
+"""
 
 import hashlib
 import shutil
@@ -14,6 +15,8 @@ from pathlib import Path
 
 import tomlkit
 from nonebot.log import logger
+
+from Scripts.Network import github_download, request
 
 from .Base import ExtensionManifest
 from .Dependencies import sync_extension_dependencies
@@ -25,18 +28,15 @@ from .Market import (
     MarketExtension,
     extract_market_package,
 )
-from Scripts.Network import github_download, request
 
 # 扩展市场注册表地址（GitHub 托管的 JSON 索引）
-MARKET_REGISTRY_URL = (
-    'https://raw.githubusercontent.com/MineJPGcraft/UniBot.Market/main/Extensions.json'
-)
+MARKET_REGISTRY_URL = 'https://raw.githubusercontent.com/MineJPGcraft/UniBot.Market/main/Extensions.json'
 # 市场数据缓存时长（秒）
 MARKET_CACHE_TTL = 600
 
 
 class ExtensionMarketManager:
-    '''扩展市场管理器单例。'''
+    """扩展市场管理器单例。"""
 
     market_cache: dict[str, MarketExtension] = {}
     market_cache_time: float = 0
@@ -44,13 +44,9 @@ class ExtensionMarketManager:
     # ===== 注册表 =====
 
     async def fetch_market(self, force: bool = False) -> list[dict]:
-        '''获取扩展市场注册表（带缓存），失败时返回缓存的空列表。'''
+        """获取扩展市场注册表（带缓存），失败时返回缓存的空列表。"""
         now = time.time()
-        if (
-            not force
-            and self.market_cache
-            and now - self.market_cache_time < MARKET_CACHE_TTL
-        ):
+        if not force and self.market_cache and now - self.market_cache_time < MARKET_CACHE_TTL:
             return self._market_dicts()
         data = await request(MARKET_REGISTRY_URL)
         if not isinstance(data, list):
@@ -72,28 +68,30 @@ class ExtensionMarketManager:
         return self._market_dicts()
 
     def _market_dicts(self) -> list[dict]:
-        '''将市场缓存转换为 WebUI 展示用的字典列表。'''
+        """将市场缓存转换为 WebUI 展示用的字典列表。"""
         items = []
         for extension in self.market_cache.values():
             latest = extension.latest_release()
-            items.append({
-                'id': extension.id,
-                'name': extension.name,
-                'repo': extension.repo,
-                'description': extension.description,
-                'latest_version': latest.version if latest else '',
-                'installed': extension.id in extension_manager.registry,
-            })
+            items.append(
+                {
+                    'id': extension.id,
+                    'name': extension.name,
+                    'repo': extension.repo,
+                    'description': extension.description,
+                    'latest_version': latest.version if latest else '',
+                    'installed': extension.id in extension_manager.registry,
+                }
+            )
         return items
 
     # ===== 安装状态持久化 =====
 
     def _states_path(self) -> Path:
-        '''返回 States.toml 的完整路径。'''
+        """返回 States.toml 的完整路径。"""
         return STATES_ROOT / STATES_FILE
 
     def _read_states(self) -> dict[str, ExtensionInstallState]:
-        '''读取全部扩展安装状态，缺失时返回空字典。'''
+        """读取全部扩展安装状态，缺失时返回空字典。"""
         path = self._states_path()
         if not path.exists():
             return {}
@@ -113,23 +111,20 @@ class ExtensionMarketManager:
         return states
 
     def _write_states(self, states: dict[str, ExtensionInstallState]) -> None:
-        '''原子写入全部扩展安装状态。'''
-        data = {
-            extension_id: state.model_dump()
-            for extension_id, state in states.items()
-        }
+        """原子写入全部扩展安装状态。"""
+        data = {extension_id: state.model_dump() for extension_id, state in states.items()}
         path = self._states_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(tomlkit.dumps(data), encoding='Utf-8')
 
     def get_install_state(self, extension_id: str) -> ExtensionInstallState | None:
-        '''获取指定扩展的安装状态，未安装返回 None。'''
+        """获取指定扩展的安装状态，未安装返回 None。"""
         return self._read_states().get(extension_id)
 
     # ===== 下载与校验 =====
 
     async def _download_release(self, asset_url: str, expected_sha256: str) -> bytes:
-        '''下载扩展包并校验 SHA-256，失败抛 ManifestError。'''
+        """下载扩展包并校验 SHA-256，失败抛 ManifestError。"""
         response = await github_download(asset_url)
         if response is None:
             raise ManifestError(f'下载扩展包失败：{asset_url}')
@@ -137,15 +132,13 @@ class ExtensionMarketManager:
         if expected_sha256:
             actual = hashlib.sha256(archive_data).hexdigest()
             if actual.lower() != expected_sha256.lower():
-                raise ManifestError(
-                    f'扩展包 SHA-256 校验失败（期望 {expected_sha256}，实际 {actual}）！'
-                )
+                raise ManifestError(f'扩展包 SHA-256 校验失败（期望 {expected_sha256}，实际 {actual}）！')
         return archive_data
 
     # ===== 安装事务 =====
 
     async def install(self, extension_id: str, version: str = '') -> tuple[bool, str]:
-        '''从市场安装/升级扩展（可回滚事务），重启后由 Loader 加载生效。'''
+        """从市场安装/升级扩展（可回滚事务），重启后由 Loader 加载生效。"""
         extension_entry = self.market_cache.get(extension_id)
         if extension_entry is None:
             return False, f'市场不存在扩展 {extension_id}'
@@ -154,7 +147,6 @@ class ExtensionMarketManager:
             return False, f'扩展 {extension_id} 没有可用版本'
         try:
             archive_data = await self._download_release(release.asset_url, release.sha256)
-            target_dir = EXTENSIONS_DIR / extension_id
             # 安装事务：解压到临时目录，校验清单后原子替换
             success, message = await self._install_transaction(extension_id, archive_data, release)
             if not success:
@@ -172,7 +164,7 @@ class ExtensionMarketManager:
 
     @staticmethod
     def _select_release(extension_entry: MarketExtension, version: str) -> object | None:
-        '''按指定版本或最新版本选择 Release 条目。'''
+        """按指定版本或最新版本选择 Release 条目。"""
         if version:
             for release in extension_entry.releases:
                 if release.version == version:
@@ -180,10 +172,8 @@ class ExtensionMarketManager:
             return None
         return extension_entry.latest_release()
 
-    async def _install_transaction(
-        self, extension_id: str, archive_data: bytes, release: object
-    ) -> tuple[bool, str]:
-        '''在临时目录解压校验，成功后原子替换目标目录。'''
+    async def _install_transaction(self, extension_id: str, archive_data: bytes, release: object) -> tuple[bool, str]:
+        """在临时目录解压校验，成功后原子替换目标目录。"""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)
             try:
@@ -192,9 +182,7 @@ class ExtensionMarketManager:
                 return False, str(error)
             # 校验解压后的清单 id 与目标一致
             if manifest.extension.id != extension_id:
-                return False, (
-                    f'扩展包清单 id {manifest.extension.id} 与目标 {extension_id} 不一致！'
-                )
+                return False, (f'扩展包清单 id {manifest.extension.id} 与目标 {extension_id} 不一致！')
             # 校验兼容性
             try:
                 self._validate_market_compatibility(extension_id, manifest)
@@ -225,7 +213,7 @@ class ExtensionMarketManager:
 
     @staticmethod
     def _validate_market_compatibility(extension_id: str, manifest: ExtensionManifest) -> None:
-        '''校验市场扩展与当前 UniBot 版本兼容（与 Loader 一致）。'''
+        """校验市场扩展与当前 UniBot 版本兼容（与 Loader 一致）。"""
         from packaging.specifiers import SpecifierSet
 
         constraint = manifest.compatibility.unibot
@@ -234,15 +222,12 @@ class ExtensionMarketManager:
         try:
             specifier = SpecifierSet(constraint)
         except Exception as error:
-            raise ManifestError(
-                f'扩展 {extension_id} 的版本约束非法：{constraint}（{error}）'
-            ) from error
+            raise ManifestError(f'扩展 {extension_id} 的版本约束非法：{constraint}（{error}）') from error
         from Scripts.Extensions.Base import get_unibot_version
+
         current_version = get_unibot_version()
         if current_version and current_version not in specifier:
-            raise ManifestError(
-                f'扩展 {extension_id} 需要 UniBot {constraint}，当前为 {current_version}！'
-            )
+            raise ManifestError(f'扩展 {extension_id} 需要 UniBot {constraint}，当前为 {current_version}！')
 
     async def _record_install(
         self,
@@ -251,7 +236,7 @@ class ExtensionMarketManager:
         archive_data: bytes,
         extension_entry: MarketExtension,
     ) -> None:
-        '''记录扩展安装状态与 Python 依赖归属。'''
+        """记录扩展安装状态与 Python 依赖归属。"""
         states = self._read_states()
         manifest = None
         # 尝试从已安装目录读取清单以获取 Python 依赖
@@ -260,13 +245,12 @@ class ExtensionMarketManager:
         if manifest_path is not None:
             try:
                 from Scripts.Extensions.Base import parse_manifest
+
                 loaded = parse_manifest(manifest_path.read_text('Utf-8'))
                 manifest = loaded
             except Exception:
                 manifest = None
-        python_dependencies = (
-            list(manifest.dependencies.python) if manifest is not None else []
-        )
+        python_dependencies = list(manifest.dependencies.python) if manifest is not None else []
         states[extension_id] = ExtensionInstallState(
             source='market',
             version=release.version,
@@ -280,7 +264,7 @@ class ExtensionMarketManager:
     # ===== 卸载 =====
 
     async def uninstall(self, extension_id: str) -> tuple[bool, str]:
-        '''卸载市场扩展：删除目录并清理安装状态，重启后由 Loader 不再加载。'''
+        """卸载市场扩展：删除目录并清理安装状态，重启后由 Loader 不再加载。"""
         target_dir = EXTENSIONS_DIR / extension_id
         if not target_dir.exists() and extension_id not in self.market_cache:
             return False, f'扩展 {extension_id} 不存在'
