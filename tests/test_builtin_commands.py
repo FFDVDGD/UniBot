@@ -13,24 +13,23 @@ from Scripts.Extensions import Command, CommandError, CommandManager, SubCommand
 from Scripts.Extensions.Loader import ExtensionLoader
 
 
-def _make_builtin_extension(command_cls: type) -> 'object':
-    '''构造一个声明了单个命令类、builtin 标记的假扩展实例。'''
+def _make_extension(command_cls: type) -> 'object':
+    '''构造一个声明了单个命令类的假扩展实例。'''
     from Scripts.Extensions import Extension
 
     extension = Extension()
-    extension.builtin = True
     extension.commands = [command_cls]
     return extension
 
 
-def _commit(commands: dict[str, 'object']):
-    '''用假扩展实例驱动 Loader._commit_commands，模拟内置扩展声明阶段。
+def _commit(commands: dict[str, 'object'], builtin: bool = True):
+    '''用假扩展实例驱动 Loader._commit_commands，模拟扩展声明阶段。
 
     Loader 将命令注册到全局 command_manager 单例（conftest 已按测试清空）。
     '''
     loader = ExtensionLoader(command_manager)
     for extension_id, extension in commands.items():
-        loader._commit_commands(extension_id, extension)
+        loader._commit_commands(extension_id, extension, builtin=builtin)
     return command_manager
 
 
@@ -126,21 +125,21 @@ def _build_all(manager: CommandManager):
 class TestBuiltinCollection:
     def test_all_enabled_commands_registered(self):
         manager = _commit({
-            'About': _make_builtin_extension(_AboutCommand),
-            'Bound': _make_builtin_extension(_BoundCommand),
-            'Command': _make_builtin_extension(_ConsoleCommand),
-            'Help': _make_builtin_extension(_HelpCommand),
-            'List': _make_builtin_extension(_ListCommand),
-            'Luck': _make_builtin_extension(_LuckCommand),
-            'Send': _make_builtin_extension(_SendCommand),
-            'Server': _make_builtin_extension(_ServerCommand),
+            'About': _make_extension(_AboutCommand),
+            'Bound': _make_extension(_BoundCommand),
+            'Command': _make_extension(_ConsoleCommand),
+            'Help': _make_extension(_HelpCommand),
+            'List': _make_extension(_ListCommand),
+            'Luck': _make_extension(_LuckCommand),
+            'Send': _make_extension(_SendCommand),
+            'Server': _make_extension(_ServerCommand),
         })
         nodes = manager.get_command_nodes()
         names = {node.name for node in nodes.values()}
         assert names == {'about', 'bound', 'command', 'help', 'list', 'luck', 'send', 'server'}
 
     def test_command_ids_use_builtin_prefix(self):
-        manager = _commit({'Send': _make_builtin_extension(_SendCommand)})
+        manager = _commit({'Send': _make_extension(_SendCommand)})
         nodes = manager.get_command_nodes()
         assert all(cid.startswith('builtin:') for cid in nodes)
 
@@ -148,14 +147,12 @@ class TestBuiltinCollection:
         '''非内置扩展命令使用 extension: 前缀。'''
         from Scripts.Extensions import Extension
 
-        extension = Extension()
-        extension.builtin = False
-        extension.commands = [_SendCommand]
-        manager = _commit({'WeatherExt': extension})
+        extension = _make_extension(_SendCommand)
+        manager = _commit({'WeatherExt': extension}, builtin=False)
         assert 'extension:WeatherExt:send' in manager.get_command_nodes()
 
     def test_register_after_build_raises(self):
-        manager = _commit({'Send': _make_builtin_extension(_SendCommand)})
+        manager = _commit({'Send': _make_extension(_SendCommand)})
         _build_all(manager)
         with pytest.raises(CommandError):
             manager.register_command(_SendCommand(), 'builtin:send')
@@ -165,51 +162,51 @@ class TestBuiltinCollection:
 
 class TestBuiltinStructure:
     def test_command_has_multi_argument(self):
-        manager = _commit({'Command': _make_builtin_extension(_ConsoleCommand)})
+        manager = _commit({'Command': _make_extension(_ConsoleCommand)})
         node = manager.get_command('builtin:command')
         message_arg = node.find_argument('command')
         assert message_arg is not None
         assert message_arg.multi is True
 
     def test_send_has_alias(self):
-        manager = _commit({'Send': _make_builtin_extension(_SendCommand)})
+        manager = _commit({'Send': _make_extension(_SendCommand)})
         node = manager.get_command('builtin:send')
         assert 'mc' in node.aliases
 
     def test_bound_has_four_subcommands(self):
-        manager = _commit({'Bound': _make_builtin_extension(_BoundCommand)})
+        manager = _commit({'Bound': _make_extension(_BoundCommand)})
         node = manager.get_command('builtin:bound')
         names = {sub.name for sub in node.subcommands}
         assert names == {'list', 'query', 'remove', 'append'}
 
     def test_about_has_check_subcommand(self):
-        manager = _commit({'About': _make_builtin_extension(_AboutCommand)})
+        manager = _commit({'About': _make_extension(_AboutCommand)})
         node = manager.get_command('builtin:about')
         assert node.find_subcommand('check') is not None
 
     def test_help_has_optional_argument(self):
-        manager = _commit({'Help': _make_builtin_extension(_HelpCommand)})
+        manager = _commit({'Help': _make_extension(_HelpCommand)})
         node = manager.get_command('builtin:help')
         command_arg = node.find_argument('command')
         assert command_arg is not None
         assert command_arg.required is False
 
     def test_help_has_usage_and_description(self):
-        manager = _commit({'Help': _make_builtin_extension(_HelpCommand)})
+        manager = _commit({'Help': _make_extension(_HelpCommand)})
         node = manager.get_command('builtin:help')
         assert node.usage
         assert node.description
 
     def test_build_creates_matchers(self):
         manager = _commit({
-            'About': _make_builtin_extension(_AboutCommand),
-            'Bound': _make_builtin_extension(_BoundCommand),
-            'Command': _make_builtin_extension(_ConsoleCommand),
-            'Help': _make_builtin_extension(_HelpCommand),
-            'List': _make_builtin_extension(_ListCommand),
-            'Luck': _make_builtin_extension(_LuckCommand),
-            'Send': _make_builtin_extension(_SendCommand),
-            'Server': _make_builtin_extension(_ServerCommand),
+            'About': _make_extension(_AboutCommand),
+            'Bound': _make_extension(_BoundCommand),
+            'Command': _make_extension(_ConsoleCommand),
+            'Help': _make_extension(_HelpCommand),
+            'List': _make_extension(_ListCommand),
+            'Luck': _make_extension(_LuckCommand),
+            'Send': _make_extension(_SendCommand),
+            'Server': _make_extension(_ServerCommand),
         })
         _build_all(manager)
         assert len(manager._matchers) == 8
@@ -226,7 +223,6 @@ class TestManifestFromAttributes:
             name = '假扩展'
             version = '1.0.0'
             types = ('command',)
-            builtin = True
 
         manifest = manifest_from_attributes(FakeExt())
         assert manifest.extension.id == 'Fake'
@@ -237,7 +233,7 @@ class TestManifestFromAttributes:
         '''直接实例化 Extension 并传入元数据参数，无需继承。'''
         from Scripts.Extensions import Extension, ExtensionType, manifest_from_attributes
 
-        extension = Extension(id='Fake', name='假扩展', version='1.0.0', types=('command',), builtin=True)
+        extension = Extension(id='Fake', name='假扩展', version='1.0.0', types=('command',))
         manifest = manifest_from_attributes(extension)
         assert manifest.extension.id == 'Fake'
         assert manifest.extension.name == '假扩展'

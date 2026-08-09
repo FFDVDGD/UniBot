@@ -4,13 +4,13 @@ from typing import override
 
 from nonebot_plugin_alconna import Match
 
-from .. import Command, Extension, command_manager
+from Scripts.Extensions import Command, Extension, command_manager
 from Scripts.Globals import render_template
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Help', name='命令帮助', version='1.0.0', types=('command',), builtin=True)
+extension = Extension(id='Help', name='命令帮助', version='1.0.0', types=('command',))
 
 
 def get_enabled_nodes() -> list[Command]:
@@ -67,7 +67,7 @@ class HelpCommand(Command):
 
     @override
     def declare(self) -> None:
-        self.register_option('command', str, default=None, description='命令名称')
+        self.register_option('command', str, description='命令名称')
 
     @override
     async def handler(self, command: Match[str]):

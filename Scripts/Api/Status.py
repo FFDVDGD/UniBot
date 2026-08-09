@@ -6,7 +6,8 @@ import nonebot
 import psutil
 
 from Scripts.Config import config
-from Scripts.Managers import data_manager, server_manager, version_manager
+from Scripts.Globals import player_service
+from Scripts.Managers import server_manager, version_manager
 from Scripts.Process import is_watchdog_process, request_restart
 from .Auth import get_current_user, require_role
 from .WebSocket import ws_clients
@@ -20,6 +21,8 @@ def get_status_data() -> dict:
     '''生成机器人运行状态数据（REST 接口与 WebSocket 推送共用）'''
     adapter_names = list(nonebot.get_adapters().keys())
     servers = server_manager.servers or {}
+    service = player_service
+    players_bound = len(service.players) if service else 0
     return {
         'version': version_manager.version,
         'latest_version': version_manager.latest_version,
@@ -29,7 +32,7 @@ def get_status_data() -> dict:
         'cpu_percent': psutil.Process().cpu_percent(interval=0.1),
         'servers_online': len(servers),
         'servers_total': len(servers),
-        'players_bound': len(data_manager.players),
+        'players_bound': players_bound,
         'adapters': adapter_names,
         'webui_enabled': config.webui.get('enabled', False) if isinstance(config.webui, dict) else config.webui.enabled,
         'ws_clients': len(ws_clients),

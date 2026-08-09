@@ -8,7 +8,7 @@
 
 from io import BytesIO
 from pathlib import Path
-from zipfile import ZipFile, ZipInfo, is_zipfile
+from zipfile import ZipFile, is_zipfile
 
 from nonebot.log import logger
 from pydantic import BaseModel, Field
@@ -103,7 +103,7 @@ def _validate_archive(zip_file: ZipFile) -> None:
     logger.debug(f'扩展包校验通过：{len(infos)} 个文件，约 {total_size} 字节。')
 
 
-def extract_market_package(archive_data: bytes, target_dir: Path) -> dict:
+def extract_market_package(archive_data: bytes, target_dir: Path) -> ExtensionManifest:
     '''安全解压市场扩展包并读取其清单，返回清单信息。
 
     解压前先校验全部成员安全性，再读取根目录 `Extension.toml` 校验 id。

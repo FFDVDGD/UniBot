@@ -4,7 +4,7 @@ from typing import override
 
 from nonebot.log import logger
 
-from .. import Command, Extension, SubCommand
+from Scripts.Extensions import Command, Extension, SubCommand
 from Scripts.Globals import render_template
 from Scripts.Managers import version_manager
 from Scripts.Messages import messages
@@ -13,7 +13,7 @@ from Scripts.Utils import turn_message_text
 logger.debug('加载命令 About 完毕！')
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='About', name='关于信息', version='1.0.0', types=('command',), builtin=True)
+extension = Extension(id='About', name='关于信息', version='1.0.0', types=('command',))
 
 
 @extension.register_command

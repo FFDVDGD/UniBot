@@ -1,10 +1,9 @@
-import asyncio
-
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import FileResponse
 
 from Scripts.Config import config
-from Scripts.Managers import cache_manager, data_manager
+from Scripts.Globals import player_service
+from Scripts.Managers import cache_manager
 from Scripts.Network import AVATAR_SIZE, fetch_player_avatar
 from .Auth import get_current_user, require_role
 from .Schemas import BindPlayerRequest
@@ -20,8 +19,10 @@ async def get_players(
     current_user: dict = Depends(get_current_user),
 ):
     '''获取所有玩家绑定关系，支持搜索和分页'''
+    service = player_service
+    players = service.players if service else {}
     all_items = []
-    for user_id, players in data_manager.players.items():
+    for user_id, players in players.items():
         all_items.append({'user': user_id, 'players': players, 'bound_at': ''})
 
     if keyword:
@@ -65,9 +66,11 @@ async def get_player_avatar(
 @router.get('/{user}', summary='查询用户绑定')
 async def get_user_bindings(user: str, current_user: dict = Depends(get_current_user)):
     '''查询指定用户的所有绑定'''
-    if user not in data_manager.players:
+    service = player_service
+    players = service.players if service else {}
+    if user not in players:
         return {'code': 404, 'data': None, 'message': '用户不存在'}
-    return {'code': 0, 'data': {'user': user, 'players': data_manager.players[user]}, 'message': 'ok'}
+    return {'code': 0, 'data': {'user': user, 'players': players[user]}, 'message': 'ok'}
 
 
 @router.post('', summary='绑定玩家')
@@ -76,10 +79,14 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
     if not body.user or not body.player:
         return {'code': 1, 'data': None, 'message': 'user 和 player 不能为空'}
 
+    service = player_service
+    if service is None:
+        return {'code': 1, 'data': None, 'message': '玩家绑定服务不可用'}
+
     # 检查该游戏 ID 是否已被其他用户绑定
-    if await data_manager.check_player_occupied(body.player):
+    if await service.check_player_occupied(body.player):
         existing_user = None
-        for bound_user, bound_players in data_manager.players.items():
+        for bound_user, bound_players in service.players.items():
             if body.player.lower() in [p.lower() for p in bound_players]:
                 existing_user = bound_user
                 break
@@ -87,11 +94,11 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
             return {'code': 1, 'data': None, 'message': '该游戏 ID 已被其他用户绑定'}
 
     # 检查绑定数量上限
-    if body.user in data_manager.players:
-        if config.qq_bound_max_number > 0 and len(data_manager.players[body.user]) >= config.qq_bound_max_number:
+    if body.user in service.players:
+        if config.qq_bound_max_number > 0 and len(service.players[body.user]) >= config.qq_bound_max_number:
             return {'code': 1, 'data': None, 'message': '绑定数量已达上限'}
 
-    success = await data_manager.append_player(body.user, body.player)
+    success = await service.append_player(body.user, body.player)
     if not success:
         return {'code': 1, 'data': None, 'message': '绑定数量已达上限'}
     return {'code': 0, 'data': None, 'message': 'ok'}
@@ -100,9 +107,11 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
 @router.delete('/{user}/{player}', summary='解除绑定')
 async def unbind_player(user: str, player: str, current_user: dict = Depends(require_role('admin', 'operator'))):
     '''解除用户与游戏 ID 的绑定'''
-    if user not in data_manager.players:
+    service = player_service
+    players = service.players if service else {}
+    if user not in players:
         return {'code': 404, 'data': None, 'message': '绑定关系不存在'}
-    if player not in data_manager.players.get(user, []):
+    if player not in players.get(user, []):
         return {'code': 404, 'data': None, 'message': '绑定关系不存在'}
-    await data_manager.remove_player(user, player)
+    await service.remove_player(user, player)
     return {'code': 0, 'data': None, 'message': 'ok'}

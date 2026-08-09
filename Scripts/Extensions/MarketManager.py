@@ -29,7 +29,7 @@ from Scripts.Network import github_download, request
 
 # 扩展市场注册表地址（GitHub 托管的 JSON 索引）
 MARKET_REGISTRY_URL = (
-    'https://raw.githubusercontent.com/MineJPGcraft/UniBot-Extensions/main/extensions.json'
+    'https://raw.githubusercontent.com/MineJPGcraft/UniBot.Market/main/Extensions.json'
 )
 # 市场数据缓存时长（秒）
 MARKET_CACHE_TTL = 600

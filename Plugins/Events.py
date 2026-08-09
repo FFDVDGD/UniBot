@@ -180,5 +180,8 @@ async def handle_group_message(message: UniMsg, session: Uninfo):
     plain_text_message = message.extract_plain_text()
     if any(plain_text_message.startswith(prefix) for prefix in config.command_start):
         await message_watcher.finish()
-    user_name = session.user.nick or session.user.name or str(session.user.id)
+    from Scripts.Globals import player_service
+    service = player_service
+    user_name = service.players.get(str(session.user.id), (None,))[0] if service else None
+    user_name = user_name or session.user.nick or session.user.name or str(session.user.id)
     await server_manager.broadcast(build_server_message(platform_name, user_name, message_to_text(message)))

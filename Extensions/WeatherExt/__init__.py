@@ -36,7 +36,7 @@ class WeatherService(Service):
 
     def get_weather(self, city: str | None = None) -> dict:
         '''返回指定城市（或默认城市）的模拟天气。'''
-        default_city = extension.config.value.city
+        default_city = extension.config_value.city
         target_city = city or default_city
         return {
             'city': target_city,
@@ -61,10 +61,16 @@ class WeatherCommand(Command):
 
     @override
     async def handler(self, session: Uninfo, city: Match[str]) -> str | None:
-        '''处理 weather 主命令。'''
-        service = extension.api.get('weather')
-        target = city.result if city.available else None
-        data = service.get_weather(target)
+        '''处理 weather 主命令。
+
+        可选参数声明了默认值（'Shanghai'），框架在构建时直接注入 Alconna，
+        未提供时 `city.result` 即为默认值，可直接使用。
+        '''
+        assert extension.api is not None
+        service = extension.api.get(WeatherService)
+        if service is None:
+            return None
+        data = service.get_weather(city.result)
         return f'{data["city"]} 当前 {data["temperature"]}°C，{data["condition"]}！'
 
     class Today(SubCommand['WeatherCommand']):
@@ -76,6 +82,9 @@ class WeatherCommand(Command):
         @override
         async def handler(self) -> str | None:
             '''处理 weather today 子命令。'''
-            service = extension.api.get('weather')
+            assert extension.api is not None
+            service = extension.api.get(WeatherService)
+            if service is None:
+                return None
             data = service.get_weather()
             return f'今天 {data["city"]}：{data["condition"]}，{data["temperature"]}°C！'

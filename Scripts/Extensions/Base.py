@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Generic, TypeVar, cast
 
 from nonebot.log import logger
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,6 +15,10 @@ from .Errors import (
 )
 from .Service import ServiceRegistry
 from .Storage import ExtensionConfigStore, ExtensionDataStore
+
+
+ServiceClassT = TypeVar('ServiceClassT')
+ConfigModelT = TypeVar('ConfigModelT', bound=BaseModel)
 
 
 class ExtensionState(str, Enum):
@@ -197,7 +201,7 @@ def manifest_from_attributes(extension: 'Extension') -> ExtensionManifest:
 
 # ===== Extension 基类 =====
 
-class Extension:
+class Extension(Generic[ConfigModelT]):
     '''UniBot 本地扩展基类，所有扩展必须继承并实现。
 
     扩展通过实例装饰器 `@extension.register_command` / `@extension.register_service`
@@ -231,11 +235,8 @@ class Extension:
     def id(self, value: str) -> None:
         self._declared_id = value
 
-    # 内置扩展标记：内置命令单文件扩展为 True，命令以 builtin: 前缀注册
-    builtin: bool = False
-
     # 由扩展类声明，Loader 实例化后注入；实例上始终非 None（缺省用空配置模型）
-    config_model: type[BaseModel] | None = None
+    config_model: type[ConfigModelT] | None = None
 
     # 由 Loader 创建并注入，作用域限定在当前扩展
     metadata: ExtensionMetadata | None = None
@@ -261,8 +262,7 @@ class Extension:
         author: str = '',
         description: str = '',
         types: tuple[str, ...] = (),
-        builtin: bool = False,
-        config_model: type[BaseModel] | None = None,
+        config_model: type[ConfigModelT] | None = None,
     ) -> None:
         '''初始化扩展实例。只能登记能力类，不能产生全局注册副作用。
 
@@ -283,8 +283,9 @@ class Extension:
         self.author = author or self.author
         self.description = description or self.description
         self.types = types or self.types
-        self.builtin = builtin or self.builtin
-        self.config_model = config_model or self.config_model or self._default_config_model()
+        self.config_model = config_model or self.config_model or cast(
+            type[ConfigModelT], self._default_config_model()
+        )
 
     @staticmethod
     def _default_config_model() -> type[BaseModel]:
@@ -320,11 +321,11 @@ class Extension:
             )
 
     @property
-    def config_value(self) -> BaseModel:
+    def config_value(self) -> ConfigModelT:
         '''返回已绑定的配置模型（未绑定时抛出明确错误）。'''
         self._require_bound()
         assert self.config is not None
-        return self.config.value
+        return cast(ConfigModelT, self.config.value)
 
     # ===== 声明提交（实例装饰器，能力归属由装饰时使用的实例决定） =====
 
@@ -333,7 +334,7 @@ class Extension:
         self.commands.append(command_cls)
         return command_cls
 
-    def register_service(self, service_cls) -> type:
+    def register_service(self, service_cls: type[ServiceClassT]) -> type[ServiceClassT]:
         '''实例装饰器：登记一个 Service 子类，返回该类。'''
         self.services.append(service_cls)
         return service_cls

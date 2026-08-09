@@ -6,14 +6,14 @@ from nonebot_plugin_alconna import At, Match
 from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Config import config
-from .. import Command, Extension, SubCommand
-from Scripts.Globals import render_template
-from Scripts.Managers import data_manager, server_manager
+from Scripts.Extensions import Command, Extension, SubCommand
+from Scripts.Globals import player_service, render_template
+from Scripts.Managers import server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import check_player, get_permission
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Bound', name='玩家绑定', version='1.0.0', types=('command',), builtin=True)
+extension = Extension(id='Bound', name='玩家绑定', version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -31,14 +31,14 @@ class BoundCommand(Command):
         description = '列出所有绑定'
 
         @override
-        @override
         async def handler(self, session: Uninfo):
             if not get_permission(session):
                 return messages.commands.bound.no_permission
-            if not data_manager.players:
+            service = player_service
+            if service is None or not service.players:
                 return messages.commands.bound.no_binding
             return messages.commands.bound.list_title + '\n' + '\n'.join(
-                f'  {user} -> {'、'.join(players)}' for user, players in data_manager.players.items()
+                f'  {user} -> {'、'.join(players)}' for user, players in service.players.items()
             )
 
         @override
@@ -46,11 +46,12 @@ class BoundCommand(Command):
             '''渲染绑定列表为图片，返回 PNG 字节（由框架在图像模式发送）。'''
             if not get_permission(session):
                 return messages.commands.bound.no_permission
-            if not data_manager.players:
+            service = player_service
+            if service is None or not service.players:
                 return messages.commands.bound.no_binding
             bindings = [
                 {'user': user, 'players': players}
-                for user, players in data_manager.players.items()
+                for user, players in service.players.items()
             ]
             return await render_template('Bound', (600, 800), bindings=bindings)
 
@@ -62,16 +63,17 @@ class BoundCommand(Command):
 
         @override
         def declare(self) -> None:
-            self.register_option('user_id', At | str, default=None, description='用户')
+            self.register_option('user_id', At | str, description='用户')
 
         @override
         async def handler(self, session: Uninfo, user_id: Match[At | str]):
             target_user = user_id.result if user_id.available else str(session.user.id)
             if isinstance(target_user, At):
                 target_user = target_user.target
-            if target_user not in data_manager.players:
+            service = player_service
+            if service is None or target_user not in service.players:
                 return messages.commands.bound.not_bound_query.format(target_user=target_user)
-            players = '、'.join(data_manager.players[target_user])
+            players = '、'.join(service.players[target_user])
             return messages.commands.bound.query_result.format(target_user=target_user, players=players)
 
     class Remove(SubCommand['BoundCommand']):
@@ -82,7 +84,7 @@ class BoundCommand(Command):
 
         @override
         def declare(self) -> None:
-            self.register_option('player', At | str, default=None, description='玩家')
+            self.register_option('player', At | str, description='玩家')
 
         @override
         async def handler(self, session: Uninfo, player: Match[str]):
@@ -116,7 +118,7 @@ class BoundCommand(Command):
 
     @override
     def declare(self) -> None:
-        self.register_option('player', str, default=None, description='要绑定的玩家名')
+        self.register_option('player', str, description='要绑定的玩家名')
 
     @override
     async def handler(self, session: Uninfo, player: Match[str]):
@@ -129,13 +131,16 @@ class BoundCommand(Command):
         if not check_player(player):
             return messages.commands.bound.invalid_name
         user = str(session.user.id)
-        if user in data_manager.players and player in data_manager.players[user]:
+        service = player_service
+        if service is None:
+            return messages.commands.bound.server_offline
+        if user in service.players and player in service.players[user]:
             return messages.commands.bound.already_bound
-        if await data_manager.check_player_occupied(player):
+        if await service.check_player_occupied(player):
             return messages.commands.bound.occupied
         if not server_manager.check_online():
             return messages.commands.bound.server_offline
-        if await data_manager.append_player(user, player):
+        if await service.append_player(user, player):
             await server_manager.execute(f'{config.whitelist_command} add {player}')
             return messages.commands.bound.bound_success.format(name=session.user.name or user, user=user, player=player)
         return messages.commands.bound.too_many
@@ -144,11 +149,14 @@ class BoundCommand(Command):
         '''为指定用户添加玩家绑定（Append 子命令）。'''
         if not check_player(player):
             return messages.commands.bound.invalid_name
-        if await data_manager.check_player_occupied(player):
+        service = player_service
+        if service is None:
+            return messages.commands.bound.server_offline
+        if await service.check_player_occupied(player):
             return messages.commands.bound.occupied
         if not server_manager.check_online():
             return messages.commands.bound.server_offline
-        if await data_manager.append_player(target_user, player):
+        if await service.append_player(target_user, player):
             await server_manager.execute(f'{config.whitelist_command} add {player}')
             return messages.commands.bound.bound_success.format(
                 name=target_user, user=target_user, player=player
@@ -158,7 +166,10 @@ class BoundCommand(Command):
     async def bound_remove_user(self, target_user: str):
         if not server_manager.check_online():
             return messages.commands.bound.server_offline_try
-        bounded = await data_manager.remove_player(target_user)
+        service = player_service
+        if service is None:
+            return messages.commands.bound.server_offline_try
+        bounded = await service.remove_player(target_user)
         if not bounded:
             return messages.commands.bound.not_bound_query.format(target_user=target_user)
         for player in bounded:
@@ -169,7 +180,10 @@ class BoundCommand(Command):
         if not server_manager.check_online():
             return messages.commands.bound.server_offline_try
         user = str(session.user.id)
-        bounded = await data_manager.remove_player(user)
+        service = player_service
+        if service is None:
+            return messages.commands.bound.server_offline_try
+        bounded = await service.remove_player(user)
         if not bounded:
             return messages.commands.bound.no_binding_self
         for player in bounded:

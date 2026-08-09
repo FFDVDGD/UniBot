@@ -9,10 +9,10 @@ from io import BytesIO
 
 from html2pic import Html2Pic
 
-from .. import BaseRenderer, Extension
+from Scripts.Extensions import BaseRenderer, Extension
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Html2Pic', name='html2pic 渲染引擎', version='1.0.0', types=('render',), builtin=True)
+extension = Extension(id='Html2Pic', name='html2pic 渲染引擎', version='1.0.0', types=('render',))
 
 
 @extension.register_renderer

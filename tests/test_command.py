@@ -157,3 +157,41 @@ class TestCommandValidation:
         manager.register_command(WeatherCommand(), 'builtin:weather')
         with pytest.raises(CommandError):
             manager.register_command(WeatherCommand(), 'builtin:weather')
+
+    def test_optional_args_do_not_inject_default(self):
+        '''default 为 None 的可选参数不应向 Alconna 注入默认值，否则 available 恒 True。'''
+        class OptionalCmd(Command):
+            name = 'opt'
+
+            @override
+            def declare(self) -> None:
+                self.register_option('server', str, default=None, description='服务器')
+
+        manager = CommandManager()
+        manager.register_command(OptionalCmd(), 'builtin:opt')
+        args = manager._build_args(OptionalCmd())
+        arg_list = list(args)
+        assert len(arg_list) == 1
+        assert arg_list[0].name == 'server'
+        assert arg_list[0].optional is True
+        # 未注入默认值：field.default 保持 inspect._empty
+        from inspect import _empty
+        assert arg_list[0].field.default is _empty
+
+    def test_optional_args_inject_non_none_default(self):
+        '''声明了非 None default 的可选参数，直接注入 Alconna，由 Alconna 填充。'''
+        class DefaultCmd(Command):
+            name = 'defcmd'
+
+            @override
+            def declare(self) -> None:
+                self.register_option('city', str, default='Shanghai', description='城市')
+
+        manager = CommandManager()
+        manager.register_command(DefaultCmd(), 'builtin:defcmd')
+        args = manager._build_args(DefaultCmd())
+        arg_list = list(args)
+        assert len(arg_list) == 1
+        assert arg_list[0].name == 'city'
+        assert arg_list[0].optional is True
+        assert arg_list[0].field.default == 'Shanghai'

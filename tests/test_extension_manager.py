@@ -1,11 +1,12 @@
 '''ExtensionManager 测试：拓扑排序、生命周期、失败隔离、启停状态（验证点 9、14、8）。'''
 
 import asyncio
+from typing import override
 
 import pytest
 import tomlkit
 
-from Scripts.Extensions import Extension, ExtensionState, extension_manager
+from Scripts.Extensions import Extension, ExtensionState, Service, ServiceRegistry, extension_manager
 
 
 class _GoodExt(Extension):
@@ -17,12 +18,15 @@ class _GoodExt(Extension):
         self.disabled = False
 
     @property
+    @override
     def id(self) -> str:
         return self._ext_id
 
+    @override
     async def on_enable(self) -> None:
         self.enabled = True
 
+    @override
     async def on_disable(self) -> None:
         self.disabled = True
 
@@ -34,11 +38,48 @@ class _FailingExt(Extension):
         self._ext_id = ext_id
 
     @property
+    @override
     def id(self) -> str:
         return self._ext_id
 
+    @override
     async def on_enable(self) -> None:
         raise RuntimeError('boom')
+
+
+class _TypedService(Service):
+    name = 'typed'
+
+
+class _LifecycleService(Service):
+    '''记录服务生命周期调用。'''
+    name = 'lifecycle'
+
+    def __init__(self) -> None:
+        self.enabled = False
+        self.disabled = False
+
+    @override
+    async def on_enable(self) -> None:
+        self.enabled = True
+
+    @override
+    async def on_disable(self) -> None:
+        self.disabled = True
+
+
+class _ServiceExt(Extension):
+
+    def __init__(self, ext_id: str, service: Service) -> None:
+        super().__init__()
+        self._ext_id = ext_id
+        self.api = ServiceRegistry(extension_manager)
+        self.api.register(service.name or type(service).__name__, service)
+
+    @property
+    @override
+    def id(self) -> str:
+        return self._ext_id
 
 
 # ===== 服务注册 =====
@@ -55,6 +96,25 @@ class TestServices:
         new_service = object()
         extension_manager.register_service('svc', new_service)
         assert extension_manager.get_service('svc') is new_service
+
+    def test_get_service_by_type(self):
+        registry = ServiceRegistry(extension_manager)
+        service = _TypedService()
+        registry.register(_TypedService.name, service)
+
+        assert registry.get(_TypedService) is service
+
+    def test_get_missing_service_by_type(self):
+        registry = ServiceRegistry(extension_manager)
+
+        assert registry.get(_TypedService) is None
+
+    def test_get_service_by_type_rejects_wrong_runtime_type(self):
+        registry = ServiceRegistry(extension_manager)
+        registry.register(_TypedService.name, object())
+
+        with pytest.raises(TypeError, match='API 服务 typed 的类型不是 _TypedService'):
+            registry.get(_TypedService)
 
 
 # ===== 生命周期 =====
@@ -95,6 +155,19 @@ class TestLifecycle:
         assert a.disabled and b.disabled
         assert a.state is ExtensionState.disabled
         assert b.state is ExtensionState.disabled
+
+    def test_service_lifecycle_follows_extension(self):
+        service = _LifecycleService()
+        ext = _ServiceExt('Svc', service)
+        ext.state = ExtensionState.loaded
+        extension_manager.loader.extensions = [ext]
+        asyncio.run(extension_manager.start())
+        assert service.enabled is True
+        assert service.disabled is False
+        assert ext.state is ExtensionState.enabled
+        asyncio.run(extension_manager.shutdown())
+        assert service.disabled is True
+        assert ext.state is ExtensionState.disabled
 
 
 # ===== 启停状态文件 =====

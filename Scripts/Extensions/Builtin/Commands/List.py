@@ -6,7 +6,7 @@ from typing import override
 from nonebot_plugin_alconna import Match
 
 from Scripts.Config import config
-from .. import Command, Extension
+from Scripts.Extensions import Command, Extension
 from Scripts.Globals import player_list_cache, render_template
 from Scripts.Managers import cache_manager, server_manager
 from Scripts.Messages import messages
@@ -14,7 +14,7 @@ from Scripts.Network import fetch_player_avatars
 from Scripts.Utils import turn_message_text
 
 
-extension = Extension(id='List', name='在线玩家', version='1.0.0', types=('command',), builtin=True)
+extension = Extension(id='List', name='在线玩家', version='1.0.0', types=('command',))
 
 
 @extension.register_command
@@ -27,7 +27,7 @@ class ListCommand(Command):
 
     @override
     def declare(self) -> None:
-        self.register_option('server', str, default=None, description='服务器名称')
+        self.register_option('server', str, description='服务器名称')
 
     @override
     async def handler(self, server: Match[str]):

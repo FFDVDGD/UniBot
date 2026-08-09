@@ -2,14 +2,14 @@
 
 from typing import override
 
-from .. import Command, Extension
+from Scripts.Extensions import Command, Extension
 from Scripts.Globals import render_template
 from Scripts.Managers import server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Server', name='服务器列表', version='1.0.0', types=('command',), builtin=True)
+extension = Extension(id='Server', name='服务器列表', version='1.0.0', types=('command',))
 
 
 @extension.register_command

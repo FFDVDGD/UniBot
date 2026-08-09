@@ -1,4 +1,3 @@
-from nonebot import require
 from nonebot.rule import Rule
 
 from nonebot_plugin_uninfo import Uninfo, SupportScope

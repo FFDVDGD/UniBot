@@ -183,7 +183,7 @@ class Command(Generic[ParentT], ABC):
 
     # ===== 处理器 =====
 
-    async def handler(self, *args, **kwargs) -> str | bytes | list | None:
+    async def handler(self, *args, **kwargs) -> AsyncIterable | str | bytes | list | None:
         '''覆写以处理命令，直接返回要发送的消息内容：
         - 字符串 / 图片字节 / 消息片段列表：框架统一发送
         - 异步迭代器（async generator）：逐项收集后由框架转成多行文本发送，
@@ -301,15 +301,23 @@ class CommandManager:
     # ----- 构建阶段 -----
 
     def _build_args(self, command: Command[Any]) -> Args:
-        '''将参数定义转换为 Alconna Args。'''
+        '''将参数定义转换为 Alconna Args。
+
+        可选参数标记为可选（`name?`）。仅当声明了非 None 的 `default` 时才把它
+        直接注入 Alconna，让 Alconna 在用户未提供时填充 `Match.result`；
+        `default` 为 None 或未声明时不注入，避免 Alconna 把默认值塞进
+        `all_matched_args` 导致 `Match.available` 恒为 True（无法区分「用户显式
+        提供」与「走默认」）。因此 `default=None` 的可选参数 `available` 仍准确。
+        '''
         args = Args()
         for argument in command.arguments:
             value_type = argument._resolved_type()
             if argument.required:
                 args.add(argument.name, value=value_type)
+            elif argument.default is not UNSET and argument.default is not None:
+                args.add(f'{argument.name}?', value=value_type, default=argument.default)
             else:
-                default = argument.default if argument.default is not UNSET else None
-                args.add(f'{argument.name}?', value=value_type, default=default)
+                args.add(f'{argument.name}?', value=value_type)
         return args
 
     def _build_subcommand(self, subcommand: Command[Any]) -> Subcommand:

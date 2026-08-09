@@ -19,7 +19,6 @@ PYPROJECT_PATH = Path('pyproject.toml')
 
 EXTRA_CONFIG_FIELDS = {
     'ai': ('ai', 'enabled'),
-    'image': ('image', 'mode'),
     'webui': ('webui', 'enabled'),
 }
 

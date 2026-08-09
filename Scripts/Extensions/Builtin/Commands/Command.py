@@ -7,13 +7,13 @@ from nonebot_plugin_alconna import Match
 from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Config import config
-from .. import Command, Extension
+from Scripts.Extensions import Command, Extension
 from Scripts.Managers import server_manager
 from Scripts.Messages import messages
 from Scripts.Utils import get_permission, turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Command', name='控制台命令', version='1.0.0', types=('command',), builtin=True)
+extension = Extension(id='Command', name='控制台命令', version='1.0.0', types=('command',))
 
 
 @extension.register_command

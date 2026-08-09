@@ -44,9 +44,12 @@ class ExtensionManager:
             try:
                 await extension.on_load()
                 await extension.on_enable()
+                if extension.api is not None:
+                    await extension.api.enable()
                 extension.transition(ExtensionState.enabled)
             except Exception as error:
                 extension.mark_failed(str(error))
+                await self._disable_extension(extension)
                 await self._rollback(extension)
         # 内置 html2pic 渲染引擎由内置扩展 Html2Pic 加载并注册，此处仅完成引擎初始化
         await self.renderer_manager.setup('html2pic')
@@ -58,10 +61,7 @@ class ExtensionManager:
             if extension is failed_extension:
                 continue
             if extension.state is ExtensionState.enabled:
-                try:
-                    await extension.on_disable()
-                except Exception as error:
-                    logger.error(f'扩展 {extension.id} 回滚清理失败：{error}！')
+                await self._disable_extension(extension)
                 extension.transition(ExtensionState.disabled)
 
     async def shutdown(self) -> None:
@@ -69,12 +69,19 @@ class ExtensionManager:
         for extension in reversed(self.loader.extensions):
             if extension.state is not ExtensionState.enabled:
                 continue
-            try:
-                await extension.on_disable()
-            except Exception as error:
-                logger.error(f'扩展 {extension.id} 关闭失败：{error}！')
+            await self._disable_extension(extension)
             extension.transition(ExtensionState.disabled)
         await self.renderer_manager.shutdown()
+
+    @staticmethod
+    async def _disable_extension(extension: Extension) -> None:
+        '''先关闭服务再释放扩展资源，清理失败不阻止后续步骤。'''
+        if extension.api is not None:
+            await extension.api.disable()
+        try:
+            await extension.on_disable()
+        except Exception as error:
+            logger.error(f'扩展 {extension.id} 关闭失败：{error}！')
 
     # ===== 服务注册与获取 =====
 
