@@ -351,9 +351,11 @@ class CommandManager:
         matcher = on_alconna(
             alconna,
             rule=command_group_rule,
+            aliases=tuple(command.aliases) if command.aliases else None,
+            block=True,
+            priority=0,
             use_cmd_start=True,
             skip_for_unmatch=True,
-            aliases=tuple(command.aliases) if command.aliases else None,
         )
         matcher.assign('$main')(self._route(matcher, command.image_handler, command.handler, command))
         for subcommand in command.subcommands:

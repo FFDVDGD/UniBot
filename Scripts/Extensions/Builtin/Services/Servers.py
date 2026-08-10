@@ -1,7 +1,7 @@
 """内置服务：Minecraft 服务器交互。"""
 
-import asyncio
 import re
+import asyncio
 from typing import override
 
 from nonebot import get_adapter
@@ -42,8 +42,7 @@ class ServerService(Service):
     def get_server(self, server_flag: str | int) -> Bot | None:
         """通过名称或编号获取 Minecraft 机器人。"""
         if isinstance(server_flag, int) or server_flag.isdigit():
-            names = list(self.servers.keys())
-            index = int(server_flag) - 1
+            index, names = int(server_flag), list(self.servers.keys())
             if 0 <= index < len(names):
                 return self.servers[names[index]]
         return self.servers.get(str(server_flag))

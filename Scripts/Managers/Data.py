@@ -17,7 +17,7 @@ class DataManager:
     resources_dir = Path('Resources')
 
     users_file = data_dir / 'Users.json'
-    secret_file = data_dir / 'secret.key'
+    secret_file = data_dir / 'Secret.key'
 
     lock = Lock()
 

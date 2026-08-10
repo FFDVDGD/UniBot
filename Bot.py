@@ -18,7 +18,7 @@ driver = nonebot.get_driver()
 async def startup() -> None:
     from Scripts.Api.Limiter import rate_limiter
     from Scripts.Config import config
-    from Scripts.Extensions import command_manager, extension_manager
+    from Scripts.Extensions import extension_manager
     from Scripts.Managers import (
         data_manager,
         plugin_manager,
@@ -28,8 +28,7 @@ async def startup() -> None:
 
     data_manager.load()
     plugin_manager.load()
-    extension_manager.load()
-    command_manager.build()
+
     asyncio.create_task(version_manager.init())
 
     if config.webui.enabled:
@@ -58,19 +57,20 @@ def register_adapters(driver, adapters: list[dict]) -> None:
         except ImportError:
             logger.warning(f'导入适配器模块 {adapter["module_name"]} 失败，已跳过！')
             continue
-        adapter_class = getattr(module, 'Adapter', None)
-        if adapter_class is None:
-            logger.warning(f'适配器模块 {adapter["module_name"]} 未包含 Adapter 类，已跳过！')
+        if adapter_class := getattr(module, 'Adapter', None):
+            logger.info(f'正在注册 {adapter_class} 适配器。')
+            driver.register_adapter(adapter_class)
             continue
-        driver.register_adapter(adapter_class)
+        logger.warning(f'适配器模块 {adapter["module_name"]} 未包含 Adapter 类，已跳过！')
 
 
 def load_plugins(plugins: list[str | dict]) -> None:
     """加载已启用的 NoneBot 插件。"""
     for plugin in plugins:
-        module_name = plugin if isinstance(plugin, str) else plugin.get('module_name', '')
-        enabled = plugin if isinstance(plugin, str) else plugin.get('enabled', True)
-        if module_name and enabled:
+        if isinstance(plugin, str):
+            nonebot.load_plugin(plugin)
+            continue
+        if (module_name := plugin.get('module_name', '')) and plugin.get('enabled', True):
             nonebot.load_plugin(module_name)
 
 
@@ -86,7 +86,10 @@ def main():
     from Scripts.Managers import config_manager, webui_manager
 
     config_manager.init()
+    
     register_adapters(driver, config_manager.nonebot_config.get('adapters', []))
+
+    nonebot.load_plugin('Scripts.Plugins.Extensions')
     load_plugins(config_manager.nonebot_config.get('plugins', []))
 
     if bot_config.webui.enabled:

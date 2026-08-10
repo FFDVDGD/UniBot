@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import tomlkit
+from packaging.specifiers import SpecifierSet
 from nonebot.log import logger
 
 if TYPE_CHECKING:
@@ -110,7 +111,7 @@ class ExtensionLoader:
                 continue
             if entry.is_dir():
                 self._discover_directory(entry)
-            elif entry.suffix == '.py' and entry.name != '__init__.py':
+            elif entry.suffix == '.py':
                 self._discover_single_file(entry, builtin=builtin)
 
     def _discover_directory(self, directory: Path) -> None:
@@ -197,8 +198,6 @@ class ExtensionLoader:
 
     def _validate_compatibility(self, extension_id: str, manifest) -> None:
         """校验扩展与当前 UniBot 版本的兼容性。"""
-        from packaging.specifiers import SpecifierSet
-
         constraint = manifest.compatibility.unibot
         # '*' / 空串表示任意版本（单文件扩展无 Extension.toml 时的缺省值）
         if not constraint or constraint == '*':
@@ -322,15 +321,14 @@ class ExtensionLoader:
         `Data/Exs/<id>/`（DATA_ROOT）目录式存储下，避免与运行时数据目录混淆。
         """
         assert extension.config_model is not None
-        config_store = ExtensionConfigStore(CONFIG_ROOT, extension_id, extension.config_model)
         api = ServiceRegistry(self.manager)
-        store_path = Path('Data') if builtin else DATA_ROOT / extension_id
-        data_store = ExtensionDataStore(store_path)
+        config_store = ExtensionConfigStore(CONFIG_ROOT, extension_id, extension.config_model)
+        data_store = ExtensionDataStore(Path('Data') if builtin else DATA_ROOT / extension_id)
         extension._bind(
-            metadata=ExtensionMetadata(manifest),
-            config_store=config_store,
-            data_store=data_store,
             api=api,
+            data_store=data_store,
+            config_store=config_store,
+            metadata=ExtensionMetadata(manifest),
         )
 
     def _find_blocked_dependency(self, extension_id: str, blocked_reasons: dict) -> str | None:
@@ -395,13 +393,11 @@ class ExtensionLoader:
             if builtin:
                 # 记录内置命令类，供后续扩展判定是否覆盖内置
                 self._builtin_command_classes.add(command_cls)
-                command_id = f'{BUILTIN_PREFIX}:{command.name}'
-                command_manager.register_command(command, command_id)
+                command_manager.register_command(command, f'{BUILTIN_PREFIX}:{command.name}')
                 continue
             # 扩展命令：若继承自某个内置命令类，则判定为覆盖内置，以同名
             # command_id 取代内置定义；否则作为新增命令以 extension: 前缀注册
-            builtin_cls = self._find_builtin_override(command_cls)
-            if builtin_cls is not None:
+            if builtin_cls := self._find_builtin_override(command_cls):
                 command_id = f'{BUILTIN_PREFIX}:{command.name}'
                 command_manager.register_command(command, command_id, override=True)
                 logger.info(

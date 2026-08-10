@@ -57,7 +57,7 @@ webui_version = 'v0.0.5'
 
 [tool.nonebot]
 plugins = [
-    { module_name = "Plugins.Events", enabled = true },
+    { module_name = "Scripts.Plugins.Events", enabled = true },
 ]
 
 [[tool.nonebot.adapters]]

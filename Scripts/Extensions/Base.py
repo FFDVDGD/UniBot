@@ -5,6 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Generic, TypeVar, cast
 
+import tomllib
 from nonebot.log import logger
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -51,15 +52,15 @@ class ExtensionType(StrEnum):
     """扩展类型。"""
 
     api = 'api'
-    command = 'command'
     render = 'render'
+    command = 'command'
 
 
 class RenderKind(StrEnum):
     """渲染扩展子类型。"""
 
-    engine = 'engine'
     theme = 'theme'
+    engine = 'engine'
 
 
 class ManifestMeta(BaseModel):
@@ -159,8 +160,6 @@ class ExtensionMetadata:
 def parse_manifest(content: str) -> ExtensionManifest:
     """解析 extension.toml 文本内容，返回严格校验后的清单。"""
     try:
-        import tomllib
-
         data = tomllib.loads(content)
     except Exception as error:
         raise ManifestError(f'扩展清单解析失败：{error}') from error

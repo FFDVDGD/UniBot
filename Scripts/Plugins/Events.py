@@ -44,10 +44,9 @@ segment_mapping = {
 
 def message_to_text(message: UniMsg):
     """将 UniMsg 转换为文本。"""
-    for segment in message:
-        print(segment)
     texts = [
-        func(segment) for segment in message if (func := segment_mapping.get(segment.type)) is not None if func(segment)
+        res for segment in message
+        if (func := segment_mapping.get(segment.type)) and (res := func(segment))
     ]
     return ' '.join(texts)
 
