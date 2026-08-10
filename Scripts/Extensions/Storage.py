@@ -41,8 +41,11 @@ def _atomic_write(file_path: Path, content: str | bytes) -> None:
     mode = 'wb' if isinstance(content, bytes) else 'w'
     try:
         with tempfile.NamedTemporaryFile(
-            mode, encoding=None if isinstance(content, bytes) else 'Utf-8',
-            dir=file_path.parent, suffix='.tmp', delete=False,
+            mode,
+            encoding=None if isinstance(content, bytes) else 'Utf-8',
+            dir=file_path.parent,
+            suffix='.tmp',
+            delete=False,
         ) as temp_file:
             temp_file.write(content)
             temp_path = Path(temp_file.name)
@@ -76,11 +79,16 @@ class ExtensionConfigStore(Generic[ConfigModelT]):
         return self.config_path.read_text('Utf-8')
 
     def _load(self) -> ConfigModelT:
-        """从当前扩展的配置文件读取并执行 model_validate，文件缺失时用默认值。"""
+        """读取配置并校验；文件缺失或为空时用默认值。仅当模型有字段才自动创建配置文件。"""
         with self._lock:
+            if not self._model.model_fields:
+                self.config_path.unlink(missing_ok=True)
+                return self._model()
             content = self._load_text()
             if not content:
-                return self._model()
+                model = self._model()
+                self._save(model)
+                return model
             try:
                 data = tomllib.loads(content)
                 return self._model.model_validate(data)

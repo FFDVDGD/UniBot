@@ -16,7 +16,7 @@ from ..Auth import get_current_user, require_role
 from ..Schemas import InstallAdapterRequest, NoneBotItemRequest, UninstallAdapterRequest
 from .Adapters import ADAPTER_CATALOG, PROTECTED_ADAPTER_MODULES
 from .Driver import compute_redundant_drivers, format_driver, merge_driver, shrink_driver
-from .Helpers import deep_merge, mask_api_key, sanitize_none
+from .Helpers import deep_merge, sanitize_none
 from .Schema import CONFIG_GROUPS, CONFIG_SCHEMA, ENV_GROUPS, ENV_SCHEMA
 
 router = APIRouter(prefix='/api/config', tags=['Config'])
@@ -43,11 +43,10 @@ def _write_toml_preserving(data: dict) -> None:
 
 @router.get('', summary='获取配置')
 async def get_config(current_user: dict = Depends(get_current_user)):
-    """获取完整配置（api_key 脱敏）。"""
-    config_data = config.model_dump()
+    """获取完整配置。"""
     return {
         'code': 0,
-        'data': mask_api_key(config_data),
+        'data': config.model_dump(),
         'message': 'ok',
     }
 

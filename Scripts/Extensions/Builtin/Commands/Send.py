@@ -39,7 +39,11 @@ class SendCommand(Command):
         player_service, server_service = Globals.player_service, Globals.server_service
         if server_service is None:
             return messages.commands.send.not_bound
-        if name := player_service.players.get(user_id, (session.user.name,))[0] if player_service else session.user.name:
+        if (
+            name := player_service.players.get(user_id, (session.user.name,))[0]
+            if player_service
+            else session.user.name
+        ):
             await server_service.broadcast(f'[{platform_name}]<{name}> {message_text}')
             return messages.commands.send.sent.format(content=message_text)
         await server_service.broadcast(f'[{platform_name}]<未知用户> {message_text}')

@@ -14,11 +14,10 @@ from html2pic import Html2Pic
 
 from Scripts.Extensions import BaseRenderer, Extension
 
-
 # logging.basicConfig() 污染 root logger，导入时清理一次）。
 logging.getLogger().handlers.clear()
 # 唯一扩展实例，能力经实例装饰器登记；元数据以 Extension.toml 为准
-extension = Extension(types=('render',))
+extension = Extension(types=('renderer',))
 
 
 @extension.register_renderer

@@ -125,10 +125,3 @@ bad_things = [
 no_server = "当前没有已连接的服务器！"
 server_line = "[{index}] {name}"
 
-[commands.ai]
-# AI 对话相关提示
-no_permission = "你没有权限执行此操作！"
-cache_cleared = "缓存已清空！"
-rate_limited = "啊哦！你问的太快啦，我的脑袋转不过来了 TwT"
-error = "啊哦！遇到错误：{error}"
-no_reply = "呃？你在说什么，能不能重新说一下 T_T"

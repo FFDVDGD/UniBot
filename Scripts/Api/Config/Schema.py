@@ -147,56 +147,6 @@ CONFIG_SCHEMA = [
         'description': '将机器人发送的消息渲染为图片；需要额外安装图片依赖，且响应速度会变慢',
     },
     {
-        'key': 'image.background',
-        'label': '图片背景',
-        'type': 'string',
-        'default': '',
-        'description': '生成图片时使用的 CSS background-image 属性值',
-    },
-    {'key': 'ai.enabled', 'label': '启用 AI', 'type': 'boolean', 'default': False, 'description': '是否启用 AI 功能'},
-    {
-        'key': 'ai.base_url',
-        'label': 'API 基础地址',
-        'type': 'string',
-        'default': '',
-        'description': 'OpenAI 兼容接口的 Base URL；启用 AI 时必填',
-    },
-    {
-        'key': 'ai.model_name',
-        'label': '模型名称',
-        'type': 'string',
-        'default': '',
-        'description': 'AI 请求使用的模型名称',
-    },
-    {
-        'key': 'ai.api_key',
-        'label': 'API 密钥',
-        'type': 'secret',
-        'default': '',
-        'description': 'OpenAI 兼容接口的 API Key；启用 AI 时必填',
-    },
-    {
-        'key': 'ai.system_prompt',
-        'label': '系统提示词',
-        'type': 'text',
-        'default': '',
-        'description': '描述 AI 的基本信息、身份与回复方式',
-    },
-    {
-        'key': 'auto_reply.enabled',
-        'label': '启用自动回复',
-        'type': 'boolean',
-        'default': False,
-        'description': '是否启用关键词自动回复功能',
-    },
-    {
-        'key': 'auto_reply.keywords',
-        'label': '关键词回复规则',
-        'type': 'keyword_map',
-        'default': {},
-        'description': '为每条回复配置关键词；逗号分隔表示匹配任意关键词，空格分隔表示需要同时匹配',
-    },
-    {
         'key': 'webui.enabled',
         'label': '启用 WebUI',
         'type': 'boolean',
@@ -225,12 +175,10 @@ CONFIG_GROUPS = [
     {'name': '玩家列表', 'keys': ['bot_prefix', 'list_compatible_mode', 'whitelist_command']},
     {
         'name': '图片渲染',
-        'keys': ['image.mode', 'image.background'],
+        'keys': ['image.mode'],
         # 门控开关：仅当该 key 为 true 时组内字段可编辑；前端据此渲染锁定遮罩
-        'gated_by': 'image.mode',
+        # 'gated_by': 'image.mode',
     },
-    {'name': 'AI', 'keys': ['ai.enabled', 'ai.base_url', 'ai.model_name', 'ai.api_key', 'ai.system_prompt']},
-    {'name': '自动回复', 'keys': ['auto_reply.enabled', 'auto_reply.keywords']},
     {'name': 'WebUI', 'keys': ['webui.enabled']},
 ]
 

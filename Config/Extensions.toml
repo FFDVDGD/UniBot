@@ -29,4 +29,4 @@ enabled = true
 enabled = true
 
 [Html2Pic]
-enabled = true
+enabled = false

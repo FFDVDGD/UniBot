@@ -84,7 +84,7 @@ def main():
     from Scripts.Managers import config_manager, webui_manager
 
     config_manager.init()
-    
+
     register_adapters(driver, config_manager.nonebot_config.get('adapters', []))
 
     nonebot.load_plugin('Scripts.Plugins.Extensions')

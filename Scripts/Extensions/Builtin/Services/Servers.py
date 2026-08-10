@@ -40,11 +40,11 @@ class ServerService(Service):
         self.servers = {}
 
     def get_server(self, server_flag: str | int) -> Bot | None:
-        """通过名称或编号获取 Minecraft 机器人。"""
+        """通过名称或编号获取 Minecraft 机器人（编号从 1 开始）。"""
         if isinstance(server_flag, int) or server_flag.isdigit():
             index, names = int(server_flag), list(self.servers.keys())
-            if 0 <= index < len(names):
-                return self.servers[names[index]]
+            if 0 < index <= len(names):
+                return self.servers[names[index - 1]]
         return self.servers.get(str(server_flag))
 
     def check_online(self) -> bool:

@@ -6,8 +6,8 @@ id = "Html2Pic"
 name = "html2pic 渲染引擎"
 version = "1.0.0"
 author = "UniBot"
-description = "内置 HTML 转图片渲染引擎（默认/回退），依赖 html2pic 库。"
-types = ["render"]
+description = "内置 HTML 转图片渲染引擎，采用 Html2Pic 渲染。"
+types = ["renderer"]
 
 [compatibility]
 unibot = "*"
@@ -16,6 +16,5 @@ unibot = "*"
 extensions = []
 python = ["html2pic", "Pillow"]
 
-[render]
-kind = ["engine"]
-theme_name = ""
+[renderer]
+name = "html2pic"

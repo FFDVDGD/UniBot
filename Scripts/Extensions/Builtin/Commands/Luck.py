@@ -8,7 +8,6 @@ from typing import override
 from nonebot_plugin_uninfo import Uninfo
 
 from Scripts.Extensions import Command, Extension
-from Scripts.Globals import render_template
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
@@ -33,7 +32,7 @@ class LuckCommand(Command):
     async def image_handler(self, session: Uninfo) -> bytes:
         """渲染今日人品为图片，返回 PNG 字节（由框架在图像模式发送）。"""
         luck_data = self.get_luck_data(session)
-        return await render_template('Luck', (500, 0), **luck_data)
+        return await extension.render_image('Luck', (500, 0), context=luck_data)
 
     def get_luck_data(self, session: Uninfo) -> dict:
         bad_things = messages.commands.luck.bad_things

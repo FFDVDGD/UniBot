@@ -15,7 +15,7 @@ from .Loader import (
     CONFIG_EXTENSIONS_FILE,
     ExtensionLoader,
 )
-from .Renderer import BaseRenderer, RendererManager
+from .Renderer import BaseRenderer, RendererManager, TemplateRegistration
 
 
 class ExtensionManager:
@@ -24,11 +24,22 @@ class ExtensionManager:
     registry: dict[str, Extension] = {}
     services: dict[str, object] = {}
     renderers: dict[str, BaseRenderer] = {}
-    themes: dict[str, Path] = {}
+    # 无代码扩展包（template/resources）展示信息：extension_id -> info dict
+    no_code_info: dict[str, dict] = {}
 
     def __init__(self) -> None:
         self.loader = ExtensionLoader(self)
         self.renderer_manager = RendererManager(self.get_renderer)
+
+    @property
+    def templates(self) -> dict[str, TemplateRegistration]:
+        """已注册的 template 扩展包：id -> TemplateRegistration。"""
+        return self.renderer_manager.templates
+
+    @property
+    def resources(self) -> dict[str, Path]:
+        """已注册的 resources 扩展包：id -> 资源根目录。"""
+        return self.renderer_manager.resources
 
     # ===== 加载与生命周期 =====
 
@@ -95,16 +106,28 @@ class ExtensionManager:
         """获取已注册的 API 服务，未注册返回 None。"""
         return self.services.get(name)
 
-    # ===== 渲染器管理 =====
+    # ===== 渲染器/模板/资源管理 =====
 
     def register_renderer(self, renderer: BaseRenderer) -> None:
         """注册一个渲染引擎实例。"""
         if renderer.name:
             self.renderers[renderer.name] = renderer
 
-    def register_theme(self, extension_id: str, templates_dir: Path) -> None:
-        """注册一个主题扩展的模板目录。"""
-        self.themes[extension_id] = templates_dir
+    def register_template(self, registration: TemplateRegistration) -> None:
+        """注册 template 无代码扩展包。"""
+        self.renderer_manager.register_template(registration)
+
+    def unregister_template(self, extension_id: str) -> None:
+        """注销 template 无代码扩展包。"""
+        self.renderer_manager.unregister_template(extension_id)
+
+    def register_resources(self, extension_id: str, resources_dir: Path) -> None:
+        """注册 resources 无代码扩展包。"""
+        self.renderer_manager.register_resources(extension_id, resources_dir)
+
+    def unregister_resources(self, extension_id: str) -> None:
+        """注销 resources 无代码扩展包。"""
+        self.renderer_manager.unregister_resources(extension_id)
 
     def get_renderer(self, name: str) -> BaseRenderer | None:
         """获取指定名称的渲染引擎实例。"""
@@ -133,23 +156,33 @@ class ExtensionManager:
     def get_extension_info(self, extension_id: str) -> dict:
         """获取扩展的展示信息（供 WebUI 使用）。"""
         extension = self.registry.get(extension_id)
-        if extension is None:
+        if extension is not None:
+            metadata = extension.metadata
+            return {
+                'id': metadata.id,
+                'name': metadata.name,
+                'version': metadata.version,
+                'author': metadata.author,
+                'description': metadata.description,
+                'types': [entry.value for entry in metadata.types],
+                'state': extension.state.value,
+                'failure_reason': extension.failure_reason,
+                'builtin': extension.builtin,
+                'config_schema': extension.get_config_schema(),
+            }
+        # 无代码扩展包（template/resources）：无 Extension 实例，信息由 Loader 提交
+        info = self.no_code_info.get(extension_id)
+        if info is None:
             return {}
-        metadata = extension.metadata
-        return {
-            'id': metadata.id,
-            'name': metadata.name,
-            'version': metadata.version,
-            'author': metadata.author,
-            'description': metadata.description,
-            'types': [entry.value for entry in metadata.types],
-            'state': extension.state.value,
-            'config_schema': extension.get_config_schema(),
-        }
+        registration = self.renderer_manager.templates.get(extension_id)
+        if registration is not None:
+            info['config_schema'] = registration.config_model.model_json_schema()
+        return dict(info)
 
     def get_extensions(self) -> list[dict]:
-        """获取全部已加载扩展的展示信息。"""
-        return [self.get_extension_info(extension_id) for extension_id in self.registry]
+        """获取全部已加载扩展的展示信息（代码扩展 + 无代码扩展包）。"""
+        ids = list(self.registry) + [eid for eid in self.no_code_info if eid not in self.registry]
+        return [self.get_extension_info(extension_id) for extension_id in ids]
 
 
 # 单例

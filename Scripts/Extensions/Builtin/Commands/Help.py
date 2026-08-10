@@ -5,7 +5,6 @@ from typing import override
 from nonebot_plugin_alconna import Match
 
 from Scripts.Extensions import Command, Extension, command_manager
-from Scripts.Globals import render_template
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
@@ -71,9 +70,9 @@ class HelpCommand(Command):
         """渲染帮助信息为图片，返回 PNG 字节（由框架在图像模式发送）。"""
         if command.available:
             detail = self.get_command_detail(command.result)
-            return await render_template('Help', (600, 0), detail=detail, commands=None)
+            return await extension.render_image('Help', (600, 0), context={'detail': detail, 'commands': None})
         commands = self.get_commands_list()
-        return await render_template('Help', (600, 0), detail=None, commands=commands)
+        return await extension.render_image('Help', (600, 0), context={'detail': None, 'commands': commands})
 
     def get_commands_list(self) -> list[dict]:
         """构建命令列表数据用于图片渲染。"""

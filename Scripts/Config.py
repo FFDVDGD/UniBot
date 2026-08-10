@@ -9,22 +9,9 @@ TOML_PATH = Path('Config.toml')
 
 class ImageConfig(BaseModel):
     mode: bool = False
-    background: str | None = None
     renderer: str = 'html2pic'  # 当前使用的渲染引擎 name，必须是已注册的引擎
-    theme: str = 'default'  # 当前模板主题（主题扩展的 theme_name 或 id，'default' = 默认模板主题扩展）
-
-
-class AiConfig(BaseModel):
-    enabled: bool = False
-    base_url: str | None = None
-    model_name: str | None = None
-    api_key: str | None = None
-    system_prompt: str | None = None
-
-
-class AutoReplyConfig(BaseModel):
-    enabled: bool = False
-    keywords: dict[str, list[str]] | None = None
+    template: str = 'Default'  # 当前模板包（template 扩展 id，'Default' = 内置默认模板）
+    font: str = ''  # 自定义字体文件路径；留空自动从资源扩展根目录查找 Font.ttf
 
 
 class WebUiConfig(BaseModel):
@@ -65,8 +52,6 @@ class Config(BaseModel):
     qq_bound_max_number: int = 1
 
     image: ImageConfig = ImageConfig()
-    ai: AiConfig = AiConfig()
-    auto_reply: AutoReplyConfig = AutoReplyConfig()
     webui: WebUiConfig = WebUiConfig()
 
     @model_validator(mode='after')

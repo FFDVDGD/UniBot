@@ -16,7 +16,7 @@
     min-height: {{ height }}px;
     padding: 26px;
     background-color: #16241b;
-    background-image: {{ background }};
+    background-image: {{ config.background if config.background else 'linear-gradient(150deg, #2e4a30 0%, #1d3524 55%, #12241a 100%)' }};
     background-size: tile;
 }
 

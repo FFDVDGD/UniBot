@@ -8,7 +8,6 @@ from nonebot_plugin_uninfo import Uninfo
 from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Extensions import Command, Extension, SubCommand
-from Scripts.Globals import render_template
 from Scripts.Messages import messages
 from Scripts.Utils import check_player, get_permission
 
@@ -52,7 +51,7 @@ class BoundCommand(Command):
             if player_service is None or not player_service.players:
                 return messages.commands.bound.no_binding
             bindings = [{'user': user, 'players': players} for user, players in player_service.players.items()]
-            return await render_template('Bound', (600, 800), bindings=bindings)
+            return await extension.render_image('Bound', (600, 800), context={'bindings': bindings})
 
     class Query(SubCommand['BoundCommand']):
         """查询指定用户的绑定。"""

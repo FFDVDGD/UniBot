@@ -8,7 +8,7 @@ from nonebot_plugin_alconna import Match
 from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Extensions import Command, Extension
-from Scripts.Globals import player_list_cache, render_template
+from Scripts.Globals import player_list_cache
 from Scripts.Managers import cache_manager
 from Scripts.Messages import messages
 from Scripts.Network import fetch_player_avatars
@@ -46,7 +46,7 @@ class ListCommand(Command):
             return response
         player_names = {name for groups in response.values() for name in groups[0]}
         avatars = await self.ensure_avatars(list(player_names))
-        return await render_template('List', (600, 800), player_list=response, avatars=avatars)
+        return await extension.render_image('List', (600, 800), context={'player_list': response, 'avatars': avatars})
 
     async def ensure_avatars(self, player_names: list):
         """获取玩家头像文件路径：本地已缓存直接复用，缺失的下载后落盘。"""

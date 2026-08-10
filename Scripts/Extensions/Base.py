@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import tomllib
 from enum import StrEnum
-from typing import Generic, TypeVar, cast
+from typing import Any, Generic, Literal, TypeVar, cast
 
 from nonebot.log import logger
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from Scripts.Managers import config_manager
 
@@ -51,18 +51,21 @@ _STATE_TRANSITIONS: dict[ExtensionState, set[ExtensionState]] = {
 
 
 class ExtensionType(StrEnum):
-    """扩展类型。"""
+    """扩展类型。
+
+    `api`/`command`/`renderer` 为代码型能力；`template`/`resources` 为无代码扩展包。
+    """
 
     api = 'api'
-    render = 'render'
     command = 'command'
+    renderer = 'renderer'
+    template = 'template'
+    resources = 'resources'
 
 
-class RenderKind(StrEnum):
-    """渲染扩展子类型。"""
-
-    theme = 'theme'
-    engine = 'engine'
+# 无代码扩展包只能单独成包，不能与任何代码能力混用
+_CODE_TYPES = {ExtensionType.api, ExtensionType.command, ExtensionType.renderer}
+_NO_CODE_TYPES = {ExtensionType.template, ExtensionType.resources}
 
 
 class ManifestMeta(BaseModel):
@@ -103,13 +106,49 @@ class DependenciesConfig(BaseModel):
     python: list[str] = []
 
 
-class RenderConfig(BaseModel):
-    """[render] 段（仅渲染扩展需要）。"""
+class RendererConfig(BaseModel):
+    """[renderer] 段（仅 renderer 扩展需要）。"""
 
     model_config = ConfigDict(extra='forbid')
 
-    kind: list[RenderKind] = []
-    theme_name: str | None = None
+    name: str = ''  # 渲染器名称，必须与注册的 BaseRenderer.name 一致
+
+
+class TemplateFieldConfig(BaseModel):
+    """[template.config_schema.<name>] 单个受限配置字段。"""
+
+    model_config = ConfigDict(extra='forbid')
+
+    type: Literal['string', 'integer', 'number', 'boolean', 'color', 'select'] = 'string'
+    default: Any = None
+    title: str = ''
+    description: str = ''
+    # 数值约束
+    min: float | int | None = None
+    max: float | int | None = None
+    # 字符串约束
+    min_length: int | None = None
+    max_length: int | None = None
+    # select 选项（select 类型必填，且 default 必须包含其中）
+    options: list[str] = []
+
+
+class TemplateConfig(BaseModel):
+    """[template] 段（仅 template 无代码扩展需要）。"""
+
+    model_config = ConfigDict(extra='forbid')
+
+    entry: str = 'Templates'  # 模板根目录，固定相对于扩展包根目录
+    resources: list[str] = []  # 可选 resources 扩展 id，按声明顺序组成资源查找范围
+    config_schema: dict[str, TemplateFieldConfig] = Field(default_factory=dict)
+
+
+class ResourcesConfig(BaseModel):
+    """[resources] 段（仅 resources 无代码扩展需要）。"""
+
+    model_config = ConfigDict(extra='forbid')
+
+    root: str = 'Resources'  # 资源根目录，固定相对于扩展包根目录
 
 
 class ExtensionManifest(BaseModel):
@@ -121,7 +160,24 @@ class ExtensionManifest(BaseModel):
     extension: ExtensionMeta
     compatibility: CompatibilityConfig = CompatibilityConfig()
     dependencies: DependenciesConfig = DependenciesConfig()
-    render: RenderConfig = RenderConfig()
+    renderer: RendererConfig = RendererConfig()
+    template: TemplateConfig = TemplateConfig()
+    resources: ResourcesConfig = ResourcesConfig()
+
+    @model_validator(mode='after')
+    def _validate_types(self) -> ExtensionManifest:
+        """校验类型互斥：无代码类型（template/resources）不能与代码能力混用，renderer 独立成包。"""
+        types = set(self.extension.types)
+        no_code = types & _NO_CODE_TYPES
+        code = types & _CODE_TYPES
+        if no_code and code:
+            raise ValueError(
+                f'无代码扩展类型 {sorted(t.value for t in no_code)} '
+                f'不能与代码能力 {sorted(t.value for t in code)} 混用！'
+            )
+        if types == {ExtensionType.renderer} and not self.renderer.name:
+            raise ValueError('renderer 扩展必须在 [renderer] 段声明 name！')
+        return self
 
 
 class ExtensionMetadata:
@@ -139,8 +195,16 @@ class ExtensionMetadata:
         self.unibot_constraint = manifest.compatibility.unibot
         self.extension_dependencies = list(manifest.dependencies.extensions)
         self.python_dependencies = list(manifest.dependencies.python)
-        self.render_kind = list(manifest.render.kind)
-        self.theme_name = manifest.render.theme_name
+        self.renderer_name = manifest.renderer.name
+        self.template_entry = manifest.template.entry
+        self.template_resources = list(manifest.template.resources)
+        self.template_config_schema = manifest.template.config_schema
+        self.resources_root = manifest.resources.root
+
+    @property
+    def is_no_code(self) -> bool:
+        """是否为无代码扩展包（template/resources）。"""
+        return any(entry in _NO_CODE_TYPES for entry in self.types)
 
     def to_dict(self) -> dict:
         """转换为可序列化字典（供 WebUI 展示）。"""
@@ -154,8 +218,10 @@ class ExtensionMetadata:
             'unibot': self.unibot_constraint,
             'extension_dependencies': self.extension_dependencies,
             'python_dependencies': self.python_dependencies,
-            'render_kind': [entry.value for entry in self.render_kind],
-            'theme_name': self.theme_name,
+            'renderer': self.renderer_name,
+            'template_entry': self.template_entry,
+            'template_resources': self.template_resources,
+            'resources_root': self.resources_root,
         }
 
 
@@ -236,6 +302,9 @@ class Extension(Generic[ConfigModelT]):
 
     # 失败原因（mark_failed 时记录）
     failure_reason: str | None = None
+
+    # 是否为随框架分发的内置扩展（Builtin/ 目录，加载时由 Loader 标记）
+    builtin: bool = False
 
     # 私有状态：id 声明值（未绑定前生效）与绑定标志
     _declared_id: str = ''
@@ -357,6 +426,33 @@ class Extension(Generic[ConfigModelT]):
         """校验并持久化配置；校验失败抛出异常且不修改原配置。"""
         return self.config.update(values)
 
+    async def render_image(
+        self,
+        template: str,
+        size: tuple[int, int],
+        *,
+        context: dict | None = None,
+        renderer: str | None = None,
+    ) -> bytes:
+        """
+        使用当前选中的模板包配置和渲染系统生成图片。
+
+            只做受控转发到框架注入的 `RendererManager`。模板包由核心
+            `config.image.template` 选择，`template` 参数表示包内模板名称
+            （如 `List`）。Jinja 上下文中的 `config` 始终来自当前 template
+            包，与调用方代码扩展配置无关。
+        """
+        self._require_bound()
+        # 函数内导入：避免导入期循环依赖（Scripts.Extensions 初始化顺序）
+        from Scripts.Extensions import extension_manager
+
+        return await extension_manager.renderer_manager.render_image(
+            template,
+            size,
+            context=context,
+            renderer=renderer,
+        )
+
     # ===== 生命周期 =====
 
     async def on_load(self) -> None:
@@ -385,6 +481,8 @@ class Extension(Generic[ConfigModelT]):
         config_store: ExtensionConfigStore[ConfigModelT],
         data_store: ExtensionDataStore,
         api: ServiceRegistry,
+        *,
+        builtin: bool = False,
     ) -> None:
         """Loader 一次性注入绑定能力；只能调用一次，扩展代码不得直接调用。"""
         if self._bound:
@@ -393,6 +491,7 @@ class Extension(Generic[ConfigModelT]):
         self._config = config_store
         self._data = data_store
         self._api = api
+        self.builtin = builtin
         self._bound = True
 
     def _set_metadata(self, metadata: ExtensionMetadata) -> None:

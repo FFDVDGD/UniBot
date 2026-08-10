@@ -44,10 +44,7 @@ segment_mapping = {
 
 def message_to_text(message: UniMsg):
     """将 UniMsg 转换为文本。"""
-    texts = [
-        res for segment in message
-        if (func := segment_mapping.get(segment.type)) and (res := func(segment))
-    ]
+    texts = [res for segment in message if (func := segment_mapping.get(segment.type)) and (res := func(segment))]
     return ' '.join(texts)
 
 
@@ -164,7 +161,7 @@ async def handle_player_chat(event: PlayerChatEvent):
     old_message = chat_message
     for command in ('send', 'gp', 'qq', 'q'):
         if chat_message.startswith(command):
-            chat_message = chat_message[len(command):].strip()
+            chat_message = chat_message[len(command) :].strip()
     if old_message == chat_message:
         await player_chat_watcher.finish()
     server_service = Globals.server_service

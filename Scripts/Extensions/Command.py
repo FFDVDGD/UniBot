@@ -6,15 +6,16 @@
 嵌套 SubCommand 类的形式声明，框架自动发现并实例化，parent 指向父命令实例。
 """
 
-import inspect
 import re
+import inspect
 from abc import ABC
-from collections.abc import AsyncIterable, Awaitable, Callable
 from functools import wraps
 from typing import Any, Generic, TypeVar
+from collections.abc import AsyncIterable, Awaitable, Callable
 
 from arclet.alconna import Alconna, Args, MultiVar, Subcommand
 from nonebot.log import logger
+from nonebot.exception import FinishedException
 from nonebot_plugin_alconna import on_alconna
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
@@ -384,20 +385,27 @@ class CommandManager:
 
         @wraps(target)
         async def dispatched(*args, **kwargs):
-            # 异步生成器：不 await，逐项收集后转多行文本发送
-            if inspect.isasyncgenfunction(target):
-                await matcher.finish(await turn_message_text(target(*args, **kwargs)))
-                return
-            result = await target(*args, **kwargs)
-            if result is None:
-                return
-            message = result
-            if isinstance(result, AsyncIterable):
-                message = await turn_message_text(result)
-            # 图片处理器返回 PNG 字节，包装为图片消息发送
-            if isinstance(message, bytes):
-                message = UniMessage(Image(raw=message))
-            return await matcher.finish(message)
+            try:
+                # 异步生成器：不 await，逐项收集后转多行文本发送
+                if inspect.isasyncgenfunction(target):
+                    await matcher.finish(await turn_message_text(target(*args, **kwargs)))
+                    return
+                result = await target(*args, **kwargs)
+                if result is None:
+                    return
+                message = result
+                if isinstance(result, AsyncIterable):
+                    message = await turn_message_text(result)
+                # 图片处理器返回 PNG 字节，包装为图片消息发送
+                if isinstance(message, bytes):
+                    message = UniMessage(Image(raw=message))
+                return await matcher.finish(message)
+            except FinishedException:
+                pass
+            except Exception as error:
+                # 渲染/处理失败：记录日志并发送错误提示，不让异常中断机器人
+                logger.exception(f'命令 {command.name} 处理器执行失败：{error}')
+                await matcher.finish(f'命令执行失败：{error}')
 
         return dispatched
 

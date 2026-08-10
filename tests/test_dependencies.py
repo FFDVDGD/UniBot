@@ -61,9 +61,7 @@ def _write_pyproject(root: Path, extensions: list[str]) -> None:
 def _setup(tmp_path: Path, monkeypatch) -> None:
     """把 Dependencies 模块的路径常量指向临时目录。"""
     monkeypatch.setattr(Dependencies, 'EXTENSIONS_DIR', tmp_path / 'Extensions')
-    monkeypatch.setattr(
-        Dependencies, 'CONFIG_EXTENSIONS_FILE', tmp_path / 'Config' / 'Extensions.toml'
-    )
+    monkeypatch.setattr(Dependencies, 'CONFIG_EXTENSIONS_FILE', tmp_path / 'Config' / 'Extensions.toml')
     monkeypatch.setattr(Dependencies, 'PYPROJECT_PATH', tmp_path / 'pyproject.toml')
 
 

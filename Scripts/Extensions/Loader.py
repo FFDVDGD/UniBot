@@ -22,7 +22,6 @@ from .Base import (
     ExtensionMetadata,
     ExtensionState,
     ExtensionType,
-    RenderKind,
     get_unibot_version,
     manifest_from_attributes,
     parse_manifest,
@@ -38,7 +37,11 @@ from .Errors import (
     LoadError,
     ManifestError,
 )
-from .Renderer import RendererRegistry
+from .Renderer import (
+    RendererRegistry,
+    TemplateRegistration,
+    build_template_config_model,
+)
 from .Service import ServiceRegistry
 from .Storage import (
     ExtensionConfigStore,
@@ -198,7 +201,15 @@ class ExtensionLoader:
             manifest = info.manifest
             self._validate_compatibility(extension_id, manifest)
             if not info.single_file:
-                self._validate_entry_module(extension_id, info.directory)
+                # 无代码扩展包没有 __init__.py 入口，跳过入口模块校验
+                is_no_code = self._is_no_code(manifest)
+                if not is_no_code:
+                    self._validate_entry_module(extension_id, info.directory)
+
+    @staticmethod
+    def _is_no_code(manifest: ExtensionManifest) -> bool:
+        """判断清单是否为无代码扩展包（template/resources）。"""
+        return bool({ExtensionType.template, ExtensionType.resources} & set(manifest.extension.types))
 
     def _validate_compatibility(self, extension_id: str, manifest) -> None:
         """校验扩展与当前 UniBot 版本的兼容性。"""
@@ -277,8 +288,20 @@ class ExtensionLoader:
                 self._register_display(extension_id, info, ExtensionState.disabled, '')
                 continue
             # 图片模式未开启：渲染扩展不加载，避免 html2pic 等依赖未安装时导入失败
-            if not config.image.mode and ExtensionType.render in info.manifest.extension.types:
+            if not config.image.mode and ExtensionType.renderer in info.manifest.extension.types:
                 self._register_display(extension_id, info, ExtensionState.disabled, '图片模式未开启，渲染扩展不加载')
+                continue
+            # 无代码扩展包（template/resources）：不导入入口、无 Extension 实例
+            if self._is_no_code(info.manifest):
+                try:
+                    self._commit_no_code_package(extension_id, info)
+                except Exception as error:
+                    logger.exception(f'加载无代码扩展 {extension_id} 失败！')
+                    blocked_reasons[extension_id] = f'无代码扩展加载失败：{error}'
+                    self._register_no_code_display(extension_id, info, ExtensionState.failed, str(error))
+                    continue
+                self._register_no_code_display(extension_id, info, ExtensionState.enabled, '')
+                logger.success(f'加载扩展 {extension_id} v{info.manifest.extension.version} 完毕！')
                 continue
             # 依赖被禁用/失败：进入 blocked
             dependency_block = self._find_blocked_dependency(extension_id, blocked_reasons)
@@ -305,7 +328,7 @@ class ExtensionLoader:
             try:
                 self._commit_services(extension)
                 self._commit_commands(extension_id, extension, builtin=info.builtin)
-                self._commit_renderers(extension, info.directory)
+                self._commit_renderers(extension)
             except Exception as error:
                 extension.mark_failed(f'声明阶段失败：{error}')
                 blocked_reasons[extension_id] = f'声明阶段失败：{error}'
@@ -337,6 +360,7 @@ class ExtensionLoader:
             data_store=data_store,
             config_store=config_store,
             metadata=ExtensionMetadata(manifest),
+            builtin=builtin,
         )
 
     def _find_blocked_dependency(self, extension_id: str, blocked_reasons: dict) -> str | None:
@@ -355,8 +379,70 @@ class ExtensionLoader:
         extension = Extension()
         extension._set_metadata(ExtensionMetadata(info.manifest))
         extension.state = state
+        extension.builtin = info.builtin
         extension.failure_reason = reason if reason else None
         self.manager.registry[extension_id] = extension
+
+    def _register_no_code_display(
+        self,
+        extension_id: str,
+        info: DiscoveredExtension,
+        state: ExtensionState,
+        reason: str,
+    ) -> None:
+        """登记无代码扩展包（template/resources）的展示信息，不创建 Extension 实例。"""
+        metadata = ExtensionMetadata(info.manifest)
+        self.manager.no_code_info[extension_id] = {
+            'id': metadata.id,
+            'name': metadata.name,
+            'version': metadata.version,
+            'author': metadata.author,
+            'description': metadata.description,
+            'types': [entry.value for entry in metadata.types],
+            'state': state.value,
+            'failure_reason': reason if reason else None,
+            'builtin': False,
+            'config_schema': None,
+        }
+
+    # ===== 无代码扩展包（template/resources） =====
+
+    def _commit_no_code_package(self, extension_id: str, info: DiscoveredExtension) -> None:
+        """提交无代码扩展包：按声明类型分别注册（template 编译配置、resources 校验根目录）。"""
+        manifest = info.manifest
+        types = set(manifest.extension.types)
+        allowed = {ExtensionType.template, ExtensionType.resources}
+        if not types <= allowed:
+            raise ManifestError(f'无代码扩展 {extension_id} 类型组合非法：{sorted(t.value for t in types)}！')
+        if ExtensionType.template in types:
+            self._commit_template_package(extension_id, info)
+        if ExtensionType.resources in types:
+            self._commit_resources_package(extension_id, info)
+
+    def _commit_template_package(self, extension_id: str, info: DiscoveredExtension) -> None:
+        """编译模板配置 schema、创建独立配置存储并注册 TemplateRegistration。"""
+        manifest = info.manifest
+        templates_dir = info.directory / manifest.template.entry
+        if not templates_dir.is_dir():
+            raise ManifestError(f'template 扩展 {extension_id} 入口目录 [{manifest.template.entry}] 不存在！')
+        config_model = build_template_config_model(extension_id, manifest.template.config_schema)
+        config_store = ExtensionConfigStore(CONFIG_ROOT, extension_id, config_model)
+        registration = TemplateRegistration(
+            extension_id=extension_id,
+            templates_dir=templates_dir,
+            resource_ids=tuple(manifest.template.resources),
+            config_model=config_model,
+            config_store=config_store,
+        )
+        self.manager.register_template(registration)
+
+    def _commit_resources_package(self, extension_id: str, info: DiscoveredExtension) -> None:
+        """校验资源根目录并注册 resources 扩展。"""
+        manifest = info.manifest
+        resources_root = info.directory / manifest.resources.root
+        if not resources_root.is_dir():
+            raise ManifestError(f'resources 扩展 {extension_id} 根目录 [{manifest.resources.root}] 不存在！')
+        self.manager.register_resources(extension_id, resources_root)
 
     @staticmethod
     def _import_extension(extension_id: str, info: DiscoveredExtension) -> Extension:
@@ -389,21 +475,11 @@ class ExtensionLoader:
             name = getattr(service, 'name', '') or service_cls.__name__
             extension.api.register(name, service)
 
-    def _commit_renderers(self, extension: Extension, directory: Path) -> None:
-        """
-        实例化并提交装饰器声明的渲染器到全局注册表。
-
-        主题扩展（`[render] kind` 含 theme）额外把约定目录 `Templates/`
-        注册为模板主题，key 优先取 `theme_name`，缺省用扩展 id。
-        """
+    def _commit_renderers(self, extension: Extension) -> None:
+        """实例化并提交装饰器声明的渲染器到全局注册表。"""
         renderer_registry = RendererRegistry(self.manager)
         for renderer_cls in extension.renderers:
             renderer_registry.register(renderer_cls())
-        if RenderKind.theme in extension.metadata.render_kind:
-            templates_dir = directory / 'Templates'
-            if templates_dir.is_dir():
-                theme_key = extension.metadata.theme_name or extension.id
-                renderer_registry.register_theme(theme_key, templates_dir)
 
     def _commit_commands(self, extension_id: str, extension: Extension, *, builtin: bool = False) -> None:
         for command_cls in extension.commands:

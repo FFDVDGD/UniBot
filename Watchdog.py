@@ -3,6 +3,7 @@ import signal
 import subprocess
 import sys
 import time
+import hashlib
 import tomllib
 from pathlib import Path
 
@@ -16,9 +17,10 @@ RESTART_WINDOW_SECONDS = 60
 BOT_PATH = Path('Bot.py')
 CONFIG_PATH = Path('Config.toml')
 PYPROJECT_PATH = Path('pyproject.toml')
+# 记录最近一次同步时的依赖指纹，用于判断依赖声明是否有变化
+HASH_FILE = Path('Data') / 'Project.hash'
 
 EXTRA_CONFIG_FIELDS = {
-    'ai': ('ai', 'enabled'),
     'webui': ('webui', 'enabled'),
 }
 
@@ -34,16 +36,6 @@ def get_enabled_extras() -> list[str]:
     return [
         extra for extra, (section, field) in EXTRA_CONFIG_FIELDS.items() if config.get(section, {}).get(field, False)
     ]
-
-
-def get_dependency_state() -> tuple[list, dict, tuple[str, ...]]:
-    """获取影响 uv 同步结果的依赖声明。"""
-    project = read_toml(PYPROJECT_PATH).get('project', {})
-    return (
-        project.get('dependencies', []),
-        project.get('optional-dependencies', {}),
-        tuple(get_enabled_extras()),
-    )
 
 
 def sync_dependencies() -> None:
@@ -63,14 +55,45 @@ def sync_dependencies() -> None:
     logger.success('同步项目依赖完成！')
 
 
+def get_dependency_fingerprint() -> str:
+    """计算影响 uv 同步结果的依赖指纹。
+
+    指纹由 pyproject.toml 的完整内容与当前启用的 extras 共同决定，
+    任一变化都会导致指纹不同，从而触发重新同步。
+    """
+    digest = hashlib.sha256()
+    digest.update(PYPROJECT_PATH.read_bytes())
+    for extra in get_enabled_extras():
+        digest.update(extra.encode('Utf-8'))
+    return digest.hexdigest()
+
+
+def sync_if_changed() -> bool:
+    """对比 Data 目录中的指纹文件，依赖声明有变化时同步并更新指纹。
+
+    首次运行（无指纹文件）也会同步。返回是否执行了同步。
+    """
+    current = get_dependency_fingerprint()
+    if HASH_FILE.exists():
+        try:
+            if HASH_FILE.read_text('Utf-8').strip() == current:
+                return False
+        except Exception as error:
+            logger.warning(f'依赖指纹文件读取失败，将重新同步：{error}')
+    sync_dependencies()
+    HASH_FILE.parent.mkdir(parents=True, exist_ok=True)
+    HASH_FILE.write_text(current, encoding='Utf-8')
+    return True
+
+
 def run() -> None:
     """守护机器人进程，处理异常退出与 WebUI 重启请求。"""
     restart_attempts = 0
     restart_window_started_at = time.monotonic()
     shutdown_requested = False
-    # 启动时先同步一次依赖，确保扩展依赖（extensions 组）已安装，再快照状态
-    sync_dependencies()
-    dependency_state = get_dependency_state()
+    # 仅当依赖声明（pyproject.toml / 启用的 extras）发生变化时才同步，
+    # 通过 Data 目录中的指纹文件判断，避免每次启动都执行 uv sync
+    sync_if_changed()
     bot_environment = os.environ.copy()
     bot_environment[WATCHDOG_ENVIRONMENT] = '1'
 
@@ -92,10 +115,8 @@ def run() -> None:
         exit_code = bot_process.wait()
 
         if exit_code == RESTART_EXIT_CODE:
-            current_dependency_state = get_dependency_state()
-            if current_dependency_state != dependency_state:
-                sync_dependencies()
-                dependency_state = current_dependency_state
+            # WebUI 重启前对比指纹，依赖声明有变化则先同步再启动
+            sync_if_changed()
             restart_attempts = 0
             restart_window_started_at = time.monotonic()
             logger.info('收到 WebUI 重启请求，正在重新启动机器人！')

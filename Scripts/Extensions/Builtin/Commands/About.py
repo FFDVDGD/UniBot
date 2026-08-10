@@ -3,7 +3,6 @@
 from typing import override
 
 from Scripts.Extensions import Command, Extension, SubCommand
-from Scripts.Globals import render_template
 from Scripts.Managers import version_manager
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
@@ -70,9 +69,11 @@ class AboutCommand(Command):
 
     async def _render_about(self) -> bytes:
         """渲染当前版本信息的模板图片。"""
-        return await render_template(
+        return await extension.render_image(
             'About',
             (500, 0),
-            version=version_manager.version,
-            has_update=version_manager.check_update(),
+            context={
+                'version': version_manager.version,
+                'has_update': version_manager.check_update(),
+            },
         )

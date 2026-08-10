@@ -174,7 +174,9 @@ class ExtensionMarketManager:
             return None
         return extension_entry.latest_release()
 
-    async def _install_transaction(self, extension_id: str, archive_data: bytes, release: MarketRelease) -> tuple[bool, str]:
+    async def _install_transaction(
+        self, extension_id: str, archive_data: bytes, release: MarketRelease
+    ) -> tuple[bool, str]:
         """在临时目录解压校验，成功后原子替换目标目录。"""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)

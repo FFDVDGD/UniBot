@@ -48,7 +48,7 @@ class PluginManager:
             'author': extra.get('author', '') if metadata else '',
             'homepage': metadata.homepage if metadata else '',
             'enabled': configured.get('enabled', True) if configured else True,
-            'type': 'builtin' if module_name.startswith('Plugins.') else 'external',
+            'type': 'builtin' if module_name.startswith('Scripts.') else 'external',
             'can_disable': PluginManager._can_disable(module_name),
             'dependencies': [],
             'config_schema': {},

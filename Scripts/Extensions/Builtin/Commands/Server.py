@@ -4,7 +4,6 @@ from typing import override
 
 from Scripts import Globals
 from Scripts.Extensions import Command, Extension
-from Scripts.Globals import render_template
 from Scripts.Messages import messages
 from Scripts.Utils import turn_message_text
 
@@ -32,7 +31,7 @@ class ServerCommand(Command):
             {'name': name, 'index': index}
             for index, name in enumerate(server_service.servers.keys() if server_service else ())
         ]
-        return await render_template('Server', (500, 0), servers=servers)
+        return await extension.render_image('Server', (500, 0), context={'servers': servers})
 
     async def server_handler(self):
         server_service = Globals.server_service

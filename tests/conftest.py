@@ -30,7 +30,10 @@ def _isolate_extension_manager():
     extension_manager.registry.clear()
     extension_manager.services.clear()
     extension_manager.renderers.clear()
-    extension_manager.themes.clear()
+    extension_manager.no_code_info.clear()
+    extension_manager.renderer_manager.templates.clear()
+    extension_manager.renderer_manager.resources.clear()
+    extension_manager.renderer_manager._environments.clear()
     command_manager._commands.clear()
     command_manager._built = False
     command_manager._matchers = []
@@ -38,7 +41,10 @@ def _isolate_extension_manager():
     extension_manager.registry.clear()
     extension_manager.services.clear()
     extension_manager.renderers.clear()
-    extension_manager.themes.clear()
+    extension_manager.no_code_info.clear()
+    extension_manager.renderer_manager.templates.clear()
+    extension_manager.renderer_manager.resources.clear()
+    extension_manager.renderer_manager._environments.clear()
     command_manager._commands.clear()
     command_manager._built = False
     command_manager._matchers = []

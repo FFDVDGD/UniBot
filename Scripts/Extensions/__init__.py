@@ -6,8 +6,6 @@ from .Base import (
     ExtensionMetadata,
     ExtensionState,
     ExtensionType,
-    RenderConfig,
-    RenderKind,
     manifest_from_attributes,
     parse_manifest,
 )
@@ -52,7 +50,16 @@ from .Market import (
     safe_extract_zip,
 )
 from .MarketManager import ExtensionMarketManager, market_manager
-from .Renderer import BaseRenderer, RendererManager, RendererRegistry
+from .Renderer import (
+    FONT_PATH,
+    RESOURCES_DIR,
+    BaseRenderer,
+    RendererManager,
+    RendererRegistry,
+    TemplateRegistration,
+    build_template_config_model,
+    encode_context,
+)
 from .Service import Service, ServiceRegistry
 from .Storage import (
     RESERVED_STATE_FILE,
@@ -73,8 +80,6 @@ __all__ = [
     'ExtensionType',
     'LoadError',
     'ManifestError',
-    'RenderConfig',
-    'RenderKind',
     'StorageError',
     'manifest_from_attributes',
     'parse_manifest',
@@ -116,8 +121,13 @@ __all__ = [
     'ServiceRegistry',
     # Renderer
     'BaseRenderer',
+    'FONT_PATH',
+    'RESOURCES_DIR',
     'RendererManager',
     'RendererRegistry',
+    'TemplateRegistration',
+    'build_template_config_model',
+    'encode_context',
     # Storage
     'ExtensionConfigStore',
     'ExtensionDataStore',

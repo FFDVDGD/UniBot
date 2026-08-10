@@ -19,6 +19,10 @@ class SampleConfig(BaseModel):
     city: str = Field(default='Shanghai', min_length=1)
 
 
+class EmptyConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+
 @pytest.fixture
 def config_root(tmp_path: Path) -> Path:
     return tmp_path / 'Config' / 'Extensions'
@@ -47,6 +51,21 @@ class TestConfigStore:
         store = ExtensionConfigStore(config_root, 'Other', SampleConfig)
         assert store.value.api_key == ''
         assert store.value.city == 'Shanghai'
+
+    def test_load_missing_creates_default_file(self, config_root: Path):
+        ExtensionConfigStore(config_root, 'WeatherExt', SampleConfig)
+        assert (config_root / 'WeatherExt.toml').exists()
+
+    def test_no_fields_skips_config_file(self, config_root: Path):
+        """无配置字段的扩展不创建配置文件，并清理历史遗留空文件。"""
+        legacy = config_root / 'About.toml'
+        legacy.parent.mkdir(parents=True, exist_ok=True)
+        legacy.write_text('', encoding='Utf-8')
+        store = ExtensionConfigStore(config_root, 'About', EmptyConfig)
+        assert store.value == EmptyConfig()
+        assert not legacy.exists()
+        assert not (config_root / 'About.toml').exists()
+        assert not (config_root / 'Command.toml').exists()
 
     def test_unknown_field_rejected_on_load(self, config_root: Path):
         # 手动写入未知字段

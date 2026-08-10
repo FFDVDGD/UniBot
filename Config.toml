@@ -1,7 +1,7 @@
 # UniBot 自定义配置
 # NoneBot 框架配置（PORT、HOST、SUPERUSERS、COMMAND_SEP、COMMAND_START、LOG_LEVEL）
 # 及适配器配置（ONEBOT_ACCESS_TOKEN、MINECRAFT_WS_URLS、MINECRAFT_ACCESS_TOKEN）仍在 .env 中配置。
-# 本文件使用 TOML 格式，嵌套表会自动展平为 Config 字段（如 [ai] 下的 enabled → ai_enabled）。
+# 本文件使用 TOML 格式，嵌套表会自动展平为 Config 字段（如 [webui] 下的 enabled → webui_enabled）。
 
 # 是否将所有的管理员视为超级用户。
 admin_superusers = true
@@ -71,39 +71,13 @@ enabled = true
 [image]
 # 是否启用图片模式。
 # 启用后机器人将会把所发送的消息渲染为图片，但需额外配置，且响应速度会变慢。
-mode = true
-
-# 生成图片的背景，即 css 中的 background-image 属性。
-# https://developer.mozilla.org/zh-CN/docs/Web/CSS/background-image
-# 支持 random 函数，传入一个本地目录，返回目录下的一张随机图片（无需再用url包裹）
-background = "random(\"./Resources/Backgrounds/\")"
+mode = false
+# 渲染引擎
 renderer = "html2pic"
-# 模板主题：主题扩展（[render] kind 含 theme）注册的 theme_name 或扩展 id。
-# "default" = 内置 DefaultTheme 扩展提供的默认模板，可被其他主题扩展替换。
-theme = "default"
-
-[ai]
-# 是否启用 AI 功能。
-enabled = false
-
-# OpenAI 兼容格式的 BaseUrl 参数，若启用 AI 则必填。
-base_url = ""
-
-# 模型的名称。
-model_name = ""
-
-# OpenAI 兼容格式的 ApiKey，若启用 AI 则必填。
-api_key = ""
-
-# AI 的提示词，可以在此描述他的基本信息。
-system_prompt = "你是一个可爱的小女孩，乖巧可爱，听父母的话……"
-
-[auto_reply]
-# 是否启用自动回复功能。
-enabled = false
-
-# 自动回复的关键词以及回复内容。
-# 若有多个关键词，用逗号隔开；如果需要同时匹配多个关键词，用空格隔开。
-
-[auto_reply.keywords]
-"看群公告里的 IP 地址。" = ["服务器 在哪", "服务器", "服务器地址"]
+# 当前模板包：template 扩展的 id。
+# "Default" = 内置默认模板扩展提供的模板，可被其他模板扩展替换（热生效）。
+template = "Default"
+# 自定义字体文件路径（如 /path/to/Font.ttf）。
+# 留空时自动从资源扩展根目录查找 Font.ttf。
+# font = ""
+font = ""
