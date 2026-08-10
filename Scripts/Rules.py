@@ -4,16 +4,18 @@ from nonebot_plugin_uninfo import SupportScope, Uninfo
 from .Config import config
 
 
-def is_message_group(session: Uninfo):
+def _in_groups(session: Uninfo, groups: list[str]) -> bool:
     scope = SupportScope(session.scope)
     group_info = f'{scope.name}:{session.scene.id}'
-    return group_info in config.message_groups
+    return group_info in groups
+
+
+def is_message_group(session: Uninfo):
+    return _in_groups(session, config.message_groups)
 
 
 def is_command_group(session: Uninfo):
-    scope = SupportScope(session.scope)
-    group_info = f'{scope.name}:{session.scene.id}'
-    return group_info in config.command_groups
+    return _in_groups(session, config.command_groups)
 
 
 message_group_rule = Rule(is_message_group)

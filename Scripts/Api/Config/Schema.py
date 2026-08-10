@@ -223,7 +223,12 @@ CONFIG_GROUPS = [
         ],
     },
     {'name': '玩家列表', 'keys': ['bot_prefix', 'list_compatible_mode', 'whitelist_command']},
-    {'name': '图片渲染', 'keys': ['image.mode', 'image.background']},
+    {
+        'name': '图片渲染',
+        'keys': ['image.mode', 'image.background'],
+        # 门控开关：仅当该 key 为 true 时组内字段可编辑；前端据此渲染锁定遮罩
+        'gated_by': 'image.mode',
+    },
     {'name': 'AI', 'keys': ['ai.enabled', 'ai.base_url', 'ai.model_name', 'ai.api_key', 'ai.system_prompt']},
     {'name': '自动回复', 'keys': ['auto_reply.enabled', 'auto_reply.keywords']},
     {'name': 'WebUI', 'keys': ['webui.enabled']},
@@ -283,7 +288,8 @@ ENV_SCHEMA = [
         'label': 'QQ 机器人',
         'type': 'json',
         'default': [],
-        'description': 'QQ 官方机器人列表（JSON 数组），每项：id（AppID）、token、secret、intent（事件订阅对象）、use_websocket（默认 True，False 使用 WebHook）',
+        'description': 'QQ 官方机器人列表（JSON 数组），每项：id（AppID）、token、secret、'
+        'intent（事件订阅对象）、use_websocket（默认 True，False 使用 WebHook）',
     },
     {
         'key': 'QQ_IS_SANDBOX',
@@ -320,7 +326,8 @@ ENV_SCHEMA = [
         'label': 'Discord 机器人',
         'type': 'json',
         'default': [],
-        'description': 'Discord 机器人列表（JSON 数组），每项：token（必填）、intent（事件订阅对象，message_content 为特权 Intent）、application_commands（斜杠命令注册范围，如 {"*": ["*"]}）',
+        'description': 'Discord 机器人列表（JSON 数组），每项：token（必填）、intent（事件订阅对象，'
+        'message_content 为特权 Intent）、application_commands（斜杠命令注册范围，如 {"*": ["*"]}）',
     },
     {
         'key': 'DISCORD_API_VERSION',
@@ -379,7 +386,8 @@ ENV_SCHEMA = [
         'label': 'Satori 服务',
         'type': 'json',
         'default': [],
-        'description': 'Satori 客户端列表（JSON 数组），每项：host、port、path（默认空）、token（视服务端要求）、timeout（默认 30）、secure（是否 TLS，默认 False）',
+        'description': 'Satori 客户端列表（JSON 数组），每项：host、port、path（默认空）、'
+        'token（视服务端要求）、timeout（默认 30）、secure（是否 TLS，默认 False）',
     },
     # ===== Minecraft =====
     {

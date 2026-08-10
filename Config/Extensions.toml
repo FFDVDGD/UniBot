@@ -28,5 +28,5 @@ enabled = true
 [Server]
 enabled = true
 
-[WeatherExt]
-enabled = false
+[Html2Pic]
+enabled = true

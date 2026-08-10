@@ -1,7 +1,7 @@
 """内置服务：Minecraft 服务器交互。"""
 
-import re
 import asyncio
+import re
 from typing import override
 
 from nonebot import get_adapter

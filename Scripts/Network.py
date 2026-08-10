@@ -41,7 +41,7 @@ async def request(url: str):
 
 
 async def download(url: str) -> BytesIO | None:
-    """下载单个 URL 的文件内容，成功返回 BytesIO，失败返回 False。"""
+    """下载单个 URL 的文件内容，成功返回 BytesIO，失败返回 None。"""
     try:
         download_bytes = BytesIO()
         async with client.stream('GET', url) as stream:

@@ -1,19 +1,24 @@
 """
-内置渲染引擎扩展：html2pic（默认/回退）。
+html2pic 渲染引擎扩展。
 
 将 HTML+CSS 渲染为 PNG 字节，作为默认引擎与回退引擎。
-由 Loader 作为内置扩展加载，经实例装饰器登记渲染器。
+依赖 `html2pic` 库，经 `Extension.toml` 的 `[dependencies].python` 声明，
+由框架自动同步到 `pyproject.toml` 的 `extensions` 可选组。
 """
 
 import asyncio
+import logging
 from io import BytesIO
 
 from html2pic import Html2Pic
 
 from Scripts.Extensions import BaseRenderer, Extension
 
-# 创建唯一扩展实例，能力经实例装饰器登记
-extension = Extension(id='Html2Pic', name='html2pic 渲染引擎', version='1.0.0', types=('render',))
+
+# logging.basicConfig() 污染 root logger，导入时清理一次）。
+logging.getLogger().handlers.clear()
+# 唯一扩展实例，能力经实例装饰器登记；元数据以 Extension.toml 为准
+extension = Extension(types=('render',))
 
 
 @extension.register_renderer

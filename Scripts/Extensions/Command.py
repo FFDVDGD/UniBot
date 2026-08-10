@@ -44,7 +44,7 @@ ParentT = TypeVar('ParentT', bound='Command')
 
 
 def _format_path(extension_id: str, path: list[str]) -> str:
-    """格式化字段路径，如 `WeatherExt.command.weather.argument.city`。"""
+    """格式化字段路径，如 `MyExt.command.weather.argument.city`。"""
     return f'{extension_id}.' + '.'.join(path)
 
 
@@ -273,7 +273,7 @@ class CommandManager:
             if argument.name in seen_names:
                 raise CommandFieldError(f'{_format_path(extension_id, argument_path)} 参数名重复！')
             seen_names.add(argument.name)
-            if argument.required is False and argument.default is UNSET:
+            if not argument.required and argument.default is UNSET:
                 raise CommandFieldError(f'{_format_path(extension_id, argument_path)} 可选参数必须提供默认值！')
 
         seen_subcommands: set[str] = set()
@@ -293,7 +293,7 @@ class CommandManager:
 
     @staticmethod
     def _command_extension(command_id: str) -> str:
-        """从 command_id 中提取扩展 id（如 `extension:WeatherExt:weather`）。"""
+        """从 command_id 中提取扩展 id（如 `extension:MyExt:weather`）。"""
         parts = command_id.split(CommandManager.command_id_separator)
         if len(parts) >= 3 and parts[0] == 'extension':
             return parts[1]
@@ -316,11 +316,10 @@ class CommandManager:
             value_type = argument._resolved_type()
             if argument.required:
                 args.add(argument.name, value=value_type)
-                continue
-            if argument.default is not UNSET and argument.default is not None:
+            elif argument.default is not UNSET and argument.default is not None:
                 args.add(f'{argument.name}?', value=value_type, default=argument.default)
-                continue
-            args.add(f'{argument.name}?', value=value_type)
+            else:
+                args.add(f'{argument.name}?', value=value_type)
         return args
 
     def _build_subcommand(self, subcommand: Command[Any]) -> Subcommand:

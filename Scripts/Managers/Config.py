@@ -36,7 +36,7 @@ class ConfigManager:
         file_content = self.env_path.read_text('Utf-8')
         for line in file_content.split('\n'):
             line = line.strip()
-            if line.startswith('#') or (not line):
+            if line.startswith('#') or not line:
                 self.mapping.append(line)
                 continue
             key, value = line.split('=', 1)
@@ -83,7 +83,7 @@ class ConfigManager:
         logger.info('正在写入配置……')
         lines = []
         for line in self.mapping:
-            if line.startswith('#') or (not line):
+            if line.startswith('#') or not line:
                 lines.append(line)
                 continue
             lines.append(f'{line}={dumps(self.environment[line], ensure_ascii=False)}')
@@ -137,6 +137,10 @@ class ConfigManager:
         """获取 pyproject.toml 中登记的依赖列表。"""
         dependencies = self.read_pyproject().get('project', {}).get('dependencies', [])
         return list(dependencies)
+
+    def get_dependency_packages(self) -> set[str]:
+        """获取已登记依赖的包名集合（去除 extras 与版本约束）。"""
+        return {self._package_base(dependency) for dependency in self.get_dependencies()}
 
     def remove_dependency(self, package: str):
         """从 pyproject.toml 的 dependencies 中移除指定包。"""
@@ -209,6 +213,7 @@ class ConfigManager:
         """以原始文本写回 Messages.toml，并校验语法。"""
         tomlkit.parse(content)
         self.messages_path.write_text(content, encoding='Utf-8')
+        # 函数内导入：Scripts.Messages 被 Scripts.Config 等模块加载链引用，延迟到调用时避免环
         from Scripts.Messages import reload_messages
 
         reload_messages()

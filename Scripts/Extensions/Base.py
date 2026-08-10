@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import tomllib
 from enum import StrEnum
 from typing import Generic, TypeVar, cast
 
-import tomllib
 from nonebot.log import logger
 from pydantic import BaseModel, ConfigDict, Field
+
+from Scripts.Managers import config_manager
 
 from .Errors import (
     ExtensionError,
@@ -218,9 +220,7 @@ class Extension(Generic[ConfigModelT]):
         调用 `_bind()`，重复绑定必须失败。
     """
 
-    # 单文件扩展的元数据类属性（无 Extension.toml 时由 Loader 读取）
-    # id 通过 property 暴露：绑定后取自 metadata，未绑定取自类属性/构造参数
-    _declared_id: str = ''
+    # 公开元数据类属性（单文件扩展由类属性声明，多文件扩展以 Extension.toml 为准）
     name: str = ''
     version: str = ''
     author: str = ''
@@ -232,13 +232,14 @@ class Extension(Generic[ConfigModelT]):
 
     logger = logger
 
-    # 绑定状态
-    _bound: bool = False
-
     state: ExtensionState = ExtensionState.discovered
 
     # 失败原因（mark_failed 时记录）
     failure_reason: str | None = None
+
+    # 私有状态：id 声明值（未绑定前生效）与绑定标志
+    _declared_id: str = ''
+    _bound: bool = False
 
     def __init__(
         self,
@@ -421,6 +422,4 @@ class Extension(Generic[ConfigModelT]):
 
 def get_unibot_version() -> str:
     """获取当前 UniBot 版本号（去除前缀 v）。"""
-    from Scripts.Managers import config_manager
-
     return config_manager.version.lstrip('v')

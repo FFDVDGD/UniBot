@@ -18,7 +18,20 @@ def mask_api_key(data: dict) -> dict:
     """对 ai.api_key 进行脱敏处理。"""
     result = deepcopy(data)
     ai_config = result.get('ai', {})
-    api_key = ai_config.get('api_key', '')
-    if api_key:
+    if api_key := ai_config.get('api_key', ''):
         ai_config['api_key'] = api_key[:4] + '****'
+    return result
+
+
+def sanitize_none(data: dict) -> dict:
+    """递归替换 None 值为空字符串（tomlkit 不支持 None 值）。"""
+    result = {}
+    for key, value in data.items():
+        if value is None:
+            result[key] = ''
+            continue
+        if isinstance(value, dict):
+            result[key] = sanitize_none(value)
+            continue
+        result[key] = value
     return result

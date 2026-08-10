@@ -21,13 +21,11 @@ async def startup() -> None:
     from Scripts.Extensions import extension_manager
     from Scripts.Managers import (
         data_manager,
-        plugin_manager,
         version_manager,
         webui_manager,
     )
 
     data_manager.load()
-    plugin_manager.load()
 
     asyncio.create_task(version_manager.init())
 

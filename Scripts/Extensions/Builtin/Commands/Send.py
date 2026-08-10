@@ -8,7 +8,7 @@ from nonebot_plugin_uninfo import Uninfo
 from Scripts import Globals
 from Scripts.Extensions import Command, Extension
 from Scripts.Messages import messages
-from Scripts.Utils import get_platform_name, get_player_name
+from Scripts.Utils import get_platform_name
 
 # 创建唯一扩展实例，能力经实例装饰器登记
 extension = Extension(id='Send', name='消息发送', version='1.0.0', types=('command',))
@@ -35,13 +35,11 @@ class SendCommand(Command):
         if not message_text:
             return messages.commands.send.param_error
         user_id = str(session.user.id)
-        user_name = session.user.name or get_player_name(str(session.user.name))
         platform_name = get_platform_name(session.scope)
         player_service, server_service = Globals.player_service, Globals.server_service
-        name = player_service.players.get(user_id, (user_name,))[0] if player_service else user_name
         if server_service is None:
             return messages.commands.send.not_bound
-        if name:
+        if name := player_service.players.get(user_id, (session.user.name,))[0] if player_service else session.user.name:
             await server_service.broadcast(f'[{platform_name}]<{name}> {message_text}')
             return messages.commands.send.sent.format(content=message_text)
         await server_service.broadcast(f'[{platform_name}]<未知用户> {message_text}')

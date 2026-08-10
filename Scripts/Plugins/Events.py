@@ -164,7 +164,7 @@ async def handle_player_chat(event: PlayerChatEvent):
     old_message = chat_message
     for command in ('send', 'gp', 'qq', 'q'):
         if chat_message.startswith(command):
-            chat_message = chat_message.lstrip(command).strip()
+            chat_message = chat_message[len(command):].strip()
     if old_message == chat_message:
         await player_chat_watcher.finish()
     server_service = Globals.server_service

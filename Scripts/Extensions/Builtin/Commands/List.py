@@ -39,11 +39,7 @@ class ListCommand(Command):
 
     @override
     async def image_handler(self, server: Match[str]) -> bytes | None:
-        """
-        渲染在线玩家列表为图片，返回 PNG 字节（由框架在图像模式发送）。
-
-                查询失败时直接返回文本错误，由框架发送并跳过图片。
-        """
+        """渲染在线玩家列表为图片，返回 PNG 字节（由框架在图像模式发送）。"""
         server_flag = server.result if server.available else None
         _, response = await self.get_players(server_flag)
         if not isinstance(response, dict):
@@ -91,7 +87,7 @@ class ListCommand(Command):
         results = await asyncio.gather(
             *(self.query_server_players(server, name) for name, server in server_service.servers.items())
         )
-        players = dict(zip(server_service.servers.keys(), results))
+        players = dict(zip(server_service.servers, results))
         return True, players
 
     async def query_server_players(self, server, server_name: str):
@@ -100,8 +96,6 @@ class ListCommand(Command):
             cached = player_list_cache.get(server_name, [])
             return self.split_players(list(cached))
         server_service = Globals.server_service
-        if server_service is None:
-            return [], []
         player_list, _ = await server_service.get_player_list(server)
         return self.split_players(player_list)
 

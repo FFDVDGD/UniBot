@@ -31,10 +31,9 @@ def get_status_data() -> dict:
         'memory_mb': round(psutil.Process().memory_info().rss / 1024 / 1024, 1),
         'cpu_percent': psutil.Process().cpu_percent(interval=0.1),
         'servers_online': len(servers),
-        'servers_total': len(servers),
         'players_bound': players_bound,
         'adapters': adapter_names,
-        'webui_enabled': config.webui.get('enabled', False) if isinstance(config.webui, dict) else config.webui.enabled,
+        'webui_enabled': config.webui.enabled,
         'ws_clients': len(ws_clients),
     }
 

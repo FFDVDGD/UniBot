@@ -39,15 +39,6 @@ def gen_usage(command: Command) -> str:
     return ' '.join(parts)
 
 
-def sub_usage(command: Command) -> str:
-    """根据子命令实例生成用法字符串。"""
-    parts = [command.name]
-    for argument in command.arguments:
-        display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
-        parts.append(display)
-    return ' '.join(parts)
-
-
 def node_args(command: Command) -> list[dict]:
     """提取命令参数（含描述）用于图片渲染。"""
     return [
@@ -104,7 +95,7 @@ class HelpCommand(Command):
         if command is None:
             return None
         sub_list = [
-            {'name': sub.name, 'usage': sub_usage(sub), 'description': sub.description or ''}
+            {'name': sub.name, 'usage': gen_usage(sub), 'description': sub.description or ''}
             for sub in command.subcommands
         ]
         return {
@@ -148,7 +139,8 @@ class HelpCommand(Command):
             branch = '└─' if index == len(command.subcommands) - 1 else '├─'
             continuation = '    ' if index == len(command.subcommands) - 1 else '│   '
             subcommand_description = f' — {subcommand.description}' if subcommand.description else ''
-            yield f'        {branch} {sub_usage(subcommand)}{subcommand_description}'
+            yield f'        {branch} {gen_usage(subcommand)}{subcommand_description}'
             for arg in subcommand.arguments:
                 if arg.description:
-                    yield f'        {continuation}    {messages.commands.help.arg_line.format(name=arg.name, notice=arg.description)}'
+                    arg_line = messages.commands.help.arg_line.format(name=arg.name, notice=arg.description)
+                    yield f'        {continuation}    {arg_line}'

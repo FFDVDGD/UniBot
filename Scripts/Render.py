@@ -1,7 +1,6 @@
 import asyncio
 import html
 import json
-import logging
 import re
 from pathlib import Path
 from random import choice
@@ -12,12 +11,9 @@ from nonebot.log import logger
 from .Config import config
 
 # 兼容段：为保持一致保留 html2pic 相关日志清理（Stretchable 依赖会调用
-# logging.basicConfig() 污染 root logger，导入时清理一次）。
-logging.getLogger().handlers.clear()
 
 RESOURCES_DIR = Path(__file__).parent.parent / 'Resources'
 FONT_PATH: Path = RESOURCES_DIR / 'Font.ttf'
-TEMPLATES_DIR = RESOURCES_DIR / 'Images'
 
 # 支持的图片扩展名
 _IMAGE_SUFFIXES = {'.png', '.jpg', '.jpeg', '.webp', '.bmp'}
@@ -61,18 +57,28 @@ def resolve_random(value: str) -> str:
 
 
 def _build_environment() -> Environment:
-    """构建 Jinja2 环境：主题优先，内置回退。"""
-    loaders = []
-    # 主题扩展优先（choice 按顺序，前面的 loader 命中则使用主题模板）
-    if config.image.theme and config.image.theme != 'default':
-        from Scripts.Extensions import extension_manager
+    """
+    构建 Jinja2 环境：当前主题优先，默认主题（DefaultTheme）回退。
 
-        templates_dir = extension_manager.themes.get(config.image.theme)
-        if templates_dir is not None:
-            loaders.append(FileSystemLoader(str(templates_dir)))
-        if templates_dir is None:
-            logger.warning(f'主题 {config.image.theme} 不存在，回退内置模板！')
-    loaders.append(FileSystemLoader(str(TEMPLATES_DIR)))
+    当前主题（`config.image.theme`）从扩展管理器主题注册表取模板目录；
+    指定主题缺失时回退默认主题扩展（theme_name='default'），两者都缺失时抛错。
+    """
+    loaders = []
+    # 函数内导入：Scripts.Extensions 初始化时可能反向触发本模块（经扩展模块 -> Globals），
+    # 延迟到调用时再取 extension_manager，避免导入期循环依赖
+    from Scripts.Extensions import extension_manager
+
+    templates_dir = extension_manager.themes.get(config.image.theme)
+    if templates_dir is not None:
+        loaders.append(FileSystemLoader(str(templates_dir)))
+    else:
+        logger.warning(f'主题 {config.image.theme} 不存在，回退默认主题！')
+    # 默认主题（DefaultTheme 扩展）作为最终回退
+    default_dir = extension_manager.themes.get('default')
+    if default_dir is not None and (not loaders or default_dir != templates_dir):
+        loaders.append(FileSystemLoader(str(default_dir)))
+    if not loaders:
+        raise RuntimeError('未找到可用模板主题，请确认 DefaultTheme 扩展已启用！')
     environment = Environment(loader=ChoiceLoader(loaders), enable_async=True)
     environment.globals['random'] = random_image
     return environment
@@ -98,6 +104,7 @@ def invalidate_environment() -> None:
 
 async def render(html: str, css: str) -> bytes:
     """委托当前渲染引擎渲染 HTML+CSS 为 PNG 字节。"""
+    # 函数内导入：与 _build_environment 同理，避免导入期循环依赖
     from Scripts.Extensions import extension_manager
 
     return await extension_manager.renderer_manager.render(html, css, config.image.renderer)
@@ -125,7 +132,7 @@ async def render_template(template_name: str, size: tuple[int, int], **kwargs) -
     """
     渲染模板为 PNG 图片字节
 
-        template_name: 模板名称，如 'List'，对应 Resources/Images/List/List.html 和 List.css
+        template_name: 模板名称，如 'List'，对应主题模板目录下的 List/List.html 和 List.css
         size: (width, height)。
     """
     width, height = size

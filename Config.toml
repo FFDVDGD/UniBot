@@ -71,12 +71,16 @@ enabled = true
 [image]
 # 是否启用图片模式。
 # 启用后机器人将会把所发送的消息渲染为图片，但需额外配置，且响应速度会变慢。
-mode = false
+mode = true
 
 # 生成图片的背景，即 css 中的 background-image 属性。
 # https://developer.mozilla.org/zh-CN/docs/Web/CSS/background-image
 # 支持 random 函数，传入一个本地目录，返回目录下的一张随机图片（无需再用url包裹）
 background = "random(\"./Resources/Backgrounds/\")"
+renderer = "html2pic"
+# 模板主题：主题扩展（[render] kind 含 theme）注册的 theme_name 或扩展 id。
+# "default" = 内置 DefaultTheme 扩展提供的默认模板，可被其他主题扩展替换。
+theme = "default"
 
 [ai]
 # 是否启用 AI 功能。

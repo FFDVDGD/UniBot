@@ -42,11 +42,7 @@ def parse_driver(driver_value: str | list | None) -> list[str]:
     if not driver_value:
         return [BASE_DRIVER]
     items = driver_value if isinstance(driver_value, list) else driver_value.split('+')
-    drivers = []
-    for item in items:
-        item = item.strip()
-        if item:
-            drivers.append(item)
+    drivers = [stripped for item in items if (stripped := item.strip())]
     if BASE_DRIVER not in drivers:
         drivers.append(BASE_DRIVER)
     return drivers

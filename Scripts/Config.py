@@ -11,7 +11,7 @@ class ImageConfig(BaseModel):
     mode: bool = False
     background: str | None = None
     renderer: str = 'html2pic'  # 当前使用的渲染引擎 name，必须是已注册的引擎
-    theme: str = 'default'  # 当前主题（'default' = 内置模板，或主题扩展 id）
+    theme: str = 'default'  # 当前模板主题（主题扩展的 theme_name 或 id，'default' = 默认模板主题扩展）
 
 
 class AiConfig(BaseModel):
@@ -75,20 +75,14 @@ class Config(BaseModel):
         return self
 
 
-toml_data = tomlkit.parse(TOML_PATH.read_text('Utf-8'))
-
-merged = get_plugin_config(Config).model_dump()
-merged.update(toml_data)
-
-config = Config.model_validate(merged)
-
-
 def _merge_toml(content: str) -> dict:
     """解析 Config.toml 文本内容，并合并到模型默认值上。"""
-    toml_data = tomlkit.parse(content)
     merged = get_plugin_config(Config).model_dump()
-    merged.update(toml_data)
+    merged.update(tomlkit.parse(content))
     return merged
+
+
+config = Config.model_validate(_merge_toml(TOML_PATH.read_text('Utf-8')))
 
 
 def validate_config_content(content: str) -> str | None:

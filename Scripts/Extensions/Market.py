@@ -103,19 +103,14 @@ def _validate_archive(zip_file: ZipFile) -> None:
 
 
 def extract_market_package(archive_data: bytes, target_dir: Path) -> ExtensionManifest:
-    """
-    安全解压市场扩展包并读取其清单，返回清单信息。
-
-        解压前先校验全部成员安全性，再读取根目录 `Extension.toml` 校验 id。
-    """
+    """安全解压市场扩展包并读取其清单，返回清单信息（解压前先校验全部成员安全性）。"""
     # 先整体校验（不改写磁盘），再解压
     if not is_zipfile(BytesIO(archive_data)):
         raise ManifestError('扩展包不是有效的 zip 文件！')
     with ZipFile(BytesIO(archive_data)) as zip_file:
         _validate_archive(zip_file)
         manifest = _read_manifest_from_zip(zip_file)
-    target_dir.mkdir(parents=True, exist_ok=True)
-    with ZipFile(BytesIO(archive_data)) as zip_file:
+        target_dir.mkdir(parents=True, exist_ok=True)
         zip_file.extractall(target_dir)
     return manifest
 
@@ -135,7 +130,5 @@ def _read_manifest_from_zip(zip_file: ZipFile) -> ExtensionManifest:
     try:
         content = zip_file.read(manifest_name).decode('Utf-8')
         return parse_manifest(content)
-    except ManifestError:
-        raise
     except Exception as error:
         raise ManifestError(f'扩展包清单解析失败：{error}') from error

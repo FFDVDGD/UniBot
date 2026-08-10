@@ -1,23 +1,37 @@
 """
-扩展 Python 依赖聚合：扫描扩展清单，同步到 pyproject.toml 的 extensions 组。
+扩展 Python 依赖聚合：扫描已启用扩展清单，同步到 pyproject.toml 的 extensions 组。
 
 扩展通过 `Extension.toml` 的 `[dependencies].python` 声明第三方 Python 库。
-本模块把所有扩展的依赖聚合去重后写入 `pyproject.toml` 的
+本模块把**已启用**扩展的依赖聚合去重，合并写入 `pyproject.toml` 的
 `[project.optional-dependencies].extensions` 组，供 `uv sync --extra extensions`
-统一安装。卸载扩展后再次聚合，避免残留无用依赖。
+统一安装。已写入的既有依赖会保留：未启用或卸载的扩展不会自动移除已有条目，
+避免误删用户环境中已安装的包。
 """
 
 import tomllib
 from pathlib import Path
 
 import tomlkit
+from nonebot.log import logger
 
 # 扩展目录根与清单文件名（与 Loader 保持一致）
 EXTENSIONS_DIR = Path('Extensions')
 MANIFEST_FILE = 'Extension.toml'
 PYPROJECT_PATH = Path('pyproject.toml')
+# 扩展启停配置文件（与 Loader 保持一致）
+CONFIG_EXTENSIONS_FILE = Path('Config') / 'Extensions.toml'
 # 收集所有扩展依赖的 optional-dependencies 组名
 EXTENSIONS_EXTRA = 'extensions'
+
+
+def _is_enabled(extension_id: str) -> bool:
+    """读取 Config/Extensions.toml 中扩展的启停标志，缺失时默认启用。"""
+    try:
+        data = tomlkit.parse(CONFIG_EXTENSIONS_FILE.read_text('Utf-8'))
+    except Exception as error:
+        logger.warning(f'扩展启停配置读取失败：{error}，默认全部启用！')
+        return True
+    return bool(data.get(extension_id, {}).get('enabled', True))
 
 
 def _read_extension_dependencies(manifest_path: Path) -> list[str]:
@@ -32,13 +46,16 @@ def _read_extension_dependencies(manifest_path: Path) -> list[str]:
 
 
 def collect_extension_dependencies() -> list[str]:
-    """扫描 Extensions/ 下所有扩展目录，聚合去重所有 Python 依赖。"""
+    """扫描 Extensions/ 下所有**已启用**扩展目录，聚合去重所有 Python 依赖。"""
     if not EXTENSIONS_DIR.exists():
         return []
     collected: list[str] = []
     seen: set[str] = set()
     for entry in EXTENSIONS_DIR.iterdir():
         if not entry.is_dir() or entry.name.startswith(('.', '_')):
+            continue
+        # 未启用的扩展不参与依赖收集（其已写入的依赖也不会被移除）
+        if not _is_enabled(entry.name):
             continue
         manifest_path = entry / MANIFEST_FILE
         if not manifest_path.exists():
@@ -51,11 +68,23 @@ def collect_extension_dependencies() -> list[str]:
 
 
 def sync_extension_dependencies() -> None:
-    """读取 pyproject.toml，把收集到的扩展依赖写入 extensions 可选组并写回。"""
+    """
+    把已启用扩展收集到的依赖合并写入 pyproject.toml 的 extensions 组。
+
+    只增不删：保留组内已有的依赖条目，仅追加新收集到的依赖。这样未启用
+    扩展的依赖不会新增，而已写入的依赖（可能已被手动安装）也不会被移除。
+    """
     if not PYPROJECT_PATH.exists():
         return
     body = tomlkit.parse(PYPROJECT_PATH.read_text('Utf-8'))
     project = body.setdefault('project', {})
     optional = project.setdefault('optional-dependencies', {})
-    optional[EXTENSIONS_EXTRA] = collect_extension_dependencies()
+    existing = list(optional.get(EXTENSIONS_EXTRA, []))
+    seen: set[str] = set(existing)
+    merged = list(existing)
+    for dependency in collect_extension_dependencies():
+        if dependency not in seen:
+            seen.add(dependency)
+            merged.append(dependency)
+    optional[EXTENSIONS_EXTRA] = merged
     PYPROJECT_PATH.write_text(tomlkit.dumps(body), encoding='Utf-8')

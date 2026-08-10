@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .Auth import router as auth_router
@@ -25,7 +25,7 @@ api_router.include_router(extensions_router)
 api_router.include_router(ws_router)
 
 
-def setup_cors(app):
+def setup_cors(app: FastAPI) -> None:
     """配置 CORS，仅允许同源或开发环境 localhost:5173。"""
     app.add_middleware(
         CORSMiddleware,

@@ -59,7 +59,7 @@ async def update_user(user_id: str, body: UpdateUserRequest, current_user: dict 
     """修改用户昵称或角色，不可修改自己的角色。"""
     if user_id == current_user['user_id'] and body.role is not None:
         return {'code': 1, 'data': None, 'message': '不可修改自己的角色'}
-    if body.role and body.role not in ('admin', 'operator', 'viewer'):
+    if body.role is not None and body.role not in ('admin', 'operator', 'viewer'):
         return {'code': 1, 'data': None, 'message': '无效的角色'}
     success = await data_manager.update_user(user_id, nickname=body.nickname, role=body.role)
     if not success:

@@ -1,5 +1,6 @@
 """扩展系统 WebUI REST 路由：已安装扩展、配置、启停、渲染引擎与主题。"""
 
+import tomlkit
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from Scripts.Api.Config.Router import TOML_PATH
@@ -13,11 +14,7 @@ router = APIRouter(prefix='/api/extensions', tags=['Extensions'])
 
 
 def _mask_config(extension) -> dict:
-    """
-    获取扩展配置并脱敏密钥字段（只返回“已配置”状态）。
-
-        未绑定/禁用的扩展无配置，返回空字典。
-    """
+    """获取扩展配置并脱敏密钥字段（只返回“已配置”状态）。"""
     if not extension.is_bound:
         return {}
     raw = extension.config.value.model_dump()
@@ -168,11 +165,6 @@ async def switch_theme(request: Request, user: dict = Depends(require_role('admi
 
 def _patch_image_config(field_name: str, value: str) -> None:
     """将 image.<field> 写入 Config.toml 并热更新内存配置。"""
-    current_data = config.model_dump()
-    current_data['image'] = {**current_data['image'], field_name: value}
-
-    import tomlkit
-
     try:
         toml_document = tomlkit.parse(TOML_PATH.read_text('Utf-8'))
     except FileNotFoundError:

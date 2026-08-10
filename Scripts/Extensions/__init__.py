@@ -52,8 +52,7 @@ from .Market import (
     safe_extract_zip,
 )
 from .MarketManager import ExtensionMarketManager, market_manager
-from .Renderer import BaseRenderer, RendererRegistry
-from .Renderers import RendererManager
+from .Renderer import BaseRenderer, RendererManager, RendererRegistry
 from .Service import Service, ServiceRegistry
 from .Storage import (
     RESERVED_STATE_FILE,
@@ -117,9 +116,8 @@ __all__ = [
     'ServiceRegistry',
     # Renderer
     'BaseRenderer',
-    'RendererRegistry',
-    # Renderers
     'RendererManager',
+    'RendererRegistry',
     # Storage
     'ExtensionConfigStore',
     'ExtensionDataStore',

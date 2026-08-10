@@ -14,7 +14,6 @@ class DataManager:
     users: dict[str, dict] = {}
 
     data_dir = Path('Data')
-    resources_dir = Path('Resources')
 
     users_file = data_dir / 'Users.json'
     secret_file = data_dir / 'Secret.key'
@@ -45,11 +44,6 @@ class DataManager:
         secret_key = uuid.uuid4().hex + uuid.uuid4().hex
         self.secret_file.write_text(secret_key, encoding='Utf-8')
         return secret_key
-
-    def load_bot_data(self):
-        """加载机器人运行时数据。"""
-        logger.debug('正在加载机器人数据……')
-        logger.success('加载机器人数据完毕！')
 
     async def save(self):
         """持久化 WebUI 用户数据。"""

@@ -15,10 +15,11 @@ from pathlib import Path
 
 import tomlkit
 from nonebot.log import logger
+from packaging.specifiers import SpecifierSet
 
 from Scripts.Network import github_download, request
 
-from .Base import ExtensionManifest
+from .Base import ExtensionManifest, get_unibot_version, parse_manifest
 from .Dependencies import sync_extension_dependencies
 from .Errors import ManifestError
 from .Loader import EXTENSIONS_DIR, STATES_FILE, STATES_ROOT
@@ -26,6 +27,7 @@ from .Manager import extension_manager
 from .Market import (
     ExtensionInstallState,
     MarketExtension,
+    MarketRelease,
     extract_market_package,
 )
 
@@ -163,7 +165,7 @@ class ExtensionMarketManager:
             return False, f'扩展安装失败：{error}'
 
     @staticmethod
-    def _select_release(extension_entry: MarketExtension, version: str) -> object | None:
+    def _select_release(extension_entry: MarketExtension, version: str) -> MarketRelease | None:
         """按指定版本或最新版本选择 Release 条目。"""
         if version:
             for release in extension_entry.releases:
@@ -172,7 +174,7 @@ class ExtensionMarketManager:
             return None
         return extension_entry.latest_release()
 
-    async def _install_transaction(self, extension_id: str, archive_data: bytes, release: object) -> tuple[bool, str]:
+    async def _install_transaction(self, extension_id: str, archive_data: bytes, release: MarketRelease) -> tuple[bool, str]:
         """在临时目录解压校验，成功后原子替换目标目录。"""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)
@@ -214,8 +216,6 @@ class ExtensionMarketManager:
     @staticmethod
     def _validate_market_compatibility(extension_id: str, manifest: ExtensionManifest) -> None:
         """校验市场扩展与当前 UniBot 版本兼容（与 Loader 一致）。"""
-        from packaging.specifiers import SpecifierSet
-
         constraint = manifest.compatibility.unibot
         if not constraint or constraint == '*':
             return
@@ -223,8 +223,6 @@ class ExtensionMarketManager:
             specifier = SpecifierSet(constraint)
         except Exception as error:
             raise ManifestError(f'扩展 {extension_id} 的版本约束非法：{constraint}（{error}）') from error
-        from Scripts.Extensions.Base import get_unibot_version
-
         current_version = get_unibot_version()
         if current_version and current_version not in specifier:
             raise ManifestError(f'扩展 {extension_id} 需要 UniBot {constraint}，当前为 {current_version}！')
@@ -232,7 +230,7 @@ class ExtensionMarketManager:
     async def _record_install(
         self,
         extension_id: str,
-        release: object,
+        release: MarketRelease,
         archive_data: bytes,
         extension_entry: MarketExtension,
     ) -> None:
@@ -244,10 +242,7 @@ class ExtensionMarketManager:
         manifest_path = next(target_dir.glob('Extension.toml'), None)
         if manifest_path is not None:
             try:
-                from Scripts.Extensions.Base import parse_manifest
-
-                loaded = parse_manifest(manifest_path.read_text('Utf-8'))
-                manifest = loaded
+                manifest = parse_manifest(manifest_path.read_text('Utf-8'))
             except Exception:
                 manifest = None
         python_dependencies = list(manifest.dependencies.python) if manifest is not None else []
@@ -269,7 +264,12 @@ class ExtensionMarketManager:
         if not target_dir.exists() and extension_id not in self.market_cache:
             return False, f'扩展 {extension_id} 不存在'
         states = self._read_states()
-        if extension_id in states and states[extension_id].source != 'market':
+        state = states.get(extension_id)
+        # 本地扩展（无安装状态记录或非市场来源）不允许卸载
+        if state is None:
+            if target_dir.exists():
+                return False, f'扩展 {extension_id} 是本地扩展，不允许卸载'
+        elif state.source != 'market':
             return False, f'扩展 {extension_id} 是本地扩展，不允许卸载'
         if target_dir.exists():
             shutil.rmtree(target_dir)

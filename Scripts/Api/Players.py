@@ -24,7 +24,7 @@ async def get_players(
     bindings = player_service.players if player_service else {}
     all_items = []
     for user_id, bound_players in bindings.items():
-        all_items.append({'user': user_id, 'players': bound_players, 'bound_at': ''})
+        all_items.append({'user': user_id, 'players': bound_players})
 
     if keyword:
         keyword_lower = keyword.lower()
@@ -87,11 +87,14 @@ async def bind_player(body: BindPlayerRequest, current_user: dict = Depends(requ
 
     # 检查该游戏 ID 是否已被其他用户绑定
     if await player_service.check_player_occupied(body.player):
-        existing_user = None
-        for bound_user, bound_players in player_service.players.items():
-            if body.player.lower() in [p.lower() for p in bound_players]:
-                existing_user = bound_user
-                break
+        existing_user = next(
+            (
+                bound_user
+                for bound_user, bound_players in player_service.players.items()
+                if body.player.lower() in [p.lower() for p in bound_players]
+            ),
+            None,
+        )
         if existing_user and existing_user != body.user:
             return {'code': 1, 'data': None, 'message': '该游戏 ID 已被其他用户绑定'}
 

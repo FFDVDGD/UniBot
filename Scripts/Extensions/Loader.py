@@ -8,17 +8,21 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import tomlkit
-from packaging.specifiers import SpecifierSet
 from nonebot.log import logger
+from packaging.specifiers import SpecifierSet
 
 if TYPE_CHECKING:
     from .Manager import ExtensionManager
+
+from Scripts.Config import config
 
 from .Base import (
     Extension,
     ExtensionManifest,
     ExtensionMetadata,
     ExtensionState,
+    ExtensionType,
+    RenderKind,
     get_unibot_version,
     manifest_from_attributes,
     parse_manifest,
@@ -97,7 +101,7 @@ class ExtensionLoader:
     # ===== 发现 =====
     def _discover(self) -> None:
         """分别扫描内置扩展子目录与用户扩展目录，解析清单。"""
-        for subpackage in ('Commands', 'Renderers', 'Services'):
+        for subpackage in ('Commands', 'Services'):
             self._scan_directory(BUILTIN_DIR / subpackage, builtin=True)
         if EXTENSIONS_DIR.exists():
             self._scan_directory(EXTENSIONS_DIR, builtin=False)
@@ -143,7 +147,7 @@ class ExtensionLoader:
         """
         发现单文件扩展：导入模块读取类属性构建清单，校验 id 与文件名一致。
 
-        内置扩展分布在 `Builtin/` 下的固定子目录（Commands/Renderers/Services），
+        内置扩展分布在 `Builtin/` 下的固定子目录（Commands/Services），
         模块 id 以子包名作前缀（如 `Commands.About`）；用户扩展位于 `Extensions/` 根目录，模块 id 即文件名。
         """
         extension_id = file.stem
@@ -272,6 +276,10 @@ class ExtensionLoader:
             if not info.enabled:
                 self._register_display(extension_id, info, ExtensionState.disabled, '')
                 continue
+            # 图片模式未开启：渲染扩展不加载，避免 html2pic 等依赖未安装时导入失败
+            if not config.image.mode and ExtensionType.render in info.manifest.extension.types:
+                self._register_display(extension_id, info, ExtensionState.disabled, '图片模式未开启，渲染扩展不加载')
+                continue
             # 依赖被禁用/失败：进入 blocked
             dependency_block = self._find_blocked_dependency(extension_id, blocked_reasons)
             if dependency_block is not None:
@@ -297,7 +305,7 @@ class ExtensionLoader:
             try:
                 self._commit_services(extension)
                 self._commit_commands(extension_id, extension, builtin=info.builtin)
-                self._commit_renderers(extension)
+                self._commit_renderers(extension, info.directory)
             except Exception as error:
                 extension.mark_failed(f'声明阶段失败：{error}')
                 blocked_reasons[extension_id] = f'声明阶段失败：{error}'
@@ -381,11 +389,21 @@ class ExtensionLoader:
             name = getattr(service, 'name', '') or service_cls.__name__
             extension.api.register(name, service)
 
-    def _commit_renderers(self, extension: Extension) -> None:
-        """实例化并提交装饰器声明的渲染器到全局注册表。"""
+    def _commit_renderers(self, extension: Extension, directory: Path) -> None:
+        """
+        实例化并提交装饰器声明的渲染器到全局注册表。
+
+        主题扩展（`[render] kind` 含 theme）额外把约定目录 `Templates/`
+        注册为模板主题，key 优先取 `theme_name`，缺省用扩展 id。
+        """
         renderer_registry = RendererRegistry(self.manager)
         for renderer_cls in extension.renderers:
             renderer_registry.register(renderer_cls())
+        if RenderKind.theme in extension.metadata.render_kind:
+            templates_dir = directory / 'Templates'
+            if templates_dir.is_dir():
+                theme_key = extension.metadata.theme_name or extension.id
+                renderer_registry.register_theme(theme_key, templates_dir)
 
     def _commit_commands(self, extension_id: str, extension: Extension, *, builtin: bool = False) -> None:
         for command_cls in extension.commands:

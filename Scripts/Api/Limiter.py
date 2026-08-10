@@ -83,10 +83,6 @@ class RateLimiter:
         """FastAPI 依赖：检查当前 IP 是否触发限流。"""
         client_ip = self.get_client_ip(request)
 
-        # 若本地则忽略
-        # if client_ip == '127.0.0.1':
-        #     return
-
         if self.is_banned(client_ip):
             record = self.records[client_ip]
             remain = int(record['banned_until'] - time.time())

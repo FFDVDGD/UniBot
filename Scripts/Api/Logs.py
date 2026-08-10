@@ -42,7 +42,7 @@ async def get_log_content(
         log_file.relative_to(LOGS_DIR)
     except ValueError:
         return {'code': 404, 'data': None, 'message': '日志文件不存在'}
-    if not log_file.exists() or not log_file.is_file():
+    if not log_file.is_file():
         return {'code': 404, 'data': None, 'message': '日志文件不存在'}
 
     try:
@@ -50,8 +50,6 @@ async def get_log_content(
     except Exception as error:
         return {'code': 500, 'data': None, 'message': f'读取日志失败：{error}'}
 
-    lines = []
-    for index, line in enumerate(content.splitlines(), start=1):
-        lines.append({'line': index, 'text': line})
+    lines = [{'line': index, 'text': line} for index, line in enumerate(content.splitlines(), start=1)]
 
     return {'code': 0, 'data': lines, 'message': 'ok'}

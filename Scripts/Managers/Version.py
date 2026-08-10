@@ -17,9 +17,7 @@ class VersionManager:
 
     def check_update(self) -> bool:
         """当前版本是否落后于最新版本。"""
-        if self.latest_version is None:
-            return False
-        return self.latest_version != self.version
+        return self.latest_version is not None and self.latest_version != self.version
 
     async def init(self):
         """记录当前版本，并在后台异步拉取最新版本。"""

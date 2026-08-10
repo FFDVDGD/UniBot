@@ -12,9 +12,11 @@
 import json
 import tempfile
 import threading
+import tomllib
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
+import tomlkit
 from nonebot.log import logger
 from pydantic import BaseModel
 
@@ -28,34 +30,20 @@ ConfigModelT = TypeVar('ConfigModelT', bound=BaseModel)
 def _check_relative(relative: str) -> Path:
     """校验相对路径不越界、为绝对路径时拒绝，并返回规范化后的 Path。"""
     path = Path(relative)
-    if path.is_absolute():
-        raise StorageError(f'不允许使用绝对路径：{relative}')
-    normalized = Path(*path.parts)
-    if '..' in path.parts or '..' in str(normalized):
-        raise StorageError(f'不允许路径越界：{relative}')
-    return normalized
+    if path.is_absolute() or '..' in path.parts:
+        raise StorageError(f'不允许的路径：{relative}')
+    return path
 
 
-def _atomic_write_text(file_path: Path, content: str) -> None:
-    """使用临时文件与原子替换写入文本，失败时保留旧文件。"""
+def _atomic_write(file_path: Path, content: str | bytes) -> None:
+    """使用临时文件与原子替换写入内容，失败时保留旧文件。"""
     file_path.parent.mkdir(parents=True, exist_ok=True)
+    mode = 'wb' if isinstance(content, bytes) else 'w'
     try:
         with tempfile.NamedTemporaryFile(
-            'w', encoding='Utf-8', dir=file_path.parent, suffix='.tmp', delete=False
+            mode, encoding=None if isinstance(content, bytes) else 'Utf-8',
+            dir=file_path.parent, suffix='.tmp', delete=False,
         ) as temp_file:
-            temp_file.write(content)
-            temp_path = Path(temp_file.name)
-        temp_path.replace(file_path)
-    except Exception as error:
-        logger.error(f'写入文件失败：{file_path}！错误：{error}')
-        raise StorageError(f'写入文件失败：{error}') from error
-
-
-def _atomic_write_bytes(file_path: Path, content: bytes) -> None:
-    """使用临时文件与原子替换写入字节，失败时保留旧文件。"""
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with tempfile.NamedTemporaryFile('wb', dir=file_path.parent, suffix='.tmp', delete=False) as temp_file:
             temp_file.write(content)
             temp_path = Path(temp_file.name)
         temp_path.replace(file_path)
@@ -94,8 +82,6 @@ class ExtensionConfigStore(Generic[ConfigModelT]):
             if not content:
                 return self._model()
             try:
-                import tomllib
-
                 data = tomllib.loads(content)
                 return self._model.model_validate(data)
             except Exception as error:
@@ -117,10 +103,8 @@ class ExtensionConfigStore(Generic[ConfigModelT]):
 
     def _save(self, model: ConfigModelT) -> None:
         """使用 model_dump(mode='json') 整体原子替换配置文件。"""
-        import tomlkit
-
         content = tomlkit.dumps(model.model_dump(mode='json'))
-        _atomic_write_text(self.config_path, content)
+        _atomic_write(self.config_path, content)
 
 
 class ExtensionDataStore:
@@ -152,7 +136,7 @@ class ExtensionDataStore:
     def write_text(self, relative: str, content: str) -> None:
         """原子写入文本文件。"""
         with self._lock:
-            _atomic_write_text(self._resolve(relative), content)
+            _atomic_write(self._resolve(relative), content)
 
     def read_json(self, relative: str) -> Any:
         """读取 JSON 文件并解析。"""
@@ -163,7 +147,7 @@ class ExtensionDataStore:
         """原子写入 JSON 文件。"""
         with self._lock:
             content = json.dumps(data, ensure_ascii=False, indent=2)
-            _atomic_write_text(self._resolve(relative), content)
+            _atomic_write(self._resolve(relative), content)
 
     def read_bytes(self, relative: str) -> bytes:
         """读取字节文件。"""
@@ -173,4 +157,4 @@ class ExtensionDataStore:
     def write_bytes(self, relative: str, content: bytes) -> None:
         """原子写入字节文件。"""
         with self._lock:
-            _atomic_write_bytes(self._resolve(relative), content)
+            _atomic_write(self._resolve(relative), content)

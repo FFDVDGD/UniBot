@@ -50,8 +50,9 @@ class LuckCommand(Command):
             tips = messages.commands.luck.tip_high
         elif luck_point > 30:
             tips = messages.commands.luck.tip_mid
-        bad_thing = bad_things[(seed & int(scene_id.replace('-', '0'), 32)) % len(bad_things)]
-        good_thing = good_things[(seed ^ int(scene_id.replace('-', '0'), 32)) % len(good_things)]
+        scene_index = int(scene_id.replace('-', '0'), 32)
+        bad_thing = bad_things[(seed & scene_index) % len(bad_things)]
+        good_thing = good_things[(seed ^ scene_index) % len(good_things)]
         if bad_thing.startswith(good_thing[:2]):
             bad_thing = bad_things[bad_things.index(bad_thing) - 1]
         return {

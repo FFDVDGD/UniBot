@@ -86,15 +86,16 @@ class BoundCommand(Command):
             self.register_option('player', At | str, description='玩家')
 
         @override
-        async def handler(self, session: Uninfo, player: Match[str]):
+        async def handler(self, session: Uninfo, player: Match[At | str]):
             current_user = str(session.user.id)
             if not player.available:
                 # .bound remove - 自己解绑全部
                 return await self.parent.bound_remove_self_all(session)
+            target_user = player.result.target if isinstance(player.result, At) else player.result
             # .bound remove <QQ> - 管理员解绑用户
-            if player.result != current_user and not get_permission(session):
+            if target_user != current_user and not get_permission(session):
                 return messages.commands.bound.no_permission
-            return await self.parent.bound_remove_user(player.result)
+            return await self.parent.bound_remove_user(target_user)
 
     class Append(SubCommand['BoundCommand']):
         """为指定用户添加绑定。"""
@@ -164,9 +165,7 @@ class BoundCommand(Command):
 
     async def bound_remove_user(self, target_user: str):
         player_service, server_service = Globals.player_service, Globals.server_service
-        if server_service is None or not server_service.check_online():
-            return messages.commands.bound.server_offline_try
-        if player_service is None:
+        if player_service is None or server_service is None or not server_service.check_online():
             return messages.commands.bound.server_offline_try
         bounded = await player_service.remove_player(target_user)
         if not bounded:
@@ -177,11 +176,9 @@ class BoundCommand(Command):
 
     async def bound_remove_self_all(self, session: Uninfo):
         player_service, server_service = Globals.player_service, Globals.server_service
-        if server_service is None or not server_service.check_online():
+        if player_service is None or server_service is None or not server_service.check_online():
             return messages.commands.bound.server_offline_try
         user = str(session.user.id)
-        if player_service is None:
-            return messages.commands.bound.server_offline_try
         bounded = await player_service.remove_player(user)
         if not bounded:
             return messages.commands.bound.no_binding_self

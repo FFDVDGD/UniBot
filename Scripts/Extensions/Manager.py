@@ -5,6 +5,8 @@ from pathlib import Path
 import tomlkit
 from nonebot.log import logger
 
+from Scripts.Config import config
+
 from . import (
     Extension,
     ExtensionState,
@@ -13,8 +15,7 @@ from .Loader import (
     CONFIG_EXTENSIONS_FILE,
     ExtensionLoader,
 )
-from .Renderer import BaseRenderer
-from .Renderers import RendererManager
+from .Renderer import BaseRenderer, RendererManager
 
 
 class ExtensionManager:
@@ -50,8 +51,9 @@ class ExtensionManager:
                 extension.mark_failed(str(error))
                 await self._disable_extension(extension)
                 await self._rollback(extension)
-        # 内置 html2pic 渲染引擎由内置扩展 Html2Pic 加载并注册，此处仅完成引擎初始化
-        await self.renderer_manager.setup('html2pic')
+        # 图片模式开启时才初始化默认渲染引擎（Html2Pic 扩展加载并注册）
+        if config.image.mode:
+            await self.renderer_manager.setup('html2pic')
         logger.success('扩展启动完毕！')
 
     async def _rollback(self, failed_extension: Extension) -> None:
@@ -110,8 +112,8 @@ class ExtensionManager:
 
     # ===== 启停状态 =====
 
-    def set_enabled(self, extension_id: str, enabled: bool) -> bool:
-        """设置扩展启停状态（写入 Config/Extensions.toml，重启生效），返回是否成功。"""
+    def set_enabled(self, extension_id: str, enabled: bool) -> None:
+        """设置扩展启停状态（写入 Config/Extensions.toml，重启生效）。"""
         config_path = CONFIG_EXTENSIONS_FILE
         config_path.parent.mkdir(parents=True, exist_ok=True)
         data: dict = {}
@@ -125,7 +127,6 @@ class ExtensionManager:
         data[extension_id] = extension_config
         config_path.write_text(tomlkit.dumps(data), encoding='Utf-8')
         logger.info(f'扩展 {extension_id} 已设置为 {"启用" if enabled else "禁用"}，重启后生效！')
-        return True
 
     # ===== 展示信息 =====
 
@@ -134,13 +135,14 @@ class ExtensionManager:
         extension = self.registry.get(extension_id)
         if extension is None:
             return {}
+        metadata = extension.metadata
         return {
-            'id': extension.metadata.id,
-            'name': extension.metadata.name,
-            'version': extension.metadata.version,
-            'author': extension.metadata.author,
-            'description': extension.metadata.description,
-            'types': [entry.value for entry in extension.metadata.types],
+            'id': metadata.id,
+            'name': metadata.name,
+            'version': metadata.version,
+            'author': metadata.author,
+            'description': metadata.description,
+            'types': [entry.value for entry in metadata.types],
             'state': extension.state.value,
             'config_schema': extension.get_config_schema(),
         }

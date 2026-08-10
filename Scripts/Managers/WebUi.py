@@ -62,6 +62,8 @@ class WebUiManager:
 
     def mount(self, app: FastAPI):
         """挂载 WebUI API 路由到 /webui 前缀下（需在 nonebot.init() 之后、nonebot.run() 之前调用）。"""
+        # 函数内导入：Scripts.Api 依赖本模块的 webui_manager（认证/日志等），
+        # 且须在 nonebot 初始化完成后才可挂载路由，延迟导入避免初始化期循环依赖
         from Scripts.Api import api_router, setup_cors
         from Scripts.Api.WebSocket import log_sink
 

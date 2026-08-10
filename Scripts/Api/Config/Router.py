@@ -16,10 +16,29 @@ from ..Auth import get_current_user, require_role
 from ..Schemas import InstallAdapterRequest, NoneBotItemRequest, UninstallAdapterRequest
 from .Adapters import ADAPTER_CATALOG, PROTECTED_ADAPTER_MODULES
 from .Driver import compute_redundant_drivers, format_driver, merge_driver, shrink_driver
-from .Helpers import deep_merge, mask_api_key
+from .Helpers import deep_merge, mask_api_key, sanitize_none
 from .Schema import CONFIG_GROUPS, CONFIG_SCHEMA, ENV_GROUPS, ENV_SCHEMA
 
 router = APIRouter(prefix='/api/config', tags=['Config'])
+
+# tomlkit 不支持 None 值，写盘前替换为空字符串
+# NoneBot 内置配置字段（port/superusers/command_start）在 .env 中管理，不写入 Config.toml
+_TOML_SKIP_KEYS = ('port', 'superusers', 'command_start')
+
+
+def _write_toml_preserving(data: dict) -> None:
+    """读取现有 Config.toml 保留注释与格式，逐键更新后写回。"""
+    try:
+        toml_document = tomlkit.parse(TOML_PATH.read_text('Utf-8'))
+    except FileNotFoundError:
+        toml_document = tomlkit.document()
+    for key, value in data.items():
+        if isinstance(value, dict) and key in toml_document and isinstance(toml_document[key], dict):
+            for sub_key, sub_value in value.items():
+                toml_document[key][sub_key] = sub_value
+            continue
+        toml_document[key] = value
+    TOML_PATH.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
 
 
 @router.get('', summary='获取配置')
@@ -54,45 +73,13 @@ async def patch_config(request: Request, current_user: dict = Depends(require_ro
     except Exception:
         return {'code': 1, 'data': None, 'message': '请求体格式错误'}
 
-    current_data = config.model_dump()
-    merged_data = deep_merge(current_data, patch_data)
-
-    # 写回 TOML 文件
+    merged_data = deep_merge(config.model_dump(), patch_data)
     toml_output = deepcopy(merged_data)
-    # 移除 NoneBot 内置配置字段（这些在 .env 中管理）
-    for key in ('port', 'superusers', 'command_start'):
+    for key in _TOML_SKIP_KEYS:
         toml_output.pop(key, None)
 
-    # tomlkit 不支持 None 值，替换为空字符串
-    def sanitize_none(data: dict) -> dict:
-        result = {}
-        for key, value in data.items():
-            if value is None:
-                result[key] = ''
-                continue
-            if isinstance(value, dict):
-                result[key] = sanitize_none(value)
-                continue
-            result[key] = value
-        return result
-
     try:
-        # 读取现有文件以保留注释和格式
-        try:
-            toml_document = tomlkit.parse(TOML_PATH.read_text('Utf-8'))
-        except FileNotFoundError:
-            toml_document = tomlkit.document()
-
-        # 逐键更新，保留原有注释
-        sanitized = sanitize_none(toml_output)
-        for key, value in sanitized.items():
-            if isinstance(value, dict) and key in toml_document and isinstance(toml_document[key], dict):
-                for sub_key, sub_value in value.items():
-                    toml_document[key][sub_key] = sub_value
-                continue
-            toml_document[key] = value
-
-        TOML_PATH.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
+        _write_toml_preserving(sanitize_none(toml_output))
     except Exception as error:
         return {'code': 500, 'data': None, 'message': f'写入配置文件失败：{error}'}
 
@@ -222,7 +209,7 @@ async def get_nonebot_config(current_user: dict = Depends(get_current_user)):
         if isinstance(adapter, dict)
     ]
     registered_modules = {adapter.get('module_name') for adapter in adapters}
-    installed_packages = {config_manager._package_base(dependency) for dependency in config_manager.get_dependencies()}
+    installed_packages = config_manager.get_dependency_packages()
     catalog = [
         {
             **adapter,

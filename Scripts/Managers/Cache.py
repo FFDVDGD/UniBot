@@ -36,12 +36,6 @@ class CacheManager:
         paths = await asyncio.gather(*tasks)
         return dict(zip(files.keys(), paths))
 
-    def _write(self, file_name: str, content: bytes) -> str:
-        """将单个文件写入缓存目录，返回文件完整路径。"""
-        file_path = self.cache_dir / file_name
-        file_path.write_bytes(content)
-        return str(file_path)
-
     def sanitize_name(self, name: str) -> str:
         """将任意名称转为安全的文件名（仅保留字母数字与 _-）。"""
         return re.sub(r'[^0-9a-zA-Z_\-]', '_', name)
@@ -54,6 +48,12 @@ class CacheManager:
             if file.is_file():
                 file.unlink()
         logger.debug('清理缓存文件完毕！')
+
+    def _write(self, file_name: str, content: bytes) -> str:
+        """将单个文件写入缓存目录，返回文件完整路径。"""
+        file_path = self.cache_dir / file_name
+        file_path.write_bytes(content)
+        return str(file_path)
 
 
 cache_manager = CacheManager()

@@ -3,7 +3,7 @@
 
 把玩家绑定数据从 DataManager 抽取为内置 API 服务，供内置命令、事件处理器与
 WebUI API 通过 `extension.api.get(PlayerService)`（或全局注册名 `player`）获取。
-数据经内置扩展的目录式存储直接落盘为 `Data/Player.json`。
+数据经内置扩展的目录式存储直接落盘为 `Data/Players.json`。
 """
 
 from typing import Any, TypedDict, override
@@ -30,7 +30,7 @@ class PlayerData(TypedDict):
 
 @extension.register_service
 class PlayerService(Service):
-    """管理用户与游戏 ID 的绑定关系，数据同源落盘 `Data/Player.json`。"""
+    """管理用户与游戏 ID 的绑定关系，数据同源落盘 `Data/Players.json`。"""
 
     def __init__(self) -> None:
         self._accounts: dict[str, int] = {}

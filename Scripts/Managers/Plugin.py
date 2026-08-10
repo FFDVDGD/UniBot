@@ -18,10 +18,6 @@ class PluginManager:
     market_cache: list = []
     market_cache_time: float = 0
 
-    def load(self):
-        """记录插件管理器已完成初始化。"""
-        logger.success('加载插件管理器完毕！')
-
     def _configured_plugins(self) -> list[dict]:
         """获取 pyproject.toml 中登记的插件配置。"""
         configured_plugins = []
@@ -38,9 +34,9 @@ class PluginManager:
 
     @staticmethod
     def _plugin_info(plugin, configured: dict | None = None) -> dict:
+        if not plugin and configured is None:
+            raise ValueError('plugin 与 configured 不可同时为空')
         metadata = plugin.metadata if plugin else None
-        if not plugin:
-            assert configured is not None
         module_name = plugin.module_name if plugin else configured['module_name']
         extra = metadata.extra if metadata else {}
         return {
@@ -87,8 +83,6 @@ class PluginManager:
         plugin = self.get_plugin_detail(name)
         if not plugin or not plugin['can_disable']:
             return False
-        from Scripts.Managers import config_manager
-
         config_manager.set_plugin_enabled(plugin['module_name'], enabled)
         return True
 

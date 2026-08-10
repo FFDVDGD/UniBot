@@ -23,6 +23,9 @@ COOKIE_ACCESS_KEY = 'unibot_access_token'
 COOKIE_REFRESH_KEY = 'unibot_refresh_token'
 COOKIE_FLAG_KEY = 'unibot_authenticated'
 
+ACCESS_TOKEN_EXPIRE_HOURS = 2
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+
 
 def set_auth_cookies(response: JSONResponse, access_token: str, refresh_token: str | None = None):
     """设置 HttpOnly 安全 cookie（access_token 短期 + refresh_token 长期）。"""
@@ -57,12 +60,7 @@ def set_auth_cookies(response: JSONResponse, access_token: str, refresh_token: s
 
 
 def clear_auth_cookies(response: JSONResponse):
-    """
-    清除所有认证 cookie。
-
-        delete_cookie 内部会以 max_age=0 重新下发同名 cookie，
-        浏览器收到后立即删除；无需额外传 max_age / expires。
-    """
+    """清除所有认证 cookie（以 max_age=0 重新下发同名 cookie 实现删除）。"""
     for key in (COOKIE_ACCESS_KEY, COOKIE_REFRESH_KEY, COOKIE_FLAG_KEY):
         response.delete_cookie(key=key, path='/webui')
 
@@ -72,9 +70,6 @@ router = APIRouter(
     tags=['Auth'],
     dependencies=[Depends(rate_limiter.check)],
 )
-
-ACCESS_TOKEN_EXPIRE_HOURS = 2
-REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # 已注销的 refresh_token 集合
 revoked_tokens: set[str] = set()
@@ -211,13 +206,8 @@ async def refresh(request: Request, body: RefreshRequest):
 
 @router.post('/logout', summary='退出登录')
 async def logout(request: Request, body: LogoutRequest | None = None):
-    """
-    使当前 refresh_token 失效并清除 cookie。
-
-        无论请求体或 cookie 是否存在，都会强制清空所有认证 cookie，
-        以保证客户端在任何情况下退出登录后都不会残留凭证。
-    """
-    refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or (body.refresh_token if body else '') or ''
+    """使当前 refresh_token 失效并清除 cookie（无论请求体或 cookie 是否存在）。"""
+    refresh_token = request.cookies.get(COOKIE_REFRESH_KEY) or (body.refresh_token if body else '')
     if refresh_token:
         revoked_tokens.add(refresh_token)
     response = JSONResponse({'code': 0, 'data': None, 'message': 'ok'})

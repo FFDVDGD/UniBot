@@ -1,0 +1,21 @@
+[manifest]
+schema_version = 1
+
+[extension]
+id = "Html2Pic"
+name = "html2pic 渲染引擎"
+version = "1.0.0"
+author = "UniBot"
+description = "内置 HTML 转图片渲染引擎（默认/回退），依赖 html2pic 库。"
+types = ["render"]
+
+[compatibility]
+unibot = "*"
+
+[dependencies]
+extensions = []
+python = ["html2pic", "Pillow"]
+
+[render]
+kind = ["engine"]
+theme_name = ""

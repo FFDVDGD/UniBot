@@ -33,20 +33,17 @@ class CommandCommand(Command):
     async def handler(self, session: Uninfo, server: Match[str], command: Match[list[str]]):
         if not get_permission(session):
             return messages.commands.command.no_permission
-        if not command.available:
-            return messages.commands.command.invalid_param
         command_string = ' '.join(command.result)
         return await turn_message_text(self.command_handler(server.result, command_string))
 
     def parse_command(self, command: str):
+        """按黑白名单过滤允许发送的控制台命令。"""
         if config.command_minecraft_whitelist:
-            for enabled_command in config.command_minecraft_whitelist:
-                if command.startswith(enabled_command):
-                    return command
+            if any(command.startswith(item) for item in config.command_minecraft_whitelist):
+                return command
             return None
-        for disabled_command in config.command_minecraft_blacklist:
-            if command.startswith(disabled_command):
-                return None
+        if any(command.startswith(item) for item in config.command_minecraft_blacklist):
+            return None
         return command
 
     async def command_handler(self, server_flag, command):
@@ -61,8 +58,8 @@ class CommandCommand(Command):
             if not server_service.servers:
                 yield messages.commands.command.no_server
                 return
+            yield messages.commands.command.send_all_title
             for name, bot in server_service.servers.items():
-                yield messages.commands.command.send_all_title
                 try:
                     result = await bot.send_rcon_command(command=parsed_command)
                     reply = result if result else messages.commands.command.no_return

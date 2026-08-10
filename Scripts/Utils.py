@@ -25,7 +25,7 @@ scope_mapping = {
 
 async def turn_message_text(iterator: AsyncIterable[str] | Iterable[str]) -> str:
     if isinstance(iterator, Iterable):
-        return '\n'.join([text for text in iterator])
+        return '\n'.join(iterator)
     return '\n'.join([text async for text in iterator])
 
 
