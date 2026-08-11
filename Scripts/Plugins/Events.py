@@ -150,34 +150,33 @@ async def handle_player_chat(event: PlayerChatEvent):
         if check_message(chat_message):
             logger.warning(f'检测到消息 {chat_message} 包含敏感词，已丢弃！')
             await send_message_to_groups(message_config.events.sensitive_group.format(player=player))
-            await player_chat_watcher.finish()
+            return
 
         await send_message_to_groups(
             message_config.events.chat_forward.format(server=name, player=player, content=chat_message)
         )
-        await player_chat_watcher.finish()
+        return
 
     logger.debug(f'收到服务器消息：{chat_message}')
-    old_message = chat_message
-    for command in ('send', 'gp', 'qq', 'q'):
-        if chat_message.startswith(command):
-            chat_message = chat_message[len(command) :].strip()
-    if old_message == chat_message:
-        await player_chat_watcher.finish()
+    if ' ' not in chat_message:
+        return
+    start, content = chat_message.split(' ', maxsplit=1)
+    if start.lower() not in ('send', 'gp', 'qq', 'q'):
+        return
     server_service = Globals.server_service
     server = server_service.get_server(name) if server_service else None
     if server is None:
-        await player_chat_watcher.finish()
-    if not chat_message:
+        return
+    if not content:
         message = MessageSegment.text(message_config.events.need_content, color='red')
         await server.send_private_msg(message=message, nickname=player)
         return
-    if check_message(chat_message):
+    if check_message(content):
         message = MessageSegment.text(message_config.events.sensitive_reply, color='red')
         await server.send_private_msg(message=message, nickname=player)
         return
     await send_message_to_groups(
-        message_config.events.chat_forward.format(server=name, player=player, content=chat_message)
+        message_config.events.chat_forward.format(server=name, player=player, content=content)
     )
     message = MessageSegment.text(message_config.events.sent_success, color='green')
     await server.send_private_msg(message=message, nickname=player)
@@ -188,7 +187,7 @@ async def handle_group_message(message: UniMsg, session: Uninfo):
     platform_name = get_platform_name(session.scope)
     plain_text_message = message.extract_plain_text()
     if any(plain_text_message.startswith(prefix) for prefix in config.command_start):
-        await message_watcher.finish()
+        return
     player_service, server_service = Globals.player_service, Globals.server_service
     user_name = player_service.players.get(str(session.user.id), (None,))[0] if player_service else None
     user_name = user_name or session.user.nick or session.user.name or str(session.user.id)
