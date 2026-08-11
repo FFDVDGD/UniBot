@@ -74,6 +74,8 @@ class ExtensionMarketManager:
         items = []
         for extension in self.market_cache.values():
             latest = extension.latest_release()
+            installed = extension.id in extension_manager.registry
+            info = extension_manager.get_extension_info(extension.id) if installed else {}
             items.append(
                 {
                     'id': extension.id,
@@ -82,7 +84,8 @@ class ExtensionMarketManager:
                     'description': extension.description,
                     'official': extension.official,
                     'latest_version': latest.version if latest else '',
-                    'installed': extension.id in extension_manager.registry,
+                    'installed': installed,
+                    'installed_version': info.get('version', ''),
                 }
             )
         return items

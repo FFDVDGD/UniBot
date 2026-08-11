@@ -21,7 +21,7 @@ class VersionManager:
 
     async def init(self):
         """记录当前版本，并在后台异步拉取最新版本。"""
-        self.version = config_manager.version
+        self.version = str(config_manager.version)
         logger.info(f'监测到当前为 {self.version} 版本。')
         asyncio.create_task(self.fetch_latest())
 
@@ -31,7 +31,7 @@ class VersionManager:
         if not latest_data:
             logger.warning('获取最新版本失败，请检查网络稍后再试！')
             return False
-        self.latest_version = str(latest_data.get('tag_name', '')).lstrip('v')
+        self.latest_version = str(latest_data.get('tag_name', ''))
         if not self.latest_version:
             logger.warning('获取最新版本失败：返回数据缺少版本信息！')
             return False

@@ -30,7 +30,8 @@ class PluginManager:
 
     @staticmethod
     def _can_disable(module_name: str) -> bool:
-        return not module_name.startswith('Plugins.')
+        """框架内置插件（`Scripts.` 前缀）不允许禁用。"""
+        return not module_name.startswith('Scripts.')
 
     @staticmethod
     def _plugin_info(plugin, configured: dict | None = None) -> dict:

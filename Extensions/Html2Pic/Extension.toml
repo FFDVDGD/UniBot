@@ -3,7 +3,7 @@ schema_version = 1
 
 [extension]
 id = "Html2Pic"
-name = "html2pic 渲染引擎"
+name = "Html2Pic 渲染引擎"
 version = "1.0.0"
 author = "UniBot"
 description = "内置 HTML 转图片渲染引擎，采用 Html2Pic 渲染。"
