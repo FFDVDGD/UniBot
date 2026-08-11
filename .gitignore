@@ -11,6 +11,8 @@ uv.lock
 # 项目运行产生文件以及文档
 Data/
 Logs/
+# Extensions/Example/
+Config/Extensions/
 /WebUi/
 .docs/
 .dist/

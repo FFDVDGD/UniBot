@@ -192,7 +192,7 @@ SUPERUSERS=["1234567890"]
 
 # 命令起始字符与分隔符
 COMMAND_SEP=[" "]
-COMMAND_START=["."]
+COMMAND_START=["#"]
 
 # Minecraft 服务器 WebSocket 地址（支持多服）
 MINECRAFT_WS_URLS={"server1": ["ws://127.0.0.1:8080/mc"]}
@@ -263,14 +263,14 @@ keywords = { "看群公告里的 IP 地址。" = ["服务器在哪", "服务器�
 
 | 指令 | 功能 |
 |------|------|
-| `.list` | 查询所有服务器的在线玩家 |
-| `.server` | 查看当前连接的服务器列表 |
-| `.luck` | 每日运势占卜（仅供娱乐） |
-| `.send` | 向游戏内发送消息（`sync_all_qq_message` 关闭时可用） |
-| `.command` | 远程执行 Minecraft 指令（管理员） |
-| `.bound` | 绑定 / 解绑 / 查询游戏白名单 |
-| `.help` | 查看命令帮助 |
-| `.about` | 关于本机器人 |
+| `/list` | 查询所有服务器的在线玩家 |
+| `/server` | 查看当前连接的服务器列表 |
+| `/luck` | 每日运势占卜（仅供娱乐） |
+| `/send` | 向游戏内发送消息（`sync_all_qq_message` 关闭时可用） |
+| `/command` | 远程执行 Minecraft 指令（管理员） |
+| `/bound` | 绑定 / 解绑 / 查询游戏白名单 |
+| `/help` | 查看命令帮助 |
+| `/about` | 关于本机器人 |
 
 > 💡 所有指令均基于 [Alconna](https://github.com/ArcletProject/Alconna) 解析，跨平台表现一致。
 
@@ -282,12 +282,12 @@ keywords = { "看群公告里的 IP 地址。" = ["服务器在哪", "服务器�
 
 | 指令 | 渲染内容 |
 |------|----------|
-| `.list` | 在线玩家列表（含玩家头像） |
-| `.server` | 服务器连接状态 |
-| `.luck` | 每日运势卡片 |
-| `.bound` | 白名单绑定信息 |
-| `.help` | 帮助信息 |
-| `.about` | 关于页面 |
+| `/list` | 在线玩家列表（含玩家头像） |
+| `/server` | 服务器连接状态 |
+| `/luck` | 每日运势卡片 |
+| `/bound` | 白名单绑定信息 |
+| `/help` | 帮助信息 |
+| `/about` | 关于页面 |
 
 **自定义背景：**
 

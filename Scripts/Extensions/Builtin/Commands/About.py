@@ -17,7 +17,7 @@ class AboutCommand(Command):
 
     name = 'about'
     description = '查看关于信息。'
-    usage = '.about'
+    usage = '/about'
 
     class Check(SubCommand['AboutCommand']):
         """检测是否有新版本。"""

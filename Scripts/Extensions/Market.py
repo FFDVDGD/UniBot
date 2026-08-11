@@ -39,6 +39,7 @@ class MarketExtension(BaseModel):
     name: str = Field(min_length=1)
     repo: str = Field(min_length=1)
     description: str = ''
+    official: bool = False
     releases: list[MarketRelease] = []
 
     def latest_release(self) -> MarketRelease | None:

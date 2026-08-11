@@ -20,7 +20,7 @@ class SendCommand(Command):
 
     name = 'send'
     description = '向已连接的服务器发送消息。'
-    usage = '.send <消息内容>'
+    usage = '/send <消息内容>'
     aliases = ('mc',)
 
     @override

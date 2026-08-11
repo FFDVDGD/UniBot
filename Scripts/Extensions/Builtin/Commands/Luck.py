@@ -21,7 +21,7 @@ class LuckCommand(Command):
 
     name = 'luck'
     description = '查看今日人品值。'
-    usage = '.luck'
+    usage = '/luck'
 
     @override
     async def handler(self, session: Uninfo):

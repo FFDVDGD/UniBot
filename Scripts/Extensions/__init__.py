@@ -1,5 +1,7 @@
 """UniBot 扩展系统框架包。"""
 
+from nonebot_plugin_alconna import Match
+
 from .Base import (
     Extension,
     ExtensionManifest,
@@ -68,6 +70,8 @@ from .Storage import (
 )
 
 __all__ = [
+    # Alconna
+    'Match',
     # Base
     'CompatibilityError',
     'DependencyError',

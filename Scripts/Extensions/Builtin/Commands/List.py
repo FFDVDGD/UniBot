@@ -23,7 +23,7 @@ class ListCommand(Command):
 
     name = 'list'
     description = '查看服务器在线玩家列表。'
-    usage = '.list [服务器名称]'
+    usage = '/list [服务器名称]'
 
     @override
     def declare(self) -> None:

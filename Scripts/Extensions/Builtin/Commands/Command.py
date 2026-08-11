@@ -22,7 +22,7 @@ class CommandCommand(Command):
 
     name = 'command'
     description = '向指定服务器发送控制台命令。'
-    usage = '.command <服务器名称> <命令>'
+    usage = '/command <服务器名称> <命令>'
 
     @override
     def declare(self) -> None:

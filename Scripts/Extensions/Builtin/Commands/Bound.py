@@ -21,7 +21,7 @@ class BoundCommand(Command):
 
     name = 'bound'
     description = '管理玩家白名单绑定。'
-    usage = '.bound [玩家名|子命令]'
+    usage = '/bound [玩家名|子命令]'
 
     class List(SubCommand['BoundCommand']):
         """列出所有绑定。"""

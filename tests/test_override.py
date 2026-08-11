@@ -18,7 +18,7 @@ class BuiltinListCommand(Command):
 
     name = 'list'
     description = '查看服务器在线玩家列表。'
-    usage = '.list [服务器名称]'
+    usage = '/list [服务器名称]'
 
     @override
     def declare(self) -> None:
@@ -33,7 +33,7 @@ class _OverrideListCommand(BuiltinListCommand):
     """通过继承覆写内置 list 命令。"""
 
     description = '覆写后的描述'
-    usage = '.list all'
+    usage = '/list all'
 
 
 async def _handler(*args, **kwargs):
@@ -47,7 +47,7 @@ class TestClassOverride:
     def test_override_meta_fields(self):
         command = _OverrideListCommand()
         assert command.description == '覆写后的描述'
-        assert command.usage == '.list all'
+        assert command.usage == '/list all'
 
     def test_inherited_commands_and_arguments_preserved(self):
         command = _OverrideListCommand()
@@ -78,8 +78,8 @@ class TestClassOverride:
         override = _OverrideListCommand()
         assert base.description == '查看服务器在线玩家列表。'
         assert override.description == '覆写后的描述'
-        assert base.usage == '.list [服务器名称]'
-        assert override.usage == '.list all'
+        assert base.usage == '/list [服务器名称]'
+        assert override.usage == '/list all'
 
 
 # ===== command_id 覆盖取代 =====

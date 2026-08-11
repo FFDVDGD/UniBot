@@ -86,7 +86,7 @@ class _ConsoleCommand(Command):
 class _HelpCommand(Command):
     name = 'help'
     description = '帮助'
-    usage = '.help [命令名称]'
+    usage = '/help [命令名称]'
 
     @override
     def declare(self) -> None:

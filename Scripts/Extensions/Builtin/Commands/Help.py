@@ -13,12 +13,8 @@ extension = Extension(id='Help', name='命令帮助', version='1.0.0', types=('c
 
 
 def get_enabled_nodes() -> list[Command]:
-    """获取已登记的内置命令节点（builtin: 前缀）。"""
-    return [
-        command
-        for command_id, command in command_manager.get_command_nodes().items()
-        if command_id.startswith('builtin:')
-    ]
+    """获取全部已登记的命令节点（内置 builtin: 与扩展 extension: 前缀）。"""
+    return list(command_manager.get_command_nodes().values())
 
 
 def get_node(name: str) -> Command | None:
@@ -30,8 +26,8 @@ def get_node(name: str) -> Command | None:
 
 
 def gen_usage(command: Command) -> str:
-    """根据结构化命令自动生成用法字符串（含子命令、参数）。"""
-    parts = [command.name]
+    """根据结构化命令自动生成用法字符串（含子命令、参数），统一带 `#` 前缀。"""
+    parts = [f'/{command.name}']
     for argument in command.arguments:
         display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
         parts.append(display)
@@ -53,7 +49,7 @@ class HelpCommand(Command):
 
     name = 'help'
     description = '查看所有可用命令的帮助信息。'
-    usage = '.help [命令名称]'
+    usage = '/help [命令名称]'
 
     @override
     def declare(self) -> None:

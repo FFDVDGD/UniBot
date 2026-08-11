@@ -17,7 +17,7 @@ class ServerCommand(Command):
 
     name = 'server'
     description = '查看已连接的服务器列表。'
-    usage = '.server'
+    usage = '/server'
 
     @override
     async def handler(self):
