@@ -45,10 +45,9 @@ export default defineUserConfig({
           collapsed: false,
           items: [
             '/guide/',
-            '/guide/快速开始.md',
-            '/guide/配置说明.md',
-            '/guide/指令手册.md',
             '/guide/功能特性.md',
+            '/guide/快速开始.md',
+            '/guide/指令手册.md',
           ],
         },
       ],
@@ -58,6 +57,8 @@ export default defineUserConfig({
           collapsed: false,
           items: [
             '/unibot/',
+            '/unibot/配置说明.md',
+            '/unibot/扩展系统.md',
             '/unibot/架构设计.md',
             '/unibot/接口文档.md',
             '/unibot/开发插件.md',

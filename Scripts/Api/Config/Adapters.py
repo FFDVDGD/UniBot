@@ -6,8 +6,10 @@ WebUI 通过 `ADAPTER_CATALOG` 渲染安装/卸载列表。
 """
 
 # 所有可选平台（用于 WebUI 中的 platform_list 配置项）
+# 与 Utils.scope_mapping 保持一致，仅包含有可读名称的平台。
 PLATFORM_OPTIONS = [
     {'value': 'qq_client', 'label': 'QQ'},
+    {'value': 'qq_api', 'label': '官方 QQ'},
     {'value': 'qq_guild', 'label': 'QQ 频道'},
     {'value': 'telegram', 'label': 'Telegram'},
     {'value': 'discord', 'label': 'Discord'},
@@ -15,7 +17,6 @@ PLATFORM_OPTIONS = [
     {'value': 'kook', 'label': 'Kook'},
     {'value': 'wechat', 'label': '微信'},
     {'value': 'wecom', 'label': '企业微信'},
-    {'value': 'minecraft', 'label': 'Minecraft'},
 ]
 
 # 基础驱动框架，必须始终保留

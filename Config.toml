@@ -12,7 +12,7 @@ bot_prefix = ""
 
 # 指令群，机器人只对这些群的指令作响应。
 # 格式 "{平台}:{群ID}"，平台对应：
-#   qq_client / qq_guild / qq_api / telegram / discord / dodo / kook / wechat / wecom / onebot12_other / satori_other
+#   qq_client / qq_api / qq_guild / telegram / discord / dodo / kook / wechat / wecom
 # 请将 123456789 替换为你的实际群号。
 command_groups = ["qq_client:123456789"]
 

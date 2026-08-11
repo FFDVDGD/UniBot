@@ -17,7 +17,7 @@ HOST="127.0.0.1"
 SUPERUSERS=["1234567890"]
 
 # 命令起始字符与分隔符
-COMMAND_START=["."]
+COMMAND_START=["#"]
 COMMAND_SEP=[" "]
 
 # 日志级别
