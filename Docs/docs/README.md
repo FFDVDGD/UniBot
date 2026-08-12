@@ -22,28 +22,36 @@ config:
     type: features
     features:
       -
-        title: 🌐 真正的跨平台
+        title: 真正的跨平台
+        icon: fluent-color:globe-24
         details: 不止 QQ，还支持 Telegram、Discord、Kook、QQ 频道等，一套指令全平台通用。
       -
-        title: 🔗 多服互联
+        title: 多服互联
+        icon: fluent-color:link-24
         details: 同时连接多台 Minecraft 服务器，消息互通，跨服聊天零延迟。
       -
-        title: 🔄 全服务端兼容
+        title: 全服务端兼容
+        icon: fluent-color:arrow-sync-24
         details: 支持 Fabric、Forge、Spigot、Paper 等主流服务端，即插即用，无需额外适配。
       -
-        title: 📦 扩展系统
+        title: 扩展系统
+        icon: fluent-color:toolbox-24
         details: 指令、服务、渲染引擎、模板与资源五类扩展，即插即用，失败自动隔离。
       -
-        title: 🖥️ WebUI 管理面板
+        title: WebUI 管理面板
+        icon: fluent-color:laptop-24
         details: 现代化管理界面，可视化配置、实时监控、日志查看，开箱即用。
       -
-        title: � NoneBot2 生态
+        title: NoneBot2 生态
+        icon: fluent-color:bot-24
         details: 基于 NoneBot2 构建，无缝接入 NB 插件商店，社区现成插件开箱即用。
       -
-        title: 🔐 白名单管理
+        title: 白名单管理
+        icon: fluent-color:lock-closed-24
         details: 完善的平台账号与游戏 ID 绑定系统，支持多服白名单同步。
       -
-        title: 🎨 图片渲染模式
+        title: 图片渲染模式
+        icon: fluent-color:paint-brush-24
         details: 渲染引擎与模板自由组合，将指令输出渲染为精美图片，支持自定义背景。
   -
     type: custom
@@ -51,7 +59,7 @@ config:
 
 这是 **Minecraft UniBot** 项目的官方文档。本项目由多个子项目共同构成，目标是打造一套跨平台、多服互联的 Minecraft 机器人生态。
 
-## 📚 项目组成
+## ::fluent-color:book-24:: 项目组成
 
 | 子项目 | 说明 | 技术栈 |
 |--------|------|--------|
@@ -62,7 +70,7 @@ config:
 > [!TIP]
 > 本文档中的「鹊桥」指本项目维护的 **MCDReforged 端插件**。鹊桥协议本身由 [17TheWord / QueQiao](https://github.com/17TheWord/QueQiao) 官方维护，除此端外还支持 Spigot、Paper、Fabric、Forge、NeoForge、Vanilla、Folia、Velocity 等多种服务端，并非由本项目开发。
 
-## 🚀 快速导航
+## ::fluent-color:send-24:: 快速导航
 
 - [开始使用](/guide/快速开始.html) — 从零开始部署你的 UniBot
 - [配置说明](/unibot/配置说明.html) — 全部配置项详解

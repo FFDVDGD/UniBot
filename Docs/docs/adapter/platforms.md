@@ -38,9 +38,11 @@ OneBot V11 是 QQ 的通用协议，需配合 **Lagrange.OneBot、NapCat、LLOne
 ONEBOT_ACCESS_TOKEN=""
 ```
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `ONEBOT_ACCESS_TOKEN` | OneBot 服务端设置的访问令牌，未启用留空 |
+:::
 
 *如有多个反向连接，可用 `ONEBOT_WS_URLS` 等字段，具体参考 OneBot 适配器文档。* 协议端作为服务端（反向 WebSocket）时，UniBot 会主动连接；具体对接方式见 [OneBot V11 适配器文档](https://onebot.adapters.nonebot.dev/)。
 
@@ -53,13 +55,16 @@ QQ_BOTS=[]
 QQ_IS_SANDBOX=false
 ```
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `QQ_BOTS` | 机器人配置列表（JSON 数组），每项含 `id`、`token`、`secret`、`intent`、`use_websocket` 等字段 |
 | `QQ_IS_SANDBOX` | 是否启用沙盒模式，默认 `false` |
+:::
 
 `QQ_BOTS` 每项字段：
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `id` | 应用 AppID（开放平台获取） |
@@ -67,6 +72,7 @@ QQ_IS_SANDBOX=false
 | `secret` | 应用 Secret |
 | `intent` | 事件订阅（对象类型），可选字段如 `guilds`、`guild_messages`、`at_messages` 等，默认值见官方文档 |
 | `use_websocket` | 是否使用 WebSocket 连接，默认 `True`；`False` 时使用 WebHook（需公网） |
+:::
 
 ## Telegram
 
@@ -78,18 +84,22 @@ TELEGRAM_WEBHOOK_URL=""
 TELEGRAM_PROXY=""
 ```
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `TELEGRAM_BOTS` | 机器人配置列表（JSON 数组），每项含 `token`、`is_webhook` 字段 |
 | `TELEGRAM_WEBHOOK_URL` | Webhook 模式下使用的公网 HTTPS 地址；Long polling 模式下留空 |
 | `TELEGRAM_PROXY` | 访问 Telegram API 的代理地址，如 `http://127.0.0.1:10809`；Socks 协议需安装 `httpx[socks]` |
+:::
 
 `TELEGRAM_BOTS` 每项字段：
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `token` | 向 @BotFather 申请的机器人 Token（必填） |
 | `is_webhook` | 是否启用 Webhook 模式，默认 `false`（即默认 Long polling 模式） |
+:::
 
 ## Discord
 
@@ -104,6 +114,7 @@ DISCORD_HANDLE_SELF_MESSAGE=false
 DISCORD_PROXY=""
 ```
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `DISCORD_BOTS` | 机器人配置列表（JSON 数组），每项含 `token`、`intent`、`application_commands` 字段 |
@@ -112,14 +123,17 @@ DISCORD_PROXY=""
 | `DISCORD_COMPRESS` | 是否启用网关数据压缩，默认 `false` |
 | `DISCORD_HANDLE_SELF_MESSAGE` | 是否处理自己发送的消息，默认 `false` |
 | `DISCORD_PROXY` | 访问 Discord API 的代理地址，不使用留空 |
+:::
 
 `DISCORD_BOTS` 每项字段：
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `token` | 机器人 Token（必填） |
 | `intent` | 事件订阅（对象类型），常用字段：`guild_messages`、`direct_messages`、`message_content`（特权 Intent，需在 Developer Portal 开启） |
 | `application_commands` | 斜杠命令注册范围；`{"*": ["*"]}` 注册全部为全局命令，`{"命令名": ["服务器ID"]}` 注册为指定服务器的局部命令 |
+:::
 
 ## DoDo
 
@@ -129,16 +143,20 @@ DISCORD_PROXY=""
 DODO_BOTS=[]
 ```
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `DODO_BOTS` | 机器人配置列表（JSON 数组），每项含 `client_id`、`token` 字段 |
+:::
 
 `DODO_BOTS` 每项字段：
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `client_id` | 开放平台获取的客户端 ID（必填） |
 | `token` | 开放平台获取的客户端 Token（必填） |
+:::
 
 ## KOOK（开黑啦）
 
@@ -148,15 +166,19 @@ DODO_BOTS=[]
 KAIHEILA_BOTS=[]
 ```
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `KAIHEILA_BOTS` | 机器人配置列表（JSON 数组），每项含 `token` 字段 |
+:::
 
 `KAIHEILA_BOTS` 每项字段：
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `token` | 在开发者平台 - 我的应用 - 机器人页面获取的 Token（必填） |
+:::
 
 ## Satori
 
@@ -166,12 +188,15 @@ Satori 是通用协议，可对接 Chronocat 等实现了 Satori 协议的平台
 SATORI_CLIENTS=[]
 ```
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `SATORI_CLIENTS` | Satori 客户端列表（JSON 数组），每项含 `host`、`port`、`path`、`token`、`timeout`、`secure` 字段 |
+:::
 
 `SATORI_CLIENTS` 每项字段：
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `host` | Satori 服务端监听地址，如 `localhost`（必填） |
@@ -180,6 +205,7 @@ SATORI_CLIENTS=[]
 | `token` | 连接令牌，由服务端决定是否需要（如对接 Chronocat 必填） |
 | `timeout` | 连接超时时间（秒），默认 `30` |
 | `secure` | 是否使用 TLS 加密连接，默认 `false` |
+:::
 
 ## Minecraft
 
@@ -193,10 +219,12 @@ MINECRAFT_WS_URLS={"server1": ["ws://127.0.0.1:8080/mc"]}
 MINECRAFT_ACCESS_TOKEN=""
 ```
 
+::: table copy="all"
 | 字段 | 说明 |
 |------|------|
 | `MINECRAFT_WS_URLS` | 服务器名 → WebSocket 地址列表（JSON 对象），支持多服 |
 | `MINECRAFT_ACCESS_TOKEN` | 服务器接入鉴权 Token，须与服务器端一致 |
+:::
 
 ## 配置校验
 

@@ -4,15 +4,45 @@
 
 ## 快速导航
 
-- [配置说明](/unibot/配置说明.html) — `.env` 与 `Config.toml` 等全部配置项
-- [扩展系统](/unibot/扩展系统.html) — 扩展类型、清单、状态与渲染体系
-- [架构设计](/unibot/架构设计.html) — 深入了解项目结构
-- [REST API](/unibot/接口文档.html) — WebUI 后端 API 参考
-- [开发扩展](/unibot/开发插件.html) — 编写自己的 UniBot 扩展
-- [上传市场](/unibot/上传市场.html) — 把你的扩展发布到扩展市场
+<LinkCard title="配置说明" href="/unibot/配置说明.html" icon="fluent-color:settings-24">
+
+  `.env` 与 `Config.toml` 等全部配置项
+
+</LinkCard>
+
+<LinkCard title="扩展系统" href="/unibot/扩展系统.html" icon="fluent-color:puzzle-piece-24">
+
+  扩展类型、清单、状态与渲染体系
+
+</LinkCard>
+
+<LinkCard title="架构设计" href="/unibot/架构设计.html" icon="fluent-color:apps-24">
+
+  深入了解项目结构
+
+</LinkCard>
+
+<LinkCard title="REST API" href="/unibot/接口文档.html" icon="fluent-color:code-24">
+
+  WebUI 后端 API 参考
+
+</LinkCard>
+
+<LinkCard title="开发扩展" href="/unibot/开发插件.html" icon="fluent-color:wrench-screwdriver-24">
+
+  编写自己的 UniBot 扩展
+
+</LinkCard>
+
+<LinkCard title="上传市场" href="/unibot/上传市场.html" icon="fluent-color:building-store-24">
+
+  把你的扩展发布到扩展市场
+
+</LinkCard>
 
 ## 技术栈
 
+::: table title="技术栈概览" copy="all"
 | 类别 | 技术 |
 |------|------|
 | 框架 | NoneBot2（FastAPI 驱动） |
@@ -23,6 +53,7 @@
 | 图片渲染 | Jinja2（模板） + html2pic / Playwright（引擎） |
 | 认证 | JWT + bcrypt |
 | 前端 | Vue 3 + Vite + Pinia |
+:::
 
 ## 核心能力
 
@@ -36,7 +67,7 @@
 
 ## 目录结构
 
-```
+```file-tree
 UniBot/
 ├── Bot.py                 # 机器人入口
 ├── Watchdog.py            # 守护进程（自动重启）

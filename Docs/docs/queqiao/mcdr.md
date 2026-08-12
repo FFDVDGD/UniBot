@@ -14,11 +14,12 @@
 
 ## 安装
 
-### 方式一：直接下载 .mcdr 包
+::: tabs
+@tab 方式一：直接下载 .mcdr 包
 
 从 [Releases](https://github.com/Minecraft-UniBot/QueQiao.MCDReforged/releases) 下载 `queqiao-vX.X.X.mcdr`，放入 MCDR 的 `plugins/` 目录，重启 MCDR 即可。
 
-### 方式二：源码安装
+@tab 方式二：源码安装
 
 ```bash
 git clone https://github.com/Minecraft-UniBot/QueQiao.MCDReforged.git
@@ -31,6 +32,7 @@ uv sync
 ```bash
 uv run python -m mcdreforged pack
 ```
+:::
 
 ### 依赖
 
@@ -39,11 +41,13 @@ uv run python -m mcdreforged pack
 - Python 包：`websockets` ≥ 16.0、`PyYAML` ≥ 6.0、`psutil` ≥ 5.9
 - MCDR 插件依赖：
 
+::: table title="MCDR 插件依赖" copy="all"
 | 插件 | 用途 | 必需 |
 |------|------|------|
-| [MoreGameEvents](https://mcdreforged.com/zh-CN/plugin/mg_events) | 玩家死亡、成就事件 | ✅ |
-| [Minecraft Data API](https://mcdreforged.com/zh-CN/plugin/minecraft_data_api) | 玩家坐标、生命值、经验等级 | ✅ |
-| [online_player_api](https://mcdreforged.com/zh-CN/plugin/online_player_api) | 在线玩家列表 | ⚠️ 可选（缺失时回退 MCDR 内置接口） |
+| [MoreGameEvents](https://mcdreforged.com/zh-CN/plugin/mg_events) | 玩家死亡、成就事件 | ::fluent-color:checkmark-circle-24:: |
+| [Minecraft Data API](https://mcdreforged.com/zh-CN/plugin/minecraft_data_api) | 玩家坐标、生命值、经验等级 | ::fluent-color:checkmark-circle-24:: |
+| [online_player_api](https://mcdreforged.com/zh-CN/plugin/online_player_api) | 在线玩家列表 | ::fluent-color:warning-24:: 可选（缺失时回退 MCDR 内置接口） |
+:::
 
 ## 配置
 
@@ -75,6 +79,7 @@ uv run python -m mcdreforged pack
 
 ### 字段说明
 
+::: table title="config.json 字段说明" copy="all"
 | 字段 | 说明 |
 |------|------|
 | `server_name` | 本服务器名称，用于 Header `x-self-name` 与事件标识 |
@@ -88,24 +93,31 @@ uv run python -m mcdreforged pack
 | `server.enable` | 启用服务端模式 |
 | `server.host` / `server.port` | WebSocket 服务端监听地址 |
 | `log_events` | 是否在日志中打印事件转发记录 |
+:::
 
-### 客户端模式
+### 连接模式
+
+::: tabs
+@tab 客户端模式
 
 将 `client.enable` 设为 `true`，并填写鹊桥服务端的 WebSocket 地址（`client.url`）。该模式下插件主动连接服务端，需与对端 `server_name`、`access_token` 保持一致。
 
 *推荐使用客户端模式。* 当服务器在内网、无法直接对外暴露端口时，客户端模式可主动外连，无需在服务器上开放监听端口。
 
-### 服务端模式
+@tab 服务端模式
 
 将 `server.enable` 设为 `true`，插件将启动 WebSocket 服务端监听 `server.host:server.port`，等待鹊桥客户端接入。需在对端 `websocket_client.url_list` 中填写本插件的监听地址。
+:::
 
 ## 命令
 
+::: table title="命令列表" copy="all"
 | 命令 | 权限 | 说明 |
 |------|------|------|
 | `!!queqiao` | 2 | 显示帮助 |
 | `!!queqiao status` | 2 | 查看连接状态（模式、玩家、CPU、内存、MOTD 等） |
 | `!!queqiao reload` | 2 | 重载配置并重新连接 |
+:::
 
 ## 与适配器对接
 

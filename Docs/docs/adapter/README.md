@@ -6,6 +6,7 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 
 ## 支持的平台
 
+::: table title="支持的平台" copy="all" hl-cols="warning:4"
 | 平台 | 适配器 | 说明 |
 |------|--------|------|
 | **QQ** | OneBot V11 | 需配合 Lagrange.OneBot / NapCat / LLOneBot 等协议端 |
@@ -16,21 +17,43 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 | **KOOK（开黑啦）** | KOOK | 开发者平台接入 |
 | **Satori** | Satori | 通用协议，可对接 Chronocat 等 |
 | **Minecraft** | Minecraft | 通过鹊桥协议与服务器互通 |
+:::
 
 ## 安装与依赖自动同步
 
 通过 **WebUI → 适配器** 安装平台适配器时，UniBot 会自动完成三件事：
 
-1. 把适配器包（如 `nonebot-adapter-onebot`）写入 `pyproject.toml` 的 `dependencies`；
-2. 在 `.env` 的 `DRIVER` 中追加适配器所需的驱动（如 `~httpx`、`~websockets`）；
-3. **自动把驱动所需底层依赖包**（如 `websockets`）同步写入 `pyproject.toml` 的 `dependencies`，确保重启后驱动可正常工作。
+::: steps
+
+1. **写入依赖**
+
+   把适配器包（如 `nonebot-adapter-onebot`）写入 `pyproject.toml` 的 `dependencies`。
+
+2. **追加驱动**
+
+   在 `.env` 的 `DRIVER` 中追加适配器所需的驱动（如 `~httpx`、`~websockets`）。
+
+3. **同步底层依赖**
+
+   **自动把驱动所需底层依赖包**（如 `websockets`）同步写入 `pyproject.toml` 的 `dependencies`，确保重启后驱动可正常工作。
+
+:::
 
 以上依赖声明变化会在重启时由 Watchdog 通过 `uv sync` 自动落地安装。卸载适配器时，仅移除注册与 `DRIVER` 中多余的驱动，不删除依赖声明，避免误删被其他依赖引用的包。
 
 ## 快速导航
 
-- [接入聊天平台](/adapter/platforms.html) — 各平台适配器的配置字段与对接方式
-- [Minecraft 适配器](/adapter/使用说明.html) — MC 协议适配器的配置与服务器对接
+<LinkCard title="接入聊天平台" href="/adapter/platforms.html" icon="fluent-color:chat-24">
+
+各平台适配器的配置字段与对接方式。
+
+</LinkCard>
+
+<LinkCard title="Minecraft 适配器" href="/adapter/使用说明.html" icon="fluent-color:link-24">
+
+MC 协议适配器的配置与服务器对接。
+
+</LinkCard>
 
 ## Minecraft 适配器
 
@@ -40,12 +63,14 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 
 ## 相关项目
 
+::: table title="相关项目" copy="all"
 | 项目 | 说明 |
 |------|------|
 | [鹊桥](/queqiao/) | 服务器端插件/Mod，协议官方实现 |
 | [QueQiao.MCDReforged](/queqiao/mcdr.html) | MCDR 端协议实现 |
 | [nonebot-plugin-mcqq](https://github.com/17TheWord/nonebot-plugin-mcqq) | 更完善的 MC 通信插件 |
 | [nonebot-plugin-mcping](https://github.com/17TheWord/nonebot-plugin-mcping) | 获取 MC 服务器 MOTD 并返回图片 |
+:::
 
 ## 开源许可
 

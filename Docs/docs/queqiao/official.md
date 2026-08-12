@@ -6,6 +6,7 @@
 
 ## 支持的服务端
 
+::: table title="支持的服务端" copy="all"
 | 类型 | 说明 | 版本范围 |
 |------|------|----------|
 | Spigot / Paper / Folia | Bukkit 系插件 | 1.12.2 起 |
@@ -13,6 +14,7 @@
 | Fabric | Mod 加载器 | 1.16.5 起 |
 | Velocity | 代理端插件 | 3.3.0 |
 | 原版 | 独立程序（独立运行） | 原版 |
+:::
 
 ## 安装
 
@@ -71,6 +73,7 @@ ignored_commands: []
 
 ### 字段说明
 
+::: table title="config.yml 字段说明" copy="all"
 | 字段 | 说明 |
 |------|------|
 | `enable` | 是否启用插件 / 模组 |
@@ -83,6 +86,7 @@ ignored_commands: []
 | `rcon` | RCON 客户端配置 |
 | `subscribe_event` | 订阅事件开关 |
 | `ignored_commands` | 忽略的命令列表 |
+:::
 
 ### 翻译功能（可选）
 
@@ -92,31 +96,37 @@ ignored_commands: []
 
 鹊桥提供 **正向 WebSocket** 与 **反向 WebSocket** 两种连接方式，任选其一即可。
 
-### 正向 WebSocket（服务端模式）
+::: tabs
+@tab 正向 WebSocket（服务端模式）
 
 在 `websocket_server` 中启用并监听地址 / 端口，服务端等待客户端接入。适用于服务端能对外暴露端口、由适配器主动连接的场景。
 
-### 反向 WebSocket（客户端模式）
+@tab 反向 WebSocket（客户端模式）
 
 在 `websocket_client` 中启用，并在 `url_list` 中填写对端 WebSocket 地址。服务端主动外连，适用于服务端在内网、无法暴露端口的场景。
+:::
 
 ## Header 鉴权
 
 使用任一连接方式时，均需携带或校验以下 Header：
 
+::: table title="Header 鉴权" copy="all"
 | Header | 必填 | 说明 |
 |--------|------|------|
-| `x-self-name` | ✅ | 服务器名称，必须与 `config.yml` 的 `server_name` 一致 |
-| `Authorization` | ⚠️ | 鉴权，`Bearer <access_token>`，`access_token` 为空时可省略 |
-| `x-client-origin` | ⚠️ | 对接项目来源标记，如 `minecraft` / `nonebot`，建议填写 |
+| `x-self-name` | ::fluent-color:checkmark-circle-24:: | 服务器名称，必须与 `config.yml` 的 `server_name` 一致 |
+| `Authorization` | ::fluent-color:warning-24:: | 鉴权，`Bearer <access_token>`，`access_token` 为空时可省略 |
+| `x-client-origin` | ::fluent-color:warning-24:: | 对接项目来源标记，如 `minecraft` / `nonebot`，建议填写 |
+:::
 
 ## 游戏内命令
 
+::: table title="游戏内命令" copy="all"
 | 命令 | 权限节点 | 说明 |
 |------|----------|------|
 | `/queqiao help` | `queqiao.help` | 显示帮助 |
 | `/queqiao reload` | `queqiao.reload` | 重载配置并重启 WebSocket |
 | `/queqiao client reconnect [all]` | `queqiao.client.reconnect` | 重连 WebSocket Client（`all` 强制全部重连） |
+:::
 
 *Mod 端对权限的判定为 int Level，本模组所有命令权限定义为 `2`。*
 

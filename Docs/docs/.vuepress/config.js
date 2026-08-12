@@ -16,6 +16,21 @@ export default defineUserConfig({
     repo: 'MineJPGcraft/UniBot',
     docsDir: 'Docs/docs',
 
+    markdown: {
+      // 流程图（已从 flowchart 切换到 mermaid，节点内可用 <br/> 换行）：```mermaid
+      mermaid: true,
+      // 旧版 flowchart 语法（已弃用，保留配置以防残留代码块）：```flow:preset
+      // flowchart: true,
+      // Markdown 内联图标：::fluent-color:name::
+      icon: { provider: 'iconify' },
+      // 表格增强：::: table（标题 / 复制 / 高亮）
+      table: true,
+      // 折叠面板：::: collapse
+      collapse: true,
+      // 缩写词语法：*[xxx]: 定义
+      abbr: true,
+    },
+
     social: [
       {
         icon: {

@@ -6,17 +6,28 @@
 
 ## 接入方式
 
+::: table title="接入方式" copy="all" hl-rows="tip:2"
 | 服务端类型 | 实现端 | 说明 |
 |------------|--------|------|
 | MCDReforged | [MCDR 端插件](/queqiao/mcdr.html) | 本项目维护实现 |
 | Spigot / Paper / Folia / Forge / Fabric / NeoForge / Velocity / 原版 | [鹊桥官方实现](/queqiao/official.html) | 第三方官方实现 |
+:::
 
 *需说明的是：本项目仅维护其中的 MCDR 端插件。* 鹊桥协议本身并非本项目开发，它还支持 Spigot、Paper、Fabric、Forge、NeoForge 等多种服务端。
 
 ## 快速导航
 
-- [MCDR 端插件](/queqiao/mcdr.html) — 本项目维护的 MCDR 实现，安装、配置与命令
-- [鹊桥官方实现](/queqiao/official.html) — 其它服务端的官方实现，安装、配置与对接
+<LinkCard title="MCDR 端插件" href="/queqiao/mcdr.html" icon="fluent-color:toolbox-24">
+
+本项目维护的 MCDR 实现，安装、配置与命令。
+
+</LinkCard>
+
+<LinkCard title="鹊桥官方实现" href="/queqiao/official.html" icon="fluent-color:globe-24">
+
+其它服务端的官方实现，安装、配置与对接。
+
+</LinkCard>
 
 ## 协议概述
 
@@ -26,8 +37,10 @@
 
 鹊桥协议已有多套对接实现，UniBot 通过 [nonebot-adapter-minecraft](/adapter/使用说明.html) 接入：
 
+::: table title="对接项目" copy="all"
 | 项目 | 说明 |
 |------|------|
 | [nonebot-adapter-minecraft](/adapter/) | NoneBot 的 Minecraft 适配器，UniBot 使用 |
 | [nonebot-plugin-mcqq](https://github.com/17TheWord/nonebot-plugin-mcqq) | 更完善的 MC 通信插件 |
 | [nonebot-plugin-mcping](https://github.com/17TheWord/nonebot-plugin-mcping) | 获取 MC 服务器 MOTD 并返回图片 |
+:::

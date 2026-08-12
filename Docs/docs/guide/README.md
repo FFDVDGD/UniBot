@@ -4,31 +4,68 @@
 
 ## 从哪开始
 
-- **第一次接触** → 从 [快速开始](/guide/快速开始.html) 开始，按五步完成最小部署。
-- **想知道有哪些指令** → 参阅 [指令手册](/guide/指令手册.html)。
-- **想了解全部能力** → 参阅 [功能特性](/guide/功能特性.html)。
-- **想了解整体架构** → 参阅 [架构设计](/unibot/架构设计.html)。
-- **想了解扩展系统** → 参阅 [扩展系统](/unibot/扩展系统.html)。
-- **需要调整配置** → 参阅 [配置说明](/unibot/配置说明.html)。
+:::: card-grid
+
+::: card title="快速开始" icon="fluent-color:book-open-24"
+第一次接触？从这里开始，按步骤完成最小部署。
+
+→ [前往快速开始](/guide/快速开始.html)
+:::
+
+::: card title="指令手册" icon="fluent-color:book-24"
+全部内置指令及用法，一查便知。
+
+→ [前往指令手册](/guide/指令手册.html)
+:::
+
+::: card title="功能特性" icon="fluent-color:bot-sparkle-24"
+群服互通、图片渲染、WebUI、扩展系统等全部能力。
+
+→ [查看功能特性](/guide/功能特性.html)
+:::
+
+::: card title="架构设计" icon="fluent-color:apps-24"
+了解整体架构及各组件间的通信方式。
+
+→ [查看架构设计](/unibot/架构设计.html)
+:::
+
+::: card title="扩展系统" icon="fluent-color:puzzle-piece-24"
+了解扩展机制，像积木一样组合机器人能力。
+
+→ [查看扩展系统](/unibot/扩展系统.html)
+:::
+
+::: card title="配置说明" icon="fluent-color:settings-24"
+需要深入调整配置？全部配置项尽在其中。
+
+→ [查看配置说明](/unibot/配置说明.html)
+:::
+
+::::
 
 ## 文档导航
 
+::: table title="文档导航" copy="all"
 | 章节 | 内容 | 适合谁 |
 |------|------|--------|
 | [快速开始](/guide/快速开始.html) | 五步完成部署 | 第一次使用的用户 |
 | [指令手册](/guide/指令手册.html) | 全部内置指令及用法 | 所有用户 |
 | [功能特性](/guide/功能特性.html) | 群服互通、图片渲染、WebUI、扩展系统等能力 | 想了解全部能力的用户 |
+:::
 
-> 🔗 **配置说明**：`.env` 与 `Config.toml` 等全部配置项的详细说明，见 [UniBot 配置说明](/unibot/配置说明.html)。
+> ::fluent-color:link-24:: **配置说明**：`.env` 与 `Config.toml` 等全部配置项的详细说明，见 [UniBot 配置说明](/unibot/配置说明.html)。
 
 ## 项目组成
 
 本项目由多个子项目组成，各负责一个环节：
 
+::: table title="项目组成" copy="all"
 | 子项目 | 作用 | 文档 |
 |--------|------|------|
 | [UniBot](/unibot/) | 核心机器人，负责与聊天平台、多台服务器通信 | [架构设计](/unibot/架构设计.html) |
 | [鹊桥](/queqiao/) | 第三方通信协议，本项目维护其 MCDR 端插件 | [鹊桥文档](/queqiao/) |
 | [MC 适配器](/adapter/) | NoneBot 的 MC 协议适配器，通信桥梁 | [适配器文档](/adapter/) |
+:::
 
-> 📌 **关于鹊桥**：本项目维护的是鹊桥协议的 **MCDR 端实现**。鹊桥协议本体由 [17TheWord / QueQiao](https://github.com/17TheWord/QueQiao) 官方维护，还支持 Spigot、Paper、Fabric、Forge 等多种服务端，并非本项目开发。
+> ::fluent-color:pin-24:: **关于鹊桥**：本项目维护的是鹊桥协议的 **MCDR 端实现**。鹊桥协议本体由 [17TheWord / QueQiao](https://github.com/17TheWord/QueQiao) 官方维护，还支持 Spigot、Paper、Fabric、Forge 等多种服务端，并非本项目开发。
