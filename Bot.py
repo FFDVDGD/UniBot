@@ -48,18 +48,19 @@ async def shutdown() -> None:
 
 
 def register_adapters(driver, adapters: list[dict]) -> None:
-    """注册已配置的 NoneBot 适配器。"""
+    """注册已配置的 NoneBot 适配器，单个适配器加载失败不影响其他适配器。"""
     for adapter in adapters:
+        module_name = adapter['module_name']
         try:
-            module = importlib.import_module(adapter['module_name'])
-        except ImportError:
-            logger.warning(f'导入适配器模块 {adapter["module_name"]} 失败，已跳过！')
-            continue
-        if adapter_class := getattr(module, 'Adapter', None):
+            module = importlib.import_module(module_name)
+            adapter_class = getattr(module, 'Adapter', None)
+            if adapter_class is None:
+                logger.warning(f'适配器模块 {module_name} 未包含 Adapter 类，已跳过！')
+                continue
             logger.info(f'正在注册 {adapter_class} 适配器。')
             driver.register_adapter(adapter_class)
-            continue
-        logger.warning(f'适配器模块 {adapter["module_name"]} 未包含 Adapter 类，已跳过！')
+        except Exception as error:
+            logger.warning(f'适配器 {module_name} 加载失败，已跳过！原因：{error}')
 
 
 def load_plugins(plugins: list[str | dict]) -> None:
