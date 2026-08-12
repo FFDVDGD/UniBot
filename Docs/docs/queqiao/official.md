@@ -97,13 +97,13 @@ ignored_commands: []
 鹊桥提供 **正向 WebSocket** 与 **反向 WebSocket** 两种连接方式，任选其一即可。
 
 ::: tabs
+@tab 反向 WebSocket（客户端模式，推荐）
+
+在 `websocket_client` 中启用，并在 `url_list` 中填写对端 WebSocket 地址。服务端主动外连，无需对外开放端口，适用于服务端在内网、无法暴露端口的场景，是绝大多数场景下的推荐选择。
+
 @tab 正向 WebSocket（服务端模式）
 
 在 `websocket_server` 中启用并监听地址 / 端口，服务端等待客户端接入。适用于服务端能对外暴露端口、由适配器主动连接的场景。
-
-@tab 反向 WebSocket（客户端模式）
-
-在 `websocket_client` 中启用，并在 `url_list` 中填写对端 WebSocket 地址。服务端主动外连，适用于服务端在内网、无法暴露端口的场景。
 :::
 
 ## Header 鉴权
