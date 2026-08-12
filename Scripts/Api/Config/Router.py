@@ -6,7 +6,6 @@
 
 from copy import deepcopy
 
-import tomlkit
 from fastapi import APIRouter, Depends, Request
 
 from Scripts.Config import TOML_PATH, Config, config, reload_config, validate_config_content
@@ -24,21 +23,6 @@ router = APIRouter(prefix='/api/config', tags=['Config'])
 # tomlkit 不支持 None 值，写盘前替换为空字符串
 # NoneBot 内置配置字段（port/superusers/command_start）在 .env 中管理，不写入 Config.toml
 _TOML_SKIP_KEYS = ('port', 'superusers', 'command_start')
-
-
-def _write_toml_preserving(data: dict) -> None:
-    """读取现有 Config.toml 保留注释与格式，逐键更新后写回。"""
-    try:
-        toml_document = tomlkit.parse(TOML_PATH.read_text('Utf-8'))
-    except FileNotFoundError:
-        toml_document = tomlkit.document()
-    for key, value in data.items():
-        if isinstance(value, dict) and key in toml_document and isinstance(toml_document[key], dict):
-            for sub_key, sub_value in value.items():
-                toml_document[key][sub_key] = sub_value
-            continue
-        toml_document[key] = value
-    TOML_PATH.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
 
 
 @router.get('', summary='获取配置')
@@ -78,7 +62,7 @@ async def patch_config(request: Request, current_user: dict = Depends(require_ro
         toml_output.pop(key, None)
 
     try:
-        _write_toml_preserving(sanitize_none(toml_output))
+        config_manager.update_config(sanitize_none(toml_output))
     except Exception as error:
         return {'code': 500, 'data': None, 'message': f'写入配置文件失败：{error}'}
 

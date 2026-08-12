@@ -1,11 +1,10 @@
 """扩展系统 WebUI REST 路由：已安装扩展、配置、启停、渲染引擎与主题。"""
 
-import tomlkit
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from Scripts.Api.Config.Router import TOML_PATH
 from Scripts.Config import config, reload_config
 from Scripts.Extensions import ExtensionType, extension_manager, market_manager
+from Scripts.Managers import config_manager
 
 from .Auth import get_current_user, require_role
 
@@ -246,15 +245,5 @@ async def switch_template(request: Request, user: dict = Depends(require_role('a
 
 def _patch_image_config(field_name: str, value: str) -> None:
     """将 image.<field> 写入 Config.toml 并热更新内存配置。"""
-    try:
-        toml_document = tomlkit.parse(TOML_PATH.read_text('Utf-8'))
-    except FileNotFoundError:
-        toml_document = tomlkit.document()
-    image_doc = toml_document.get('image')
-    if image_doc is None or not isinstance(image_doc, dict):
-        image_doc = tomlkit.table()
-        toml_document['image'] = image_doc
-    image_doc[field_name] = value
-    TOML_PATH.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
-
+    config_manager.update_config({'image': {field_name: value}})
     reload_config()

@@ -89,6 +89,20 @@ detail_args_title = "参数："
 detail_subcommands_title = "子命令："
 arg_line = "{name} — {notice}"
 
+[commands.config]
+# 配置管理指令相关提示
+no_permission = "你没有权限执行此命令！"
+unknown_config = "未知配置项 {name}！可用：message_groups / msg_grps / command_groups / cmd_grps / superusers"
+user_only = "配置项 {name} 只支持用户目标，请使用 @用户 或 用户ID！"
+group_only = "配置项 {name} 只支持群聊目标，请使用 . 或 平台:群ID！"
+no_scene = "无法获取当前群聊信息，请直接在当前群聊中使用！"
+already_added = "{value} 已在 {name} 中！"
+not_found = "{value} 不在 {name} 中！"
+add_success = "已将 {value} 添加到 {name}！"
+remove_success = "已将 {value} 从 {name} 中移除！"
+write_failed = "配置写入失败，请查看控制台日志！"
+restart_hint = "（重启机器人后框架权限完全生效）"
+
 [commands.list]
 # 在线玩家相关提示
 server_not_found = "没有找到已连接的 [{server}] 服务器！请检查编号或名称是否输入正确。"
