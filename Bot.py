@@ -7,9 +7,12 @@ import nonebot
 from nonebot.log import logger
 
 from Scripts import Process
+from Scripts.Logging import configure_handlers, configure_logging
 
 LOG_PATH = Path('Logs/')
 
+# 在 NoneBot 初始化前配置日志处理器，保证启动早期日志格式统一
+configure_handlers(LOG_PATH)
 nonebot.init()
 driver = nonebot.get_driver()
 
@@ -57,7 +60,7 @@ def register_adapters(driver, adapters: list[dict]) -> None:
             if adapter_class is None:
                 logger.warning(f'适配器模块 {module_name} 未包含 Adapter 类，已跳过！')
                 continue
-            logger.info(f'正在注册 {adapter_class} 适配器。')
+            logger.opt(colors=True).info(f'正在注册 <cyan>{adapter_class}</cyan> 适配器。')
             driver.register_adapter(adapter_class)
         except Exception as error:
             logger.warning(f'适配器 {module_name} 加载失败，已跳过！原因：{error}')
@@ -84,6 +87,7 @@ def main():
     from Scripts.Config import config as bot_config
     from Scripts.Managers import config_manager, webui_manager
 
+    configure_logging()
     config_manager.init()
 
     register_adapters(driver, config_manager.nonebot_config.get('adapters', []))
@@ -94,8 +98,6 @@ def main():
     if bot_config.webui.enabled:
         webui_manager.mount(nonebot.get_app())
 
-    LOG_PATH.mkdir(exist_ok=True)
-    logger.add(LOG_PATH / '{time}.log', rotation='1 day')
     signal.signal(signal.SIGTERM, exit_on_sigterm)
     nonebot.run()
 

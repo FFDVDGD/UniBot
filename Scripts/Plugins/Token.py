@@ -52,7 +52,9 @@ def normalize_token(text: str) -> str:
 def refresh_token() -> str:
     """刷新令牌：重新计算并覆盖当前令牌（即用即刷），返回新令牌。"""
     Globals.auth_token = generate_token()
-    logger.info(f'认证令牌：{Globals.auth_token}，直接复制发送在消息群和指令群即可完成配置。')
+    logger.opt(colors=True).info(
+        f'认证令牌：<light-red><b>{Globals.auth_token}</b></light-red>，直接复制发送在消息群和指令群即可完成配置。'
+    )
     return Globals.auth_token
 
 
@@ -74,7 +76,8 @@ async def handle_auth_token(session: Uninfo, message: UniMsg) -> None:
     if group_info := get_group_info(session):
         results.append(add_group(group_info))
     results.append(add_superuser(session))
-    await token_watcher.finish(f'认证成功：\n  {"；\n  ".join(results)}')
+    results_text = '；\n  '.join(results)
+    await token_watcher.finish(f'认证成功：\n  {results_text}')
 
 
 def get_group_info(session: Uninfo) -> str | None:

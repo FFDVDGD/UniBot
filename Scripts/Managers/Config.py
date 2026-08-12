@@ -70,7 +70,7 @@ class ConfigManager:
             logger.warning(f'忽略 .env 中无法解析的行: {line!r}')
         # 先合并原始值，再统一解析，保证引号多行值完整
         self.environment = {key: self._parse_value(raw) for key, raw in self.environment.items()}
-        logger.success('预加载配置文件完毕！文件已载入到内存中。')
+        logger.success('加载 .env 配置完毕！')
 
     def load_pyproject(self):
         """加载 pyproject.toml 配置（版本号、NoneBot 适配器/插件等）。"""
@@ -105,7 +105,6 @@ class ConfigManager:
 
     def write_env(self):
         """将 .env 配置写回文件。"""
-        logger.info('正在写入配置……')
         lines = []
         for line in self.mapping:
             if line.startswith('#') or not line:

@@ -100,7 +100,7 @@ class PluginManager:
             return self.market_cache
         self.market_cache = [item for item in data if isinstance(item, dict)]
         self.market_cache_time = now
-        logger.success(f'刷新插件市场数据成功！共收录 {len(self.market_cache)} 个插件。')
+        logger.opt(colors=True).success(f'刷新插件市场数据成功！共收录 <yellow>{len(self.market_cache)}</yellow> 个插件。')
         return self.market_cache
 
     async def install(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
@@ -108,7 +108,7 @@ class PluginManager:
         package = f'{project_link}=={version}' if version else project_link
         config_manager.add_dependency(package)
         config_manager.add_plugin(module_name)
-        logger.success(f'登记插件 {project_link} 成功！')
+        logger.opt(colors=True).success(f'登记插件 <green>{project_link}</green> 成功！')
         return True, '安装成功，重启后生效'
 
     async def upgrade(self, project_link: str, module_name: str, version: str = '') -> tuple[bool, str]:
@@ -117,14 +117,14 @@ class PluginManager:
         config_manager.remove_dependency(project_link)
         config_manager.add_dependency(package)
         config_manager.set_plugin_enabled(module_name, True)
-        logger.success(f'登记升级插件 {project_link} 成功！')
+        logger.opt(colors=True).success(f'登记升级插件 <green>{project_link}</green> 成功！')
         return True, '升级成功，重启后生效'
 
     async def uninstall(self, project_link: str, module_name: str) -> tuple[bool, str]:
         """卸载市场插件：移除登记，重启后由 Watchdog 自动 uv sync 卸载。"""
         config_manager.remove_plugin(module_name)
         config_manager.remove_dependency(project_link)
-        logger.success(f'登记卸载插件 {project_link} 成功！')
+        logger.opt(colors=True).success(f'登记卸载插件 <green>{project_link}</green> 成功！')
         return True, '卸载成功，重启后生效'
 
 

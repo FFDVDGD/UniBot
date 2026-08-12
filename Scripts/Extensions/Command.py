@@ -6,16 +6,17 @@
 嵌套 SubCommand 类的形式声明，框架自动发现并实例化，parent 指向父命令实例。
 """
 
-import re
 import inspect
+import re
 from abc import ABC
+from collections.abc import AsyncIterable, Awaitable, Callable
 from functools import wraps
 from typing import Any, Generic, TypeVar
-from collections.abc import AsyncIterable, Awaitable, Callable
 
 from arclet.alconna import Alconna, Args, MultiVar, Subcommand
-from nonebot.log import logger
 from nonebot.exception import FinishedException
+from nonebot.log import logger
+from nonebot.matcher import MatcherSource
 from nonebot_plugin_alconna import on_alconna
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
@@ -211,6 +212,19 @@ class SubCommand(Command[ParentT]):
     """
 
 
+def _command_source(command: Command) -> MatcherSource | None:
+    """构造指向命令类声明位置的 MatcherSource，供框架日志与帮助展示使用。"""
+    command_cls = command.__class__
+    module = inspect.getmodule(command_cls)
+    if module is None:
+        return None
+    try:
+        _, lineno = inspect.getsourcelines(command_cls)
+    except OSError:
+        return None
+    return MatcherSource(module_name=module.__name__, lineno=lineno)
+
+
 def discover_commands(module) -> list[Command[Any]]:
     """扫描模块中非抽象、非 SubCommand 的 Command 子类并实例化。"""
     commands = []
@@ -357,6 +371,10 @@ class CommandManager:
             use_cmd_start=True,
             skip_for_unmatch=True,
         )
+        # Alconna 把 matcher 位置记录为 on_alconna 调用处（本文件），重映射为命令类实际声明位置
+        if source := _command_source(command):
+            matcher._source = source
+            alconna.meta.extra['matcher.source'] = source
         matcher.assign('$main')(self._route(matcher, command.image_handler, command.handler, command))
         for subcommand in command.subcommands:
             matcher.assign(subcommand.name)(

@@ -22,7 +22,6 @@ class DataManager:
 
     def load(self):
         """加载 WebUI 用户数据与 JWT 密钥。"""
-        logger.info('加载数据文件……')
         if not self.data_dir.exists():
             logger.warning('数据文件目录不存在，正在创建数据目录……')
             self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -48,7 +47,6 @@ class DataManager:
     async def save(self):
         """持久化 WebUI 用户数据。"""
         async with self.lock:
-            logger.debug('正在保存数据文件……')
             self.users_file.write_text(dumps(self.users, ensure_ascii=False, indent=2), encoding='Utf-8')
             logger.success('保存数据文件完毕！')
 
