@@ -33,9 +33,10 @@ class ConfigManager:
                 # 引号包裹的 JSON（如 "{"A":"B"}" → 去外层引号解析为 dict）
             with suppress(JSONDecodeError):
                 return loads(raw[1:-1])
-            # 引号多行文本：把内部真实换行转义成 \n 后重新包上引号，交给 JSON 解析（自动还原转义）
+            # 引号多行文本：去掉首尾引号，把内部真实换行转义成 \n 后重新包上引号，
+            # 交给 JSON 解析（自动还原转义），避免保留外层引号
             with suppress(JSONDecodeError):
-                return loads('"' + raw.replace('\n', '\\n') + '"')
+                return loads(raw.replace('\n', '\\n'))
         return raw
 
     def init(self):

@@ -44,6 +44,12 @@ async def get_status(current_user: dict = Depends(get_current_user)):
     return {'code': 0, 'data': get_status_data(), 'message': 'ok'}
 
 
+@router.get('/token', summary='获取认证令牌')
+async def get_auth_token(current_user: dict = Depends(get_current_user)):
+    """获取当前认证令牌，用于在群聊中发送以完成快速授权。"""
+    return {'code': 0, 'data': {'token': Globals.auth_token}, 'message': 'ok'}
+
+
 @router.post('/check-update', summary='检测最新版本')
 async def check_update(current_user: dict = Depends(get_current_user)):
     """主动从 GitHub 拉取最新发布版本并返回检测结果。"""

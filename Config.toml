@@ -13,12 +13,12 @@ bot_prefix = ""
 # 指令群，机器人只对这些群的指令作响应。
 # 格式 "{平台}:{群ID}"，平台对应：
 #   qq_client / qq_api / qq_guild / telegram / discord / dodo / kook / wechat / wecom
-# 请将 123456789 替换为你的实际群号。
-command_groups = ["qq_client:123456789"]
+# 如第三方 QQ 平台的群号为 123456789，则填写 "qq_client:123456789"。
+command_groups = []
 
 # 消息群（即使用指令发送到消息的 QQ 群，以及把群内消息同步到游戏内的群）。
-# 请将 123456789 替换为你的实际群号。
-message_groups = ["qq_client:123456789"]
+# 格式同 command_groups 通常两个保持一致。
+message_groups = []
 
 # Command 指令的白名单，只有以这个列表里的指令开头的指令才被允许执行。
 # 若有填写请保留空的 command_minecraft_blacklist 或删除此字段。

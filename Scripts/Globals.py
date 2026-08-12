@@ -7,6 +7,9 @@ if TYPE_CHECKING:
 # 兼容模式下的玩家列表缓存：{服务器名称: [玩家名列表]}
 player_list_cache: dict[str, list[str]] = {}
 
+# 当前有效的认证令牌，由 Token 插件在启动时生成、使用后刷新
+auth_token: str = ''
+
 # 玩家绑定服务，由 Players 内置扩展在启停时维护
 player_service: 'PlayerService | None' = None
 

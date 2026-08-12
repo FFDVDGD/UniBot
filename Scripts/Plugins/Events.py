@@ -175,9 +175,7 @@ async def handle_player_chat(event: PlayerChatEvent):
         message = MessageSegment.text(message_config.events.sensitive_reply, color='red')
         await server.send_private_msg(message=message, nickname=player)
         return
-    await send_message_to_groups(
-        message_config.events.chat_forward.format(server=name, player=player, content=content)
-    )
+    await send_message_to_groups(message_config.events.chat_forward.format(server=name, player=player, content=content))
     message = MessageSegment.text(message_config.events.sent_success, color='green')
     await server.send_private_msg(message=message, nickname=player)
 
