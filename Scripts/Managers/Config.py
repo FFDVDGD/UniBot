@@ -14,6 +14,7 @@ class ConfigManager:
     env_path: Path = Path('.env')
     pyproject_path: Path = Path('pyproject.toml')
     messages_path: Path = Path('Config') / 'Messages.toml'
+    config_path: Path = Path('Config.toml')
 
     # pyproject.toml 数据
     version: str = ''
@@ -26,10 +27,15 @@ class ConfigManager:
         """解析 .env 值：JSON 优先，其次引号包裹的多行文本。"""
         with suppress(JSONDecodeError):
             return loads(raw)
-        if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
-            # 引号多行值：把内部真实换行转义成 \n 后交给 JSON 解析（自动还原转义）
+        for quote in ('"', "'"):
+            if not (raw.startswith(quote) and raw.endswith(quote) and len(raw) >= 2):
+                continue
+                # 引号包裹的 JSON（如 "{"A":"B"}" → 去外层引号解析为 dict）
             with suppress(JSONDecodeError):
-                return loads(raw[1:-1].replace('\n', '\\n'))
+                return loads(raw[1:-1])
+            # 引号多行文本：把内部真实换行转义成 \n 后重新包上引号，交给 JSON 解析（自动还原转义）
+            with suppress(JSONDecodeError):
+                return loads('"' + raw.replace('\n', '\\n') + '"')
         return raw
 
     def init(self):
@@ -220,6 +226,26 @@ class ConfigManager:
             plugins.append({'module_name': module_name, 'enabled': enabled})
         data['tool']['nonebot']['plugins'] = plugins
         self.write_pyproject(data)
+
+    # ===== Config.toml 操作 =====
+
+    def read_config_raw(self) -> str:
+        """读取 Config.toml 原始文本内容。"""
+        return self.config_path.read_text('Utf-8')
+
+    def update_config(self, data: dict) -> None:
+        """更新 Config.toml 指定键并写回（保留注释与格式）。"""
+        try:
+            toml_document = tomlkit.parse(self.config_path.read_text('Utf-8'))
+        except FileNotFoundError:
+            toml_document = tomlkit.document()
+        for key, value in data.items():
+            if isinstance(value, dict) and key in toml_document and isinstance(toml_document[key], dict):
+                for sub_key, sub_value in value.items():
+                    toml_document[key][sub_key] = sub_value
+                continue
+            toml_document[key] = value
+        self.config_path.write_text(tomlkit.dumps(toml_document), encoding='Utf-8')
 
     # ===== Messages.toml 操作 =====
 

@@ -41,6 +41,16 @@ def test_load_env_escaped_multiline_roundtrip(tmp_path):
     assert manager2.environment['D'] == 'x'
 
 
+def test_load_env_quoted_json(tmp_path):
+    """引号包裹的 JSON 对象：去掉外层引号后解析为 dict；普通引号串仍是字符串。"""
+    manager = _manager(tmp_path, 'B="{"A":"B"}"\nC="[1, 2]"\nD=[1, 2]\n')
+    assert manager.environment['B'] == {'A': 'B'}
+    # 外层引号是字符串语法，整体是合法 JSON 字符串，保持为字符串
+    assert manager.environment['C'] == '[1, 2]'
+    # 不带外层引号才是列表
+    assert manager.environment['D'] == [1, 2]
+
+
 def test_load_env_json_and_comments(tmp_path):
     """单行 JSON 值、注释、空行混排仍正常工作。"""
     manager = _manager(tmp_path, '# 注释\n\nA=1\n\nB=["x", "y"]\n')
