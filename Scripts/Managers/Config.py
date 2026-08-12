@@ -21,6 +21,17 @@ class ConfigManager:
     nonebot_config: dict = {}
     pyproject_data: dict = {}
 
+    @staticmethod
+    def _parse_value(raw: str) -> object:
+        """解析 .env 值：JSON 优先，其次引号包裹的多行文本。"""
+        with suppress(JSONDecodeError):
+            return loads(raw)
+        if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+            # 引号多行值：把内部真实换行转义成 \n 后交给 JSON 解析（自动还原转义）
+            with suppress(JSONDecodeError):
+                return loads(raw[1:-1].replace('\n', '\\n'))
+        return raw
+
     def init(self):
         """加载 .env 和 pyproject.toml 配置。"""
         self.load_env()
@@ -33,18 +44,25 @@ class ConfigManager:
             sys.exit(1)
         self.mapping = []
         self.environment = {}
-        file_content = self.env_path.read_text('Utf-8')
-        for line in file_content.split('\n'):
+        last_key: str | None = None
+        for line in self.env_path.read_text('Utf-8').splitlines():
             line = line.strip()
-            if line.startswith('#') or not line:
+            if not line or line.startswith('#'):
                 self.mapping.append(line)
                 continue
-            key, value = line.split('=', 1)
-            key, value = key.strip(), value.strip()
-            with suppress(JSONDecodeError):
-                value = loads(value)
-            self.environment[key] = value
-            self.mapping.append(key)
+            if '=' in line:
+                key, value = line.split('=', 1)
+                last_key = key.strip()
+                self.environment[last_key] = value.strip()
+                self.mapping.append(last_key)
+                continue
+            elif last_key is not None:
+                # 变量值跨行：续行追加到上一个值（保留换行符）
+                self.environment[last_key] += '\n' + line
+                continue
+            logger.warning(f'忽略 .env 中无法解析的行: {line!r}')
+        # 先合并原始值，再统一解析，保证引号多行值完整
+        self.environment = {key: self._parse_value(raw) for key, raw in self.environment.items()}
         logger.success('预加载配置文件完毕！文件已载入到内存中。')
 
     def load_pyproject(self):
