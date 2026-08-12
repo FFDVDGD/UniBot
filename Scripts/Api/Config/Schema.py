@@ -184,6 +184,28 @@ CONFIG_GROUPS = [
 
 # ===== .env 环境变量字段定义 =====
 
+QQ_INTENT_FIELDS = [
+    {'key': 'guilds', 'label': '频道事件', 'type': 'boolean', 'default': False},
+    {'key': 'guild_members', 'label': '频道成员事件', 'type': 'boolean', 'default': False},
+    {'key': 'guild_messages', 'label': '频道消息事件', 'type': 'boolean', 'default': False},
+    {'key': 'guild_message_reactions', 'label': '频道消息表态事件', 'type': 'boolean', 'default': False},
+    {'key': 'direct_message', 'label': '频道私信事件', 'type': 'boolean', 'default': False},
+    {'key': 'open_forum_event', 'label': '频道公域论坛事件', 'type': 'boolean', 'default': False},
+    {'key': 'audio_live_member', 'label': '频道音频或直播成员事件', 'type': 'boolean', 'default': False},
+    {'key': 'group_members', 'label': '群成员变更事件', 'type': 'boolean', 'default': True},
+    {
+        'key': 'c2c_group_at_messages',
+        'label': '私聊与群聊 @ 消息事件',
+        'type': 'boolean',
+        'default': True,
+    },
+    {'key': 'interaction', 'label': '互动事件', 'type': 'boolean', 'default': False},
+    {'key': 'message_audit', 'label': '频道消息审核事件', 'type': 'boolean', 'default': False},
+    {'key': 'forum_event', 'label': '频道私域论坛事件', 'type': 'boolean', 'default': False},
+    {'key': 'audio_action', 'label': '频道音频操作事件', 'type': 'boolean', 'default': False},
+    {'key': 'at_messages', 'label': '频道 @ 机器人消息事件', 'type': 'boolean', 'default': False},
+]
+
 ENV_SCHEMA = [
     {'key': 'PORT', 'label': '监听端口', 'type': 'number', 'default': 8000, 'description': 'NoneBot 监听的端口'},
     {
@@ -236,8 +258,49 @@ ENV_SCHEMA = [
         'label': 'QQ 机器人',
         'type': 'json',
         'default': [],
-        'description': 'QQ 官方机器人列表（JSON 数组），每项：id（AppID）、token、secret、'
-        'intent（事件订阅对象）、use_websocket（默认 True，False 使用 WebHook）',
+        'description': 'QQ 开放平台官方机器人列表；每个机器人需配置 AppID、Secret，'
+        '并按需订阅事件（Intent）。使用 WebHook 连接时在开放平台配置回调地址。',
+        'form': {
+            'kind': 'array',
+            'item_title': '机器人',
+            'fields': [
+                {
+                    'key': 'id',
+                    'label': 'AppID',
+                    'type': 'string',
+                    'required': True,
+                    'description': 'QQ 开放平台应用的 AppID',
+                },
+                {
+                    'key': 'secret',
+                    'label': 'Secret',
+                    'type': 'secret',
+                    'required': True,
+                    'description': 'QQ 开放平台应用的 Secret，用于消息签名与事件验签',
+                },
+                {
+                    'key': 'token',
+                    'label': 'Token',
+                    'type': 'secret',
+                    'description': 'QQ 开放平台应用的机器人 Token，仅 WebSocket 连接需要',
+                },
+                {
+                    'key': 'intent',
+                    'label': '事件订阅（Intent）',
+                    'type': 'object',
+                    'kind': 'booleans',
+                    'fields': QQ_INTENT_FIELDS,
+                    'description': '仅 WebSocket 连接生效，需按机器人类型订阅所需事件',
+                },
+                {
+                    'key': 'use_websocket',
+                    'label': '使用 WebSocket 连接',
+                    'type': 'boolean',
+                    'default': True,
+                    'description': '关闭后改用 WebHook 连接，需在开放平台配置回调地址',
+                },
+            ],
+        },
     },
     {
         'key': 'QQ_IS_SANDBOX',
@@ -252,7 +315,29 @@ ENV_SCHEMA = [
         'label': 'Telegram 机器人',
         'type': 'json',
         'default': [],
-        'description': 'Telegram 机器人列表（JSON 数组），每项：token（向 @BotFather 申请，必填）、is_webhook（是否启用 Webhook 模式，默认 False）',
+        'description': 'Telegram 机器人列表；Token 向 @BotFather 申请（必填）。'
+        '默认使用 Long Polling 长轮询，开启 Webhook 需配合公网 HTTPS 地址。',
+        'form': {
+            'kind': 'array',
+            'item_title': '机器人',
+            'item_placeholder': '名称',
+            'fields': [
+                {
+                    'key': 'token',
+                    'label': '机器人 Token',
+                    'type': 'secret',
+                    'required': True,
+                    'description': '向 @BotFather 申请，格式如 1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                },
+                {
+                    'key': 'is_webhook',
+                    'label': '使用 Webhook 模式',
+                    'type': 'boolean',
+                    'default': False,
+                    'description': '关闭则使用 Long Polling 长轮询（推荐）',
+                },
+            ],
+        },
     },
     {
         'key': 'TELEGRAM_WEBHOOK_URL',
@@ -274,8 +359,63 @@ ENV_SCHEMA = [
         'label': 'Discord 机器人',
         'type': 'json',
         'default': [],
-        'description': 'Discord 机器人列表（JSON 数组），每项：token（必填）、intent（事件订阅对象，'
-        'message_content 为特权 Intent）、application_commands（斜杠命令注册范围，如 {"*": ["*"]}）',
+        'description': 'Discord 机器人列表；每个机器人需 Bot Token，并按需订阅事件（Intent）。'
+        'message_content 为特权 Intent，需在开发者平台开启。',
+        'form': {
+            'kind': 'array',
+            'item_title': '机器人',
+            'fields': [
+                {
+                    'key': 'token',
+                    'label': 'Bot Token',
+                    'type': 'secret',
+                    'required': True,
+                    'description': 'Discord Developer Portal 中应用的 Bot Token',
+                },
+                {
+                    'key': 'intent',
+                    'label': '事件订阅（Intent）',
+                    'type': 'object',
+                    'kind': 'booleans',
+                    'fields': [
+                        {'key': 'guilds', 'label': '服务器事件', 'type': 'boolean', 'default': True},
+                        {
+                            'key': 'guild_messages',
+                            'label': '服务器消息事件',
+                            'type': 'boolean',
+                            'default': True,
+                        },
+                        {
+                            'key': 'direct_messages',
+                            'label': '私信事件',
+                            'type': 'boolean',
+                            'default': True,
+                        },
+                        {
+                            'key': 'message_content',
+                            'label': '消息内容（特权）',
+                            'type': 'boolean',
+                            'default': False,
+                            'description': '特权 Intent，需在开发者平台开启 Message Content Intent',
+                        },
+                        {
+                            'key': 'guild_members',
+                            'label': '服务器成员事件',
+                            'type': 'boolean',
+                            'default': True,
+                        },
+                    ],
+                },
+                {
+                    'key': 'application_commands',
+                    'label': '斜杠命令注册范围',
+                    'type': 'object',
+                    'kind': 'map',
+                    'value_type': 'list',
+                    'description': '命令名 → 服务器 ID 列表；{"*": ["*"]} 表示全部注册为全局命令',
+                },
+            ],
+        },
     },
     {
         'key': 'DISCORD_API_VERSION',
@@ -318,7 +458,28 @@ ENV_SCHEMA = [
         'label': 'DoDo 机器人',
         'type': 'json',
         'default': [],
-        'description': 'DoDo 开放平台机器人列表（JSON 数组，仅支持 WebSocket 连接），每项：client_id（必填）、token（必填）',
+        'description': 'DoDo 开放平台机器人列表（仅支持 WebSocket 连接）；'
+        '在开放平台创建机器人获取 client_id 与 token。',
+        'form': {
+            'kind': 'array',
+            'item_title': '机器人',
+            'fields': [
+                {
+                    'key': 'client_id',
+                    'label': 'Client ID',
+                    'type': 'string',
+                    'required': True,
+                    'description': 'DoDo 开放平台机器的 Client ID',
+                },
+                {
+                    'key': 'token',
+                    'label': 'Token',
+                    'type': 'secret',
+                    'required': True,
+                    'description': 'DoDo 开放平台机器的 Token',
+                },
+            ],
+        },
     },
     # ===== KOOK =====
     {
@@ -326,7 +487,20 @@ ENV_SCHEMA = [
         'label': 'KOOK 机器人',
         'type': 'json',
         'default': [],
-        'description': 'KOOK（开黑啦）机器人列表（JSON 数组），每项：token（开发者平台获取，必填）',
+        'description': 'KOOK（开黑啦）机器人列表；Token 在开发者平台获取（必填）。',
+        'form': {
+            'kind': 'array',
+            'item_title': '机器人',
+            'fields': [
+                {
+                    'key': 'token',
+                    'label': '机器人 Token',
+                    'type': 'secret',
+                    'required': True,
+                    'description': 'KOOK 开发者平台 → 应用 → 机器人连接模式 获取的 Token',
+                },
+            ],
+        },
     },
     # ===== Satori =====
     {
@@ -334,8 +508,56 @@ ENV_SCHEMA = [
         'label': 'Satori 服务',
         'type': 'json',
         'default': [],
-        'description': 'Satori 客户端列表（JSON 数组），每项：host、port、path（默认空）、'
-        'token（视服务端要求）、timeout（默认 30）、secure（是否 TLS，默认 False）',
+        'description': 'Satori 协议客户端列表，用于连接 Chronocat、LLBot、Koishi 等 Satori 服务端。',
+        'form': {
+            'kind': 'array',
+            'item_title': '连接',
+            'item_placeholder': '名称',
+            'fields': [
+                {
+                    'key': 'host',
+                    'label': '连接地址',
+                    'type': 'string',
+                    'default': 'localhost',
+                    'description': 'Satori 服务端监听地址，如 localhost',
+                },
+                {
+                    'key': 'port',
+                    'label': '端口',
+                    'type': 'number',
+                    'default': 5500,
+                    'description': 'Satori 服务端监听端口，Chronocat 默认为 5500',
+                },
+                {
+                    'key': 'path',
+                    'label': '路径',
+                    'type': 'string',
+                    'default': '',
+                    'description': '服务端自定义监听路径，如 /satori，默认为空',
+                },
+                {
+                    'key': 'token',
+                    'label': 'Token',
+                    'type': 'secret',
+                    'default': '',
+                    'description': '服务端要求的验证 Token（如对接 Chronocat 需要）',
+                },
+                {
+                    'key': 'timeout',
+                    'label': '超时时间',
+                    'type': 'number',
+                    'default': 30,
+                    'description': '连接超时时间（秒）',
+                },
+                {
+                    'key': 'secure',
+                    'label': '使用 TLS',
+                    'type': 'boolean',
+                    'default': False,
+                    'description': '是否使用 TLS / wss 加密连接',
+                },
+            ],
+        },
     },
     # ===== Minecraft =====
     {
@@ -343,7 +565,13 @@ ENV_SCHEMA = [
         'label': 'Minecraft WS 地址',
         'type': 'json',
         'default': {},
-        'description': 'Minecraft WebSocket 连接地址（JSON）：{"服务器名称": ["ws://地址:端口/路径"]}',
+        'description': 'Minecraft WebSocket 连接地址：服务器名称 → 连接地址',
+        'form': {
+            'kind': 'map',
+            'key_label': '服务器名称',
+            'value_type': 'string',
+            'value_placeholder': 'ws://地址:端口/路径',
+        },
     },
     {
         'key': 'MINECRAFT_ACCESS_TOKEN',
