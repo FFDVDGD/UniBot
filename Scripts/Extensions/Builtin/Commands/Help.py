@@ -26,8 +26,17 @@ def get_node(name: str) -> Command | None:
 
 
 def gen_usage(command: Command) -> str:
-    """根据结构化命令自动生成用法字符串（含子命令、参数），统一带 `#` 前缀。"""
+    """根据结构化命令自动生成用法字符串（含参数），统一带 `/` 前缀。"""
     parts = [f'/{command.name}']
+    for argument in command.arguments:
+        display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
+        parts.append(display)
+    return ' '.join(parts)
+
+
+def gen_path_usage(path: list[str], command: Command) -> str:
+    """生成子命令完整路径用法，如 `/bot superusers add <target>`。"""
+    parts = [f"/{' '.join(path)}"]
     for argument in command.arguments:
         display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
         parts.append(display)
@@ -41,6 +50,25 @@ def node_args(command: Command) -> list[dict]:
         for argument in command.arguments
         if argument.description
     ]
+
+
+def _walk_subcommands(subcommands: list[Command], path_prefix: list[str], indent: str = '') -> list[str]:
+    """递归展开子命令树为展示行（完整路径 + 嵌套子命令 + 参数描述）。"""
+    lines: list[str] = []
+    for index, subcommand in enumerate(subcommands):
+        is_last = index == len(subcommands) - 1
+        branch = '└─' if is_last else '├─'
+        continuation = '    ' if is_last else '│   '
+        path = path_prefix + [subcommand.name]
+        description = f' — {subcommand.description}' if subcommand.description else ''
+        lines.append(f'{indent}{branch} {gen_path_usage(path, subcommand)}{description}')
+        for argument in subcommand.arguments:
+            if argument.description:
+                arg_line = messages.commands.help.arg_line.format(name=argument.name, notice=argument.description)
+                lines.append(f'{indent}{continuation}    {arg_line}')
+        if subcommand.subcommands:
+            lines.extend(_walk_subcommands(subcommand.subcommands, path, f'{indent}{continuation}    '))
+    return lines
 
 
 @extension.register_command
@@ -76,12 +104,7 @@ class HelpCommand(Command):
         for command in get_enabled_nodes():
             usage = command.usage or gen_usage(command)
             description = command.description or ''
-            sub_list = []
-            for index, subcommand in enumerate(command.subcommands):
-                branch = '└─' if index == len(command.subcommands) - 1 else '├─'
-                sub_desc = f' — {subcommand.description}' if subcommand.description else ''
-                sub_list.append(f'{branch} {subcommand.name}{sub_desc}')
-            commands.append({'usage': usage, 'description': description, 'subcommands': sub_list})
+            commands.append({'usage': usage, 'description': description, 'subcommands': _walk_subcommands(command.subcommands, [command.name])})
         return commands
 
     def get_command_detail(self, name: str) -> dict | None:
@@ -89,16 +112,12 @@ class HelpCommand(Command):
         command = get_node(name)
         if command is None:
             return None
-        sub_list = [
-            {'name': sub.name, 'usage': gen_usage(sub), 'description': sub.description or ''}
-            for sub in command.subcommands
-        ]
         return {
             'name': name,
             'usage': command.usage or gen_usage(command),
             'description': command.description or '',
             'args': node_args(command),
-            'subcommands': sub_list,
+            'subcommands': _walk_subcommands(command.subcommands, [command.name]),
         }
 
     def help_handler(self):
@@ -107,10 +126,7 @@ class HelpCommand(Command):
             usage = command.usage or gen_usage(command)
             description = command.description or ''
             yield f'    {usage} — {description}'
-            for index, subcommand in enumerate(command.subcommands):
-                branch = '└─' if index == len(command.subcommands) - 1 else '├─'
-                subcommand_description = f' — {subcommand.description}' if subcommand.description else ''
-                yield f'    {branch} {subcommand.name}{subcommand_description}'
+            yield from _walk_subcommands(command.subcommands, [command.name], '    ')
         yield messages.commands.help.footnote
 
     def detailed_handler(self, name: str):
@@ -130,12 +146,4 @@ class HelpCommand(Command):
         if not command.subcommands:
             return
         yield f'    {messages.commands.help.detail_subcommands_title}'
-        for index, subcommand in enumerate(command.subcommands):
-            branch = '└─' if index == len(command.subcommands) - 1 else '├─'
-            continuation = '    ' if index == len(command.subcommands) - 1 else '│   '
-            subcommand_description = f' — {subcommand.description}' if subcommand.description else ''
-            yield f'        {branch} {gen_usage(subcommand)}{subcommand_description}'
-            for arg in subcommand.arguments:
-                if arg.description:
-                    arg_line = messages.commands.help.arg_line.format(name=arg.name, notice=arg.description)
-                    yield f'        {continuation}    {arg_line}'
+        yield from _walk_subcommands(command.subcommands, [command.name], '        ')

@@ -118,9 +118,31 @@ class _ServerCommand(Command):
     description = '服务器'
 
 
-def _build_all(manager: CommandManager):
-    manager.validate()
-    manager.build()
+class _NestedCommand(Command):
+    """带两级嵌套子命令的命令（如 /bot superusers add）。"""
+
+    name = 'bot'
+    description = '机器人'
+
+    class Superusers(SubCommand):
+        name = 'superusers'
+        description = '管理超级用户'
+
+        class Add(SubCommand):
+            name = 'add'
+            description = '添加'
+
+            @override
+            def declare(self) -> None:
+                self.register_arg('target', str, description='目标')
+
+        class Remove(SubCommand):
+            name = 'remove'
+            description = '移除'
+
+            @override
+            def declare(self) -> None:
+                self.register_arg('target', str, description='目标')
 
 
 # ===== 收集 =====
@@ -218,6 +240,53 @@ class TestBuiltinStructure:
         )
         _build_all(manager)
         assert len(manager._matchers) == 8
+
+
+# ===== 嵌套子命令 =====
+
+
+class TestNestedSubcommand:
+    def test_nested_subcommand_discovered(self):
+        """两级嵌套子命令被自动发现，parent 链正确。"""
+        manager = _commit({'Bot': _make_extension(_NestedCommand)})
+        node = manager.get_command('builtin:bot')
+        superusers = node.find_subcommand('superusers')
+        assert superusers is not None
+        add = superusers.find_subcommand('add')
+        assert add is not None
+        assert add.find_argument('target') is not None
+        # parent 链：add -> superusers -> bot
+        assert add.parent is superusers
+        assert superusers.parent is node
+
+    def test_nested_subcommand_builds_nested_alconna(self):
+        """构建出的 Alconna 中嵌套子命令是父子结构而非拍平。"""
+        manager = _commit({'Bot': _make_extension(_NestedCommand)})
+        _build_all(manager)
+        alconna = manager._matchers[0].command()
+        help_text = alconna.get_help()
+        # 嵌套子命令以「父级下的子命令」形式出现（非独立顶层子命令）
+        assert 'superusers' in help_text
+        assert 'add' in help_text
+        # 顶层子命令列表应只包含 superusers，add 是它的下级
+        top_level = [sub.name for sub in alconna.options if getattr(sub, 'dest', None) == 'superusers']
+        assert top_level == ['superusers']
+
+    def test_nested_subcommand_parse(self):
+        """`/bot superusers add 123` 正确解析，add 不作为一级子命令暴露。"""
+        manager = _commit({'Bot': _make_extension(_NestedCommand)})
+        _build_all(manager)
+        alconna = manager._matchers[0].command()
+        from arclet.alconna import command_manager as alconna_command_manager
+
+        with alconna_command_manager.update(alconna):
+            alconna.prefixes = ['/']
+        result = alconna.parse('/bot superusers add 123')
+        assert result.matched
+        assert list(result.subcommands) == ['superusers']
+        assert result.query('superusers.add.target') == '123'
+        # 修复前 bug：add 被拍平为一级子命令，/bot add 123 也能触发
+        assert not alconna.parse('/bot add 123').matched
 
 
 # ===== 单文件清单构建 =====

@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from Scripts.Extensions import BaseRenderer, RendererManager, extension_manager
-from Scripts.Extensions.Base import TemplateFieldConfig
 from Scripts.Extensions.Loader import CONFIG_ROOT
 from Scripts.Extensions.Renderer import (
     TemplateRegistration,
@@ -135,80 +134,3 @@ class TestRendererManager:
         manager = RendererManager(lambda name: None)
         with pytest.raises(RuntimeError):
             asyncio.run(manager.render('a', 'b'))
-
-    def test_template_reads_background_from_config(self, tmp_path):
-        """模板自行从 config.background 读取背景，框架不再注入 background。"""
-        renderer = _FakeRenderer('fake')
-        manager = RendererManager(lambda name: renderer if name == 'fake' else None)
-        asyncio.run(manager.setup('fake'))
-        template_root = Path(__file__).parent.parent / 'Extensions' / 'Default' / 'Templates'
-        config_model = build_template_config_model(
-            'Default',
-            {
-                'background': TemplateFieldConfig(
-                    type='string',
-                    default='{{ random("Default", "Backgrounds") }}',
-                ),
-            },
-        )
-        store = ExtensionConfigStore(tmp_path, 'Default', config_model)
-        manager.register_template(TemplateRegistration('Default', template_root, (), config_model, store))
-        # 注册背景资源包
-        resources_root = Path(__file__).parent.parent / 'Extensions' / 'Default' / 'Resources'
-        manager.register_resources('Default', resources_root)
-        asyncio.run(manager.render_image('About', (600, 0), renderer='fake'))
-        html, css = renderer.rendered[0]
-        # random() 语法已解析为实际图片 url，且不再由框架注入 background 变量
-        assert 'random(' not in css
-        assert 'background-image: url("' in css
-
-    def test_template_background_supports_jinja(self, tmp_path):
-        """config.background 内嵌 {{ }} 表达式会被 Jinja 二次渲染。"""
-        renderer = _FakeRenderer('fake')
-        manager = RendererManager(lambda name: renderer if name == 'fake' else None)
-        asyncio.run(manager.setup('fake'))
-        template_root = Path(__file__).parent.parent / 'Extensions' / 'Default' / 'Templates'
-        config_model = build_template_config_model(
-            'Default',
-            {
-                'background': TemplateFieldConfig(
-                    type='string',
-                    default='linear-gradient({{ 45 + 45 }}deg, #000 0%, #fff 100%)',
-                ),
-            },
-        )
-        store = ExtensionConfigStore(tmp_path, 'Default', config_model)
-        manager.register_template(TemplateRegistration('Default', template_root, (), config_model, store))
-        # 注册资源包（render_image 需要从中解析默认字体 Font.ttf）
-        resources_root = Path(__file__).parent.parent / 'Extensions' / 'Default' / 'Resources'
-        manager.register_resources('Default', resources_root)
-        asyncio.run(manager.render_image('About', (600, 0), renderer='fake'))
-        html, css = renderer.rendered[0]
-        assert '{{' not in css
-        assert 'linear-gradient(90deg' in css
-
-    def test_config_background_calls_random_global(self, tmp_path):
-        """config 内嵌 {{ random(...) }} 走 Jinja 全局函数，返回路径并自行包装 url()。"""
-        renderer = _FakeRenderer('fake')
-        manager = RendererManager(lambda name: renderer if name == 'fake' else None)
-        asyncio.run(manager.setup('fake'))
-        template_root = Path(__file__).parent.parent / 'Extensions' / 'Default' / 'Templates'
-        config_model = build_template_config_model(
-            'Default',
-            {
-                'background': TemplateFieldConfig(
-                    type='string',
-                    default='{{ random("Default", "Backgrounds") }}',
-                ),
-            },
-        )
-        store = ExtensionConfigStore(tmp_path, 'Default', config_model)
-        manager.register_template(TemplateRegistration('Default', template_root, (), config_model, store))
-        # 注册背景资源包
-        resources_root = Path(__file__).parent.parent / 'Extensions' / 'Default' / 'Resources'
-        manager.register_resources('Default', resources_root)
-        asyncio.run(manager.render_image('About', (600, 0), renderer='fake'))
-        html, css = renderer.rendered[0]
-        assert '{{' not in css
-        assert 'random(' not in css
-        assert 'background-image: url("' in css

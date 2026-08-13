@@ -149,7 +149,6 @@ async def handle_player_chat(event: PlayerChatEvent):
     if config.sync_all_game_message:
         if check_message(chat_message):
             logger.warning(f'检测到消息 {chat_message} 包含敏感词，已丢弃！')
-            await send_message_to_groups(message_config.events.sensitive_group.format(player=player))
             return
 
         await send_message_to_groups(

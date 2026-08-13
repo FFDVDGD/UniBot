@@ -152,7 +152,7 @@ class ExtensionLoader:
         发现单文件扩展：导入模块读取类属性构建清单，校验 id 与文件名一致。
 
         内置扩展分布在 `Builtin/` 下的固定子目录（Commands/Services），
-        模块 id 以子包名作前缀（如 `Commands.About`）；用户扩展位于 `Extensions/` 根目录，模块 id 即文件名。
+        模块 id 以子包名作前缀（如 `Commands.Bot`）；用户扩展位于 `Extensions/` 根目录，模块 id 即文件名。
         """
         extension_id = file.stem
         module_path = f'Extensions.{extension_id}'

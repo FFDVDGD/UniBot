@@ -4,7 +4,7 @@
 # enabled = false 表示禁用（扩展不会加载，配置与数据保留）
 # 未列出的扩展默认为启用。
 
-[About]
+[Bot]
 enabled = true
 
 [Bound]

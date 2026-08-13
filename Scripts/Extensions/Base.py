@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from Scripts.Logging import logger
 from Scripts.Managers import config_manager
 
+from .Command import Command
 from .Errors import (
     ExtensionError,
     ExtensionNotBoundError,
@@ -19,7 +20,9 @@ from .Errors import (
 from .Service import ServiceRegistry
 from .Storage import ExtensionConfigStore, ExtensionDataStore
 
+CommandClassT = TypeVar('CommandClassT', bound='Command')
 ServiceClassT = TypeVar('ServiceClassT')
+RendererClassT = TypeVar('RendererClassT')
 ConfigModelT = TypeVar('ConfigModelT', bound=BaseModel)
 
 
@@ -395,8 +398,8 @@ class Extension(Generic[ConfigModelT]):
 
     # ===== 声明提交（实例装饰器，能力归属由装饰时使用的实例决定） =====
 
-    def register_command(self, command_cls) -> type:
-        """实例装饰器：登记一个 Command 子类，返回该类。"""
+    def register_command(self, command_cls: type[CommandClassT]) -> type[CommandClassT]:
+        """实例装饰器：登记一个 Command 子类，返回该类（保留类型信息）。"""
         self.commands.append(command_cls)
         return command_cls
 
@@ -405,8 +408,8 @@ class Extension(Generic[ConfigModelT]):
         self.services.append(service_cls)
         return service_cls
 
-    def register_renderer(self, renderer_cls) -> type:
-        """实例装饰器：登记一个 BaseRenderer 子类，返回该类。"""
+    def register_renderer(self, renderer_cls: type[RendererClassT]) -> type[RendererClassT]:
+        """实例装饰器：登记一个 BaseRenderer 子类，返回该类（保留类型信息）。"""
         self.renderers.append(renderer_cls)
         return renderer_cls
 

@@ -338,14 +338,16 @@ class CommandManager:
         return args
 
     def _build_subcommand(self, subcommand: Command[Any]) -> Subcommand:
-        """将子命令实例转换为 Alconna Subcommand。"""
+        """将子命令实例递归转换为 Alconna Subcommand（支持嵌套子命令）。"""
+        nested = [self._build_subcommand(sub) for sub in subcommand.subcommands]
         return Subcommand(
             subcommand.name,
             self._build_args(subcommand),
+            *nested,
             help_text=subcommand.description or None,
         )
 
-    def _build_matcher(self, command_id: str, command: Command[Any]) -> None:
+    def _build_matcher(self, command: Command[Any]) -> None:
         """
         为一个命令实例构建 Alconna matcher 并绑定 handler。
 
@@ -376,12 +378,20 @@ class CommandManager:
             matcher._source = source
             alconna.meta.extra['matcher.source'] = source
         matcher.assign('$main')(self._route(matcher, command.image_handler, command.handler, command))
+        # 递归注册子命令分派：叶子优先（后序遍历），父级子命令在嵌套子命令之后匹配，
+        # 保证 `/bot superusers add 123` 命中 `add` 而非 `superusers`
         for subcommand in command.subcommands:
-            matcher.assign(subcommand.name)(
-                self._route(matcher, subcommand.image_handler, subcommand.handler, subcommand)
-            )
+            self._assign_subcommand(matcher, subcommand, subcommand.name)
         self._matchers.append(matcher)
         logger.debug(f'构建命令 {command.name} 完毕！')
+
+    def _assign_subcommand(self, matcher, subcommand: Command[Any], path: str) -> None:
+        """递归注册子命令分派处理器，路径用点路径（如 `superusers.add`）。"""
+        for nested in subcommand.subcommands:
+            self._assign_subcommand(matcher, nested, f'{path}.{nested.name}')
+        matcher.assign(path)(
+            self._route(matcher, subcommand.image_handler, subcommand.handler, subcommand)
+        )
 
     @staticmethod
     def _route(matcher, image_handler, handler: Handler, command: Command[Any]) -> Handler:
@@ -432,8 +442,8 @@ class CommandManager:
         if self._built:
             return self._matchers
         self.validate()
-        for command_id, command in self._commands.items():
-            self._build_matcher(command_id, command)
+        for command in self._commands.values():
+            self._build_matcher(command)
         self._built = True
         return self._matchers
 
