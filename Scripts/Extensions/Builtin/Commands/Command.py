@@ -8,9 +8,8 @@ from nonebot_plugin_uninfo import Uninfo
 from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Extensions import Command, Extension
-from Scripts.Logging import logger
 from Scripts.Messages import messages
-from Scripts.Utils import get_permission, turn_message_text
+from Scripts.Utils import get_permission, strip_minecraft_color, turn_message_text
 
 # 创建唯一扩展实例，能力经实例装饰器登记
 extension = Extension(id='Command', name='控制台命令', version='1.0.0', types=('command',))
@@ -59,14 +58,13 @@ class CommandCommand(Command):
                 yield messages.commands.command.no_server
                 return
             yield messages.commands.command.send_all_title
-            for name, bot in server_service.servers.items():
-                try:
-                    result = await bot.send_rcon_command(command=parsed_command)
-                    reply = result if result else messages.commands.command.no_return
-                    yield messages.commands.command.send_result.format(name=name, result=reply)
-                except Exception as error:
-                    logger.warning(f'向服务器 [{name}] 发送指令失败：{error}')
+            results = await server_service.execute(parsed_command)
+            for name, result in results.items():
+                if result is None:
                     yield messages.commands.command.send_failed.format(name=name)
+                    continue
+                reply = result or messages.commands.command.no_return
+                yield messages.commands.command.send_result.format(name=name, result=reply)
             return
         bot = server_service.get_server(server_flag)
         if bot is None:
@@ -74,7 +72,7 @@ class CommandCommand(Command):
             return
         try:
             result = await bot.send_rcon_command(command=parsed_command)
-            reply = result if result else messages.commands.command.no_return
+            reply = strip_minecraft_color(result) if result else messages.commands.command.no_return
             yield messages.commands.command.send_success.format(server=bot.self_id, result=reply)
         except Exception as error:
             yield messages.commands.command.send_error.format(server_flag=server_flag, error=error)

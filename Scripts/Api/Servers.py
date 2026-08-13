@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Logging import logger
+from Scripts.Utils import strip_minecraft_color
 
 from .Auth import get_current_user, require_role
 from .Schemas import BroadcastRequest, ExecuteCommandRequest
@@ -92,17 +93,21 @@ async def execute_command(
     server_service = Globals.server_service
     if server_service is None:
         return {'code': 1, 'data': None, 'message': 'Minecraft 服务器服务不可用'}
-    servers = server_service.servers
 
     if name == 'all':
         results = await server_service.execute(body.command)
         return {'code': 0, 'data': results or {}, 'message': 'ok'}
 
-    if name not in servers:
+    bot = server_service.get_server(name)
+    if bot is None:
         return {'code': 404, 'data': None, 'message': f'服务器 [{name}] 不存在'}
 
-    result = await server_service.execute(body.command, name)
-    response_text = result.get(name, '') if result else ''
+    try:
+        result = await bot.send_rcon_command(command=body.command)
+    except Exception as error:
+        logger.warning(f'向服务器 [{name}] 发送指令失败：{error}')
+        return {'code': 1, 'data': None, 'message': f'指令执行失败：{error}'}
+    response_text = strip_minecraft_color(result) if result else ''
     return {'code': 0, 'data': {'response': response_text}, 'message': 'ok'}
 
 

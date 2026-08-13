@@ -11,6 +11,7 @@ from Scripts.Logging import logger
 from .Config import config
 
 regex = re.compile(r'[A-Z0-9_]+|\.[A-Z0-9_]+', re.IGNORECASE)
+minecraft_color_pattern = re.compile(r'§x(?:§[0-9a-f]){6}|§[0-9a-fk-orx]', re.IGNORECASE)
 scope_mapping = {
     str(UninfoSupportScope.qq_client): 'QQ',
     str(UninfoSupportScope.qq_api): 'QQ',
@@ -28,6 +29,11 @@ async def turn_message_text(iterator: AsyncIterable[str] | Iterable[str]) -> str
     if isinstance(iterator, Iterable):
         return '\n'.join(iterator)
     return '\n'.join([text async for text in iterator])
+
+
+def strip_minecraft_color(text: str) -> str:
+    """去除字符串中的 Minecraft 颜色与格式代码。"""
+    return minecraft_color_pattern.sub('', text)
 
 
 def check_player(player: str) -> bool:

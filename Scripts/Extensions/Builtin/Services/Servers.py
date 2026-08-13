@@ -2,7 +2,9 @@
 
 import asyncio
 import re
-from typing import override
+from collections.abc import Awaitable, Callable
+from functools import wraps
+from typing import Any, Concatenate, ParamSpec, TypeVar, override
 
 from nonebot import get_adapter
 from nonebot.adapters.minecraft import Adapter as MCAdapter
@@ -12,8 +14,30 @@ from nonebot.adapters.minecraft.message import Message
 from Scripts import Globals
 from Scripts.Extensions import Extension, Service
 from Scripts.Logging import logger
+from Scripts.Utils import strip_minecraft_color
 
 extension = Extension(id='Servers', name='Minecraft 服务器服务', version='1.0.0', types=('api',))
+
+R = TypeVar('R')
+P = ParamSpec('P')
+
+
+def collect_results(
+    func: Callable[Concatenate[Any, Bot, P], Awaitable[R]],
+) -> Callable[Concatenate[Any, P], Awaitable[dict[str, R]]]:
+    """并发向所有服务器分发任务并收集为 {名称: 结果} 字典，注入 server 参数。"""
+
+    @wraps(func)
+    async def wrapper(self: Any, *args: P.args, **kwargs: P.kwargs) -> dict[str, R]:
+        names: list[str] = []
+        tasks: list[Awaitable[R]] = []
+        for name, server in self.servers.items():
+            names.append(name)
+            tasks.append(func(self, server, *args, **kwargs))
+        results = await asyncio.gather(*tasks)
+        return {names[index]: result for index, result in enumerate(results)}
+
+    return wrapper
 
 
 @extension.register_service
@@ -51,32 +75,15 @@ class ServerService(Service):
         """是否有 Minecraft 服务器在线。"""
         return bool(self.servers)
 
-    async def gather(self, get_task, filter_function=None):
-        """并发调用所有符合条件的 Minecraft 服务器。"""
-        names: list[str] = []
-        tasks = []
-        for name, server in self.servers.items():
-            if filter_function is None or filter_function(server):
-                names.append(name)
-                tasks.append(get_task(server))
-        results = await asyncio.gather(*tasks)
-        return {names[index]: result for index, result in enumerate(results)}
-
-    async def execute(self, command: str, server_flag: str | int | None = None):
-        """执行 Minecraft 指令，server_flag 为 None 时广播到所有服务器。"""
-
-        async def get_task(server: Bot):
-            try:
-                return await server.send_rcon_command(command=command)
-            except Exception as error:
-                logger.warning(f'向服务器 [{server.self_id}] 发送指令失败：{error}')
-
-        if server_flag is not None:
-            bot = self.get_server(server_flag)
-            if bot is not None:
-                return {bot.self_id: await bot.send_rcon_command(command=command)}
+    @collect_results
+    async def execute(self, server: Bot, command: str) -> str | None:
+        """向所有已连接服务器执行 Minecraft 指令，失败返回 None。"""
+        try:
+            result = await server.send_rcon_command(command=command)
+        except Exception as error:
+            logger.warning(f'向服务器 [{server.self_id}] 发送指令失败：{error}')
             return None
-        return await self.gather(get_task)
+        return strip_minecraft_color(result) if result else ''
 
     async def get_status(self, server: Bot) -> dict:
         """获取 Minecraft 服务器状态。"""
@@ -123,6 +130,7 @@ class ServerService(Service):
         except Exception as error:
             logger.warning(f'获取服务器 [{server.self_id}] 玩家列表失败：{error}')
             return [], 0
+        result = strip_minecraft_color(result) if result else result
         if not result:
             return [], 0
 
@@ -134,13 +142,12 @@ class ServerService(Service):
         players = [player.strip() for player in match.group(2).split(',') if player.strip()]
         return players, max_players
 
-    async def broadcast(self, message: Message | str, except_server: str = ''):
+    @collect_results
+    async def broadcast(self, server: Bot, message: Message | str, except_server: str = '') -> None:
         """广播消息到所有服务器（除 except_server 外）。"""
-
-        async def get_task(server: Bot):
-            try:
-                return await server.send_msg(message=message)
-            except Exception as error:
-                logger.warning(f'向服务器 [{server.self_id}] 广播消息失败：{error}')
-
-        return await self.gather(get_task, lambda server: server.self_id != except_server)
+        if server.self_id == except_server:
+            return None
+        try:
+            return await server.send_msg(message=message)
+        except Exception as error:
+            logger.warning(f'向服务器 [{server.self_id}] 广播消息失败：{error}')
