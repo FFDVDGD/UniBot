@@ -12,29 +12,26 @@ permissions:
 
 jobs:
   package:
-    name: 打包并上传 Zip
+    name: Package and Upload Zip
     runs-on: ubuntu-latest
     steps:
-      - name: 检出代码
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 打包项目 Zip（排除 tests / docs）
+      - name: Package project into Zip (exclude tests / docs)
         shell: bash
         run: |
           set -euxo pipefail
-          # 优先使用 Release 的 tag 名，手动触发时回退到分支名
-          TAG="${{ github.event.release.tag_name }}"
-          if [ -z "${TAG}" ]; then
-            TAG="${{ github.ref_name }}"
-          fi
-          ZIP_NAME="UniBot-${TAG}.zip"
+          ZIP_NAME="UniBot.zip"
 
           # 打包仓库内容，排除：
           #   - .git/        ：git 元数据，对用户无用
+          #   - .github/     ：CI/CD 工作流，对用户无用
           #   - tests/       ：测试代码
           #   - docs/ Docs/  ：文档（兼容大小写，含任意层级嵌套）
           zip -r "${ZIP_NAME}" . \
             -x ".git/*" \
+            -x ".github/*" \
             -x "tests/*" "*/tests/*" \
             -x "docs/*" "*/docs/*" \
             -x "Docs/*" "*/Docs/*"
@@ -42,11 +39,12 @@ jobs:
           echo "打包完成: ${ZIP_NAME}"
           ls -lh "${ZIP_NAME}"
 
-      - name: 上传构建产物
+          # 导出给后续步骤使用（env 会跨 step 保留）
+          echo "ZIP_NAME=${ZIP_NAME}" >> "${GITHUB_ENV}"
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UniBot-${{ github.event.release.tag_name }}
-          path: UniBot-${{ github.event.release.tag_name }}.zip
+          name: UniBot
+          path: ${{ env.ZIP_NAME }}
           if-no-files-found: error
-          # Zip 本身已压缩，跳过 artifact 的二次压缩以节省时间
-          compression-level: 0
