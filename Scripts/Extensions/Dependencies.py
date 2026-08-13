@@ -68,12 +68,16 @@ def collect_extension_dependencies() -> list[str]:
     return collected
 
 
-def sync_extension_dependencies() -> None:
+def sync_extension_dependencies(remove: list[str] | None = None) -> None:
     """
     把已启用扩展收集到的依赖合并写入 pyproject.toml 的 extensions 组。
 
-    只增不删：保留组内已有的依赖条目，仅追加新收集到的依赖。这样未启用
+    默认只增不删：保留组内已有的依赖条目，仅追加新收集到的依赖。这样未启用
     扩展的依赖不会新增，而已写入的依赖（可能已被手动安装）也不会被移除。
+
+    remove：需要尝试移除的依赖清单（通常为被卸载扩展声明的依赖）。仅当某个
+    依赖同时满足「在被移除清单中」且「不再被任何已启用扩展声明」时才会被移除，
+    避免误删其它扩展仍在使用的共享依赖。
     """
     if not PYPROJECT_PATH.exists():
         return
@@ -81,9 +85,13 @@ def sync_extension_dependencies() -> None:
     project = body.setdefault('project', {})
     optional = project.setdefault('optional-dependencies', {})
     existing = list(optional.get(EXTENSIONS_EXTRA, []))
-    seen: set[str] = set(existing)
-    merged = list(existing)
-    for dependency in collect_extension_dependencies():
+    current = collect_extension_dependencies()
+    current_set = set(current)
+    remove_set = set(remove or [])
+    # 保留：不在移除清单中的依赖，或仍在当前已启用扩展集合中的共享依赖
+    merged = [dep for dep in existing if dep not in remove_set or dep in current_set]
+    seen: set[str] = set(merged)
+    for dependency in current:
         if dependency not in seen:
             seen.add(dependency)
             merged.append(dependency)

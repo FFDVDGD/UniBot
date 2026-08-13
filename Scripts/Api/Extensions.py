@@ -3,12 +3,24 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from Scripts.Config import config, reload_config
-from Scripts.Extensions import ExtensionType, extension_manager, market_manager
+from Scripts.Extensions import EXTENSIONS_DIR, ExtensionType, extension_manager, market_manager
 from Scripts.Managers import config_manager
 
 from .Auth import get_current_user, require_role
 
 router = APIRouter(prefix='/api/extensions', tags=['Extensions'])
+
+# 图片模式必需的扩展（渲染引擎 + 默认模板包）。这些扩展随官方市场分发而非内置，
+# 开启 image.mode 时若缺失，由 WebUI 引导用户自动下载。
+IMAGE_MODE_REQUIRED_EXTENSIONS = [
+    ('Html2Pic', 'Html2Pic 渲染引擎'),
+    ('Default', '默认模板 & 资源'),
+]
+
+
+def _extension_downloaded(extension_id: str) -> bool:
+    """判断扩展是否已下载（扩展目录存在且含 Extension.toml 清单）。"""
+    return (EXTENSIONS_DIR / extension_id / 'Extension.toml').is_file()
 
 
 def _mask_config(extension) -> dict:
@@ -59,6 +71,37 @@ async def install_market_extension(request: Request, user: dict = Depends(requir
         return {'code': 1, 'data': None, 'message': '缺少扩展 id'}
     success, message = await market_manager.install(extension_id, version)
     return {'code': 0 if success else 1, 'data': None, 'message': message}
+
+
+@router.get('/image-requirements', summary='图片模式依赖扩展检查')
+async def get_image_requirements(current_user: dict = Depends(get_current_user)):
+    """返回图片模式所需扩展的下载情况，供开启图片模式时引导自动下载。"""
+    # 确保市场缓存已加载，便于判断缺失扩展是否可从市场自动安装
+    await market_manager.fetch_market()
+    required = []
+    missing = []
+    for extension_id, display_name in IMAGE_MODE_REQUIRED_EXTENSIONS:
+        installed = _extension_downloaded(extension_id)
+        in_market = extension_id in market_manager.market_cache
+        required.append(
+            {
+                'id': extension_id,
+                'name': display_name,
+                'installed': installed,
+                'in_market': in_market,
+            }
+        )
+        if not installed:
+            missing.append(extension_id)
+    return {
+        'code': 0,
+        'data': {
+            'mode': config.image.mode,
+            'required': required,
+            'missing': missing,
+        },
+        'message': 'ok',
+    }
 
 
 @router.get('/items/{extension_id}', summary='扩展详情与配置 schema')

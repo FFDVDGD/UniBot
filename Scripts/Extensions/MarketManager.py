@@ -74,7 +74,11 @@ class ExtensionMarketManager:
         items = []
         for extension in self.market_cache.values():
             latest = extension.latest_release()
-            installed = extension.id in extension_manager.registry
+            # 代码型扩展在 registry，无代码扩展包（template/resources）在 no_code_info
+            installed = (
+                extension.id in extension_manager.registry
+                or extension.id in extension_manager.no_code_info
+            )
             info = extension_manager.get_extension_info(extension.id) if installed else {}
             items.append(
                 {
@@ -279,11 +283,13 @@ class ExtensionMarketManager:
             return False, f'扩展 {extension_id} 是本地扩展，不允许卸载'
         if target_dir.exists():
             shutil.rmtree(target_dir)
+        # 记录被卸载扩展声明的依赖，供卸载后从 extensions 组移除不再需要的条目
+        removed_dependencies = list(state.python_dependencies) if state else []
         if extension_id in states:
             del states[extension_id]
             self._write_states(states)
-        # 卸载后重新聚合扩展依赖，移除残留的 extensions 组依赖
-        sync_extension_dependencies()
+        # 卸载后重新聚合扩展依赖：移除不再被任何已启用扩展需要的依赖（共享依赖保留）
+        sync_extension_dependencies(remove=removed_dependencies)
         logger.success(f'卸载扩展 {extension_id} 完毕，重启后生效！')
         return True, f'扩展 {extension_id} 卸载成功，重启后生效'
 

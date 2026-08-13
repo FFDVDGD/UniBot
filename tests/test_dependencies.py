@@ -119,3 +119,38 @@ class TestSyncExtensionDependencies:
 
         body = (tmp_path / 'pyproject.toml').read_text('Utf-8')
         assert body.count('dep-a') == 1
+
+    def test_remove_dependency_no_longer_needed(self, tmp_path, monkeypatch):
+        """卸载扩展时，不再被任何已启用扩展声明的依赖会被移除。"""
+        _write_extension(tmp_path, 'EnabledExt', ['dep-a'])
+        _write_pyproject(tmp_path, ['dep-a', 'dep-uninstalled'])
+        _setup(tmp_path, monkeypatch)
+
+        Dependencies.sync_extension_dependencies(remove=['dep-uninstalled'])
+
+        body = (tmp_path / 'pyproject.toml').read_text('Utf-8')
+        assert 'dep-a' in body
+        assert 'dep-uninstalled' not in body
+
+    def test_remove_keeps_shared_dependency(self, tmp_path, monkeypatch):
+        """卸载扩展时，仍被其它已启用扩展使用的共享依赖不会被移除。"""
+        _write_extension(tmp_path, 'EnabledExt', ['dep-shared'])
+        _write_pyproject(tmp_path, ['dep-shared'])
+        _setup(tmp_path, monkeypatch)
+
+        Dependencies.sync_extension_dependencies(remove=['dep-shared'])
+
+        body = (tmp_path / 'pyproject.toml').read_text('Utf-8')
+        assert 'dep-shared' in body
+
+    def test_remove_preserves_unrelated_dependencies(self, tmp_path, monkeypatch):
+        """卸载扩展时，不在移除清单中的既有依赖（如手动安装）保留不删。"""
+        _write_extension(tmp_path, 'EnabledExt', ['dep-a'])
+        _write_pyproject(tmp_path, ['dep-a', 'manual-dep'])
+        _setup(tmp_path, monkeypatch)
+
+        Dependencies.sync_extension_dependencies(remove=['dep-a'])
+
+        body = (tmp_path / 'pyproject.toml').read_text('Utf-8')
+        assert 'dep-a' in body  # 仍被 EnabledExt 使用
+        assert 'manual-dep' in body  # 不在移除清单，保留

@@ -28,6 +28,3 @@ enabled = true
 [Server]
 enabled = true
 
-# 内置渲染引擎 Html2Pic 由 [image].mode 门控：图片模式开启时自动加载，无需在此列出。
-[Default]
-enabled = true
