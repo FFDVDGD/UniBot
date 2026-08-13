@@ -59,7 +59,7 @@
 
 | | | |
 |---|---|---|
-| <p align="center"><img src=".github/images/shows/commands/about.png"><br>About 指令</p> | <p align="center"><img src=".github/images/shows/commands/list.png"><br>List 指令</p> | <p align="center"><img src=".github/images/shows/commands/help.png"><br>Help 指令</p> |
+| <p align="center"><img src=".github/images/shows/commands/about.png"><br>/bot about 指令</p> | <p align="center"><img src=".github/images/shows/commands/list.png"><br>List 指令</p> | <p align="center"><img src=".github/images/shows/commands/help.png"><br>Help 指令</p> |
 
 ---
 
@@ -270,7 +270,7 @@ keywords = { "看群公告里的 IP 地址。" = ["服务器在哪", "服务器�
 | `/command` | 远程执行 Minecraft 指令（管理员） |
 | `/bound` | 绑定 / 解绑 / 查询游戏白名单 |
 | `/help` | 查看命令帮助 |
-| `/about` | 关于本机器人 |
+| `/bot` | 机器人管理（关于信息 / 检查更新 / 更新 / 重启 / 超级用户） |
 
 > 💡 所有指令均基于 [Alconna](https://github.com/ArcletProject/Alconna) 解析，跨平台表现一致。
 
@@ -287,7 +287,7 @@ keywords = { "看群公告里的 IP 地址。" = ["服务器在哪", "服务器�
 | `/luck` | 每日运势卡片 |
 | `/bound` | 白名单绑定信息 |
 | `/help` | 帮助信息 |
-| `/about` | 关于页面 |
+| `/bot about` | 关于页面 |
 
 **自定义背景：**
 
