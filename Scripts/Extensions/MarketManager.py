@@ -75,10 +75,7 @@ class ExtensionMarketManager:
         for extension in self.market_cache.values():
             latest = extension.latest_release()
             # 代码型扩展在 registry，无代码扩展包（template/resources）在 no_code_info
-            installed = (
-                extension.id in extension_manager.registry
-                or extension.id in extension_manager.no_code_info
-            )
+            installed = extension.id in extension_manager.registry or extension.id in extension_manager.no_code_info
             info = extension_manager.get_extension_info(extension.id) if installed else {}
             items.append(
                 {

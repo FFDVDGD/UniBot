@@ -302,9 +302,7 @@ class ExtensionLoader:
                     self._register_no_code_display(extension_id, info, ExtensionState.failed, str(error))
                     continue
                 self._register_no_code_display(extension_id, info, ExtensionState.enabled, '')
-                logger.success(
-                    f'加载扩展包 <yellow>{extension_id} v{info.manifest.extension.version}</yellow> 完毕！'
-                )
+                logger.success(f'加载扩展包 <yellow>{extension_id} v{info.manifest.extension.version}</yellow> 完毕！')
                 continue
             # 依赖被禁用/失败：进入 blocked
             dependency_block = self._find_blocked_dependency(extension_id, blocked_reasons)
@@ -338,9 +336,7 @@ class ExtensionLoader:
                 continue
             self.extensions.append(extension)
             self.manager.registry[extension_id] = extension
-            logger.success(
-                f'加载扩展 <yellow>{extension_id} v{extension.metadata.version}</yellow> 完毕！'
-            )
+            logger.success(f'加载扩展 <yellow>{extension_id} v{extension.metadata.version}</yellow> 完毕！')
 
     def _bind(
         self,

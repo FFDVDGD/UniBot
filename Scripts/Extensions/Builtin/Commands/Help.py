@@ -36,7 +36,7 @@ def gen_usage(command: Command) -> str:
 
 def gen_path_usage(path: list[str], command: Command) -> str:
     """生成子命令完整路径用法，如 `/bot superusers add <target>`。"""
-    parts = [f"/{' '.join(path)}"]
+    parts = [f'/{" ".join(path)}']
     for argument in command.arguments:
         display = f'<{argument.name}>' if argument.required else f'[{argument.name}]'
         parts.append(display)
@@ -104,7 +104,13 @@ class HelpCommand(Command):
         for command in get_enabled_nodes():
             usage = command.usage or gen_usage(command)
             description = command.description or ''
-            commands.append({'usage': usage, 'description': description, 'subcommands': _walk_subcommands(command.subcommands, [command.name])})
+            commands.append(
+                {
+                    'usage': usage,
+                    'description': description,
+                    'subcommands': _walk_subcommands(command.subcommands, [command.name]),
+                }
+            )
         return commands
 
     def get_command_detail(self, name: str) -> dict | None:

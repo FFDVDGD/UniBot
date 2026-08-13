@@ -389,9 +389,7 @@ class CommandManager:
         """递归注册子命令分派处理器，路径用点路径（如 `superusers.add`）。"""
         for nested in subcommand.subcommands:
             self._assign_subcommand(matcher, nested, f'{path}.{nested.name}')
-        matcher.assign(path)(
-            self._route(matcher, subcommand.image_handler, subcommand.handler, subcommand)
-        )
+        matcher.assign(path)(self._route(matcher, subcommand.image_handler, subcommand.handler, subcommand))
 
     @staticmethod
     def _route(matcher, image_handler, handler: Handler, command: Command[Any]) -> Handler:

@@ -52,9 +52,7 @@ def normalize_token(text: str) -> str:
 def refresh_token() -> str:
     """刷新令牌：重新计算并覆盖当前令牌（即用即刷），返回新令牌。"""
     Globals.auth_token = generate_token()
-    logger.info(
-        f'认证令牌：<red><b><u>{Globals.auth_token}</u></b></red>，直接复制发送在消息群和指令群即可完成配置。'
-    )
+    logger.info(f'认证令牌：<red><b><u>{Globals.auth_token}</u></b></red>，直接复制发送在消息群和指令群即可完成配置。')
     return Globals.auth_token
 
 
