@@ -1,10 +1,10 @@
 import asyncio
 
 from fastapi import APIRouter, Depends
-from nonebot.log import logger
 
 from Scripts import Globals
 from Scripts.Config import config
+from Scripts.Logging import logger
 
 from .Auth import get_current_user, require_role
 from .Schemas import BroadcastRequest, ExecuteCommandRequest

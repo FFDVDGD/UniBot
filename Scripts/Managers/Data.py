@@ -5,7 +5,8 @@ from json import dumps, loads
 from pathlib import Path
 
 import bcrypt
-from nonebot.log import logger
+
+from Scripts.Logging import logger
 
 
 class DataManager:

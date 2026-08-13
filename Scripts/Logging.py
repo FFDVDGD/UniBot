@@ -6,9 +6,13 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from loguru import logger
+from loguru import logger as _logger
 from nonebot import get_driver
 from nonebot.log import default_filter
+
+# 统一导出的 logger：默认开启消息颜色标签解析（等价于每次调用 opt(colors=True)），
+# 控制台渲染 ANSI 彩色，文件日志（colorize=False）自动剥离标签保持纯净文本。
+logger = _logger.opt(colors=True)
 
 if TYPE_CHECKING:
     from loguru import Record
@@ -16,10 +20,10 @@ if TYPE_CHECKING:
 # 模块名前缀 → 展示名，按前缀长度从长到短排列
 MODULE_ALIASES: tuple[tuple[str, str], ...] = (
     ('Scripts.Extensions.Builtin', 'Builtin'),
-    ('Scripts.Extensions', 'Extensions'),
-    ('Scripts.Managers', 'Managers'),
+    ('Scripts.Extensions', 'Ext'),
+    ('Scripts.Managers', 'Mgr'),
     ('Scripts.Api', 'WebApi'),
-    ('Scripts.Plugins', 'Plugins'),
+    ('Scripts.Plugins', 'Plg'),
     ('Scripts', 'Core'),
     ('nonebot_plugin_alconna', 'Alconna'),
     ('nonebot', 'NoneBot'),
@@ -49,7 +53,8 @@ def resolve_module_alias(module_name: str | None) -> str:
                 remainder = module_name[len(prefix) + 1 :]
                 # 内置扩展去掉 Commands./Services. 中间层，避免展示名过长
                 if prefix == 'Scripts.Extensions.Builtin':
-                    remainder = remainder.removeprefix('Commands.').removeprefix('Services.')
+                    remainder = remainder.removeprefix('Commands.')
+                    remainder = remainder.removeprefix('Services.')
                 return f'{alias}/{remainder}'
             return alias
     # 未匹配的第三方模块只显示第一级模块名
@@ -62,13 +67,13 @@ def _patch_record(record: Record) -> None:
 
 
 def console_format(record: Record) -> str:
-    """控制台日志格式：时间、级别、模块名中性灰渲染。"""
+    """控制台日志格式：时间、级别、模块名渲染（接近 NoneBot 默认风格）。"""
     # NoneBot init() 期间内置 patcher 会把模块名截断为小写 nonebot，这里兜底统一
     name = 'NoneBot' if record['name'] == 'nonebot' else record['name']
     return (
         '<dim>{time:MM-DD HH:mm:ss}</dim> '
         '[<lvl>{level}</lvl>] '
-        f'<light-black><b>{name}</b></light-black> '
+        f'<light-cyan><u>{name}</u></light-cyan> '
         '| {message}\n'
     )
 
@@ -80,10 +85,10 @@ def file_format(record: Record) -> str:
 
 
 def setup_level_colors() -> None:
-    """为日志级别分配更鲜明的颜色，避免输出过于平淡。"""
+    """为日志级别分配与 NoneBot 默认接近的颜色。"""
     logger.level('TRACE', color='<dim>')
     logger.level('DEBUG', color='<cyan>')
-    logger.level('INFO', color='<light-blue>')
+    logger.level('INFO', color='<white>')
     logger.level('ERROR', color='<light-red>')
 
 

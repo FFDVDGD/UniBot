@@ -3,8 +3,8 @@ from datetime import datetime
 
 import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from nonebot.log import logger
 
+from Scripts.Logging import logger
 from Scripts.Managers import data_manager
 
 router = APIRouter(tags=['WebSocket'])
@@ -47,6 +47,8 @@ def log_sink(message):
         'time': datetime.fromtimestamp(record['time'].timestamp()).strftime('%H:%M:%S.%f')[:-3],
         'message': record['message'],
         'module': record['name'],
+        # 完整 ANSI 彩色行（含级别/模块名/消息内着色），前端解析渲染
+        'ansi': str(message),
     }
     log_cache.append(log_data)
     if len(log_cache) > LOG_CACHE_SIZE:

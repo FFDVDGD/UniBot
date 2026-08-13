@@ -27,8 +27,9 @@ from random import choice
 from typing import TYPE_CHECKING, Any, Literal
 
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, TemplateNotFound
-from nonebot.log import logger
 from pydantic import BaseModel, ConfigDict, Field, create_model
+
+from Scripts.Logging import logger
 
 from ..Config import config
 from .Base import TemplateFieldConfig

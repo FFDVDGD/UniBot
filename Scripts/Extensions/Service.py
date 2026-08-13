@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar, overload
 
-from nonebot.log import logger
+from Scripts.Logging import logger
 
 if TYPE_CHECKING:
     from .Manager import ExtensionManager

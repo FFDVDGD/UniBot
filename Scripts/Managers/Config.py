@@ -4,7 +4,8 @@ from json import JSONDecodeError, dumps, loads
 from pathlib import Path
 
 import tomlkit
-from nonebot.log import logger
+
+from Scripts.Logging import logger
 
 
 class ConfigManager:

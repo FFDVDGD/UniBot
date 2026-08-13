@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import tomlkit
-from nonebot.log import logger
 
 from Scripts.Config import config
+from Scripts.Logging import logger
 
 from . import (
     Extension,

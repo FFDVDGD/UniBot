@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
-from nonebot.log import logger
 
+from Scripts.Logging import logger
 from Scripts.Managers import data_manager
 
 from .Limiter import rate_limiter

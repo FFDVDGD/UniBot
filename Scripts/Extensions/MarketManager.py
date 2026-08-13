@@ -14,9 +14,9 @@ import time
 from pathlib import Path
 
 import tomlkit
-from nonebot.log import logger
 from packaging.specifiers import SpecifierSet
 
+from Scripts.Logging import logger
 from Scripts.Network import github_download, request
 
 from .Base import ExtensionManifest, get_unibot_version, parse_manifest

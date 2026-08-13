@@ -8,10 +8,10 @@ from nonebot import get_adapter
 from nonebot.adapters.minecraft import Adapter as MCAdapter
 from nonebot.adapters.minecraft import Bot
 from nonebot.adapters.minecraft.message import Message
-from nonebot.log import logger
 
 from Scripts import Globals
 from Scripts.Extensions import Extension, Service
+from Scripts.Logging import logger
 
 extension = Extension(id='Servers', name='Minecraft 服务器服务', version='1.0.0', types=('api',))
 

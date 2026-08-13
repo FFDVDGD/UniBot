@@ -12,7 +12,8 @@ import tomllib
 from pathlib import Path
 
 import tomlkit
-from nonebot.log import logger
+
+from Scripts.Logging import logger
 
 # 扩展目录根与清单文件名（与 Loader 保持一致）
 EXTENSIONS_DIR = Path('Extensions')

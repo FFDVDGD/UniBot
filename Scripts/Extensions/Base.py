@@ -6,9 +6,9 @@ import tomllib
 from enum import StrEnum
 from typing import Any, Generic, Literal, TypeVar, cast
 
-from nonebot.log import logger
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from Scripts.Logging import logger
 from Scripts.Managers import config_manager
 
 from .Errors import (

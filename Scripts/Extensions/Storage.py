@@ -17,8 +17,9 @@ from pathlib import Path
 from typing import Any, Generic, TypeVar
 
 import tomlkit
-from nonebot.log import logger
 from pydantic import BaseModel
+
+from Scripts.Logging import logger
 
 from .Errors import StorageError
 

@@ -1,7 +1,6 @@
 import asyncio
 
-from nonebot.log import logger
-
+from Scripts.Logging import logger
 from Scripts.Network import request
 
 from .Config import config_manager

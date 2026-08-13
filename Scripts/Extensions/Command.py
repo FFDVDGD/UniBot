@@ -15,12 +15,12 @@ from typing import Any, Generic, TypeVar
 
 from arclet.alconna import Alconna, Args, MultiVar, Subcommand
 from nonebot.exception import FinishedException
-from nonebot.log import logger
 from nonebot.matcher import MatcherSource
 from nonebot_plugin_alconna import on_alconna
 from nonebot_plugin_alconna.uniseg import Image, UniMessage
 
 from Scripts.Config import config
+from Scripts.Logging import logger
 from Scripts.Rules import command_group_rule
 from Scripts.Utils import turn_message_text
 

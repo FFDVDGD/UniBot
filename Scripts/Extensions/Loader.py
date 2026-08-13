@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import tomlkit
-from nonebot.log import logger
 from packaging.specifiers import SpecifierSet
+
+from Scripts.Logging import logger
 
 if TYPE_CHECKING:
     from .Manager import ExtensionManager
@@ -301,8 +302,8 @@ class ExtensionLoader:
                     self._register_no_code_display(extension_id, info, ExtensionState.failed, str(error))
                     continue
                 self._register_no_code_display(extension_id, info, ExtensionState.enabled, '')
-                logger.opt(colors=True).success(
-                    f'加载扩展 <green>{extension_id}</green> v<yellow>{info.manifest.extension.version}</yellow> 完毕！'
+                logger.success(
+                    f'加载扩展包 <yellow>{extension_id} v{info.manifest.extension.version}</yellow> 完毕！'
                 )
                 continue
             # 依赖被禁用/失败：进入 blocked
@@ -337,8 +338,8 @@ class ExtensionLoader:
                 continue
             self.extensions.append(extension)
             self.manager.registry[extension_id] = extension
-            logger.opt(colors=True).success(
-                f'加载扩展 <green>{extension_id}</green> v<yellow>{extension.metadata.version}</yellow> 完毕！'
+            logger.success(
+                f'加载扩展 <yellow>{extension_id} v{extension.metadata.version}</yellow> 完毕！'
             )
 
     def _bind(

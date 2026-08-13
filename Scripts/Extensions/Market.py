@@ -11,8 +11,9 @@ from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
 
-from nonebot.log import logger
 from pydantic import BaseModel, Field
+
+from Scripts.Logging import logger
 
 from .Base import ExtensionManifest, parse_manifest
 from .Errors import ManifestError

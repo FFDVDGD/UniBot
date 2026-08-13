@@ -2,12 +2,12 @@
 
 from typing import override
 
-from nonebot.log import logger
 from nonebot_plugin_alconna import At
 from nonebot_plugin_uninfo import SupportScope, Uninfo
 
 from Scripts.Config import config
 from Scripts.Extensions import Command, Extension, SubCommand
+from Scripts.Logging import logger
 from Scripts.Managers import config_manager
 from Scripts.Messages import messages
 from Scripts.Utils import get_permission

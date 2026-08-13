@@ -2,10 +2,11 @@ import asyncio
 import re
 from collections.abc import AsyncIterable, Iterable
 
-from nonebot.log import logger
 from nonebot_plugin_alconna import SupportScope as AlconnaSupportScope
 from nonebot_plugin_alconna import Target
 from nonebot_plugin_uninfo import SupportScope as UninfoSupportScope
+
+from Scripts.Logging import logger
 
 from .Config import config
 

@@ -4,8 +4,8 @@ from zipfile import ZipFile
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
-from nonebot.log import logger
 
+from Scripts.Logging import logger
 from Scripts.Network import github_download
 
 from .Config import config_manager
@@ -70,7 +70,13 @@ class WebUiManager:
         self.app = app
         setup_cors(app)
         app.include_router(api_router, prefix='/webui')
-        logger.add(log_sink, level='DEBUG', format='{time:HH:mm:ss} | {level} | {message}')
+        # colorize=True：log_sink 的 str(message) 才带 ANSI 码，前端据此渲染颜色
+        logger.add(
+            log_sink,
+            level='DEBUG',
+            format='{time:HH:mm:ss} [<lvl>{level}</lvl>] <light-cyan><u>{name}</u></light-cyan> | {message}',
+            colorize=True,
+        )
         logger.success('WebUI API 路由挂载完毕！')
 
     def mount_static(self):

@@ -4,10 +4,9 @@ import signal
 from pathlib import Path
 
 import nonebot
-from nonebot.log import logger
 
 from Scripts import Process
-from Scripts.Logging import configure_handlers, configure_logging
+from Scripts.Logging import configure_handlers, configure_logging, logger
 
 LOG_PATH = Path('Logs/')
 
@@ -60,7 +59,7 @@ def register_adapters(driver, adapters: list[dict]) -> None:
             if adapter_class is None:
                 logger.warning(f'适配器模块 {module_name} 未包含 Adapter 类，已跳过！')
                 continue
-            logger.opt(colors=True).info(f'正在注册 <cyan>{adapter_class}</cyan> 适配器。')
+            logger.info(f'正在注册 <cyan>{adapter_class}</cyan> 适配器。')
             driver.register_adapter(adapter_class)
         except Exception as error:
             logger.warning(f'适配器 {module_name} 加载失败，已跳过！原因：{error}')

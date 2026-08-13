@@ -2,7 +2,8 @@ import asyncio
 from io import BytesIO
 
 from httpx import AsyncClient
-from nonebot.log import logger
+
+from Scripts.Logging import logger
 
 client = AsyncClient(follow_redirects=True)
 

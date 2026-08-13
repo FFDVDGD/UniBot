@@ -2,13 +2,13 @@
 
 from typing import override
 
-from nonebot.log import logger
 from nonebot_plugin_alconna import Match
 from nonebot_plugin_uninfo import Uninfo
 
 from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Extensions import Command, Extension
+from Scripts.Logging import logger
 from Scripts.Messages import messages
 from Scripts.Utils import get_permission, turn_message_text
 

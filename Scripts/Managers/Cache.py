@@ -2,7 +2,7 @@ import asyncio
 import re
 from pathlib import Path
 
-from nonebot.log import logger
+from Scripts.Logging import logger
 
 
 class CacheManager:

@@ -3,7 +3,8 @@ import time
 from collections import defaultdict
 
 from fastapi import HTTPException, Request
-from nonebot.log import logger
+
+from Scripts.Logging import logger
 
 
 class RateLimiter:

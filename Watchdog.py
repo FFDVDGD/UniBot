@@ -1,14 +1,13 @@
+import hashlib
 import os
 import signal
 import subprocess
 import sys
 import time
-import hashlib
 import tomllib
 from pathlib import Path
 
-from nonebot.log import logger
-
+from Scripts.Logging import configure_handlers, logger
 from Scripts.Process import RESTART_EXIT_CODE, WATCHDOG_ENVIRONMENT
 
 MAX_RESTART_ATTEMPTS = 3
@@ -88,6 +87,7 @@ def sync_if_changed() -> bool:
 
 def run() -> None:
     """守护机器人进程，处理异常退出与 WebUI 重启请求。"""
+    configure_handlers(Path('Logs/'))
     restart_attempts = 0
     restart_window_started_at = time.monotonic()
     shutdown_requested = False

@@ -4,7 +4,6 @@ import hashlib
 import time
 
 from nonebot import get_driver, on_message
-from nonebot.log import logger
 from nonebot.plugin import PluginMetadata
 from nonebot.rule import Rule
 from nonebot_plugin_alconna.uniseg import UniMsg
@@ -12,6 +11,7 @@ from nonebot_plugin_uninfo import SceneType, SupportScope, Uninfo
 
 from Scripts import Globals
 from Scripts.Config import config
+from Scripts.Logging import logger
 from Scripts.Managers import config_manager
 
 TOKEN_LENGTH = 10
@@ -52,8 +52,8 @@ def normalize_token(text: str) -> str:
 def refresh_token() -> str:
     """刷新令牌：重新计算并覆盖当前令牌（即用即刷），返回新令牌。"""
     Globals.auth_token = generate_token()
-    logger.opt(colors=True).info(
-        f'认证令牌：<light-red><b>{Globals.auth_token}</b></light-red>，直接复制发送在消息群和指令群即可完成配置。'
+    logger.info(
+        f'认证令牌：<red><b><u>{Globals.auth_token}</u></b></red>，直接复制发送在消息群和指令群即可完成配置。'
     )
     return Globals.auth_token
 

@@ -5,7 +5,6 @@ from nonebot import on_message, on_notice
 from nonebot.adapters.minecraft import PlayerChatEvent, PlayerDeathEvent, PlayerJoinEvent, PlayerQuitEvent
 from nonebot.adapters.minecraft.message import MessageSegment
 from nonebot.adapters.minecraft.models import Component, HoverAction, HoverEvent
-from nonebot.log import logger
 from nonebot.plugin import PluginMetadata
 from nonebot_plugin_alconna.uniseg import UniMsg
 from nonebot_plugin_uninfo import Uninfo
@@ -13,6 +12,7 @@ from nonebot_plugin_uninfo import Uninfo
 from Scripts import Globals
 from Scripts.Config import config
 from Scripts.Globals import player_list_cache
+from Scripts.Logging import logger
 from Scripts.Messages import messages as message_config
 from Scripts.Rules import message_group_rule
 from Scripts.Utils import check_message, get_platform_name, send_message_to_groups
