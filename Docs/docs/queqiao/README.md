@@ -9,21 +9,21 @@
 ::: table title="接入方式" copy="all" hl-rows="tip:2"
 | 服务端类型 | 实现端 | 说明 |
 |------------|--------|------|
-| MCDReforged | [MCDR 端插件](/queqiao/mcdr.html) | 本项目维护实现 |
-| Spigot / Paper / Folia / Forge / Fabric / NeoForge / Velocity / 原版 | [鹊桥官方实现](/queqiao/official.html) | 第三方官方实现 |
+| MCDReforged | [MCDR 端插件](/queqiao/MCDR端插件.html) | 本项目维护实现 |
+| Spigot / Paper / Folia / Forge / Fabric / NeoForge / Velocity / 原版 | [鹊桥官方实现](/queqiao/官方实现.html) | 第三方官方实现 |
 :::
 
 *需说明的是：本项目仅维护其中的 MCDR 端插件。* 鹊桥协议本身并非本项目开发，它还支持 Spigot、Paper、Fabric、Forge、NeoForge 等多种服务端。
 
 ## 快速导航
 
-<LinkCard title="MCDR 端插件" href="/queqiao/mcdr.html" icon="fluent-color:toolbox-24">
+<LinkCard title="MCDR 端插件" href="/queqiao/MCDR端插件.html" icon="fluent-color:toolbox-24">
 
 本项目维护的 MCDR 实现，安装、配置与命令。
 
 </LinkCard>
 
-<LinkCard title="鹊桥官方实现" href="/queqiao/official.html" icon="fluent-color:globe-24">
+<LinkCard title="鹊桥官方实现" href="/queqiao/官方实现.html" icon="fluent-color:globe-24">
 
 其它服务端的官方实现，安装、配置与对接。
 

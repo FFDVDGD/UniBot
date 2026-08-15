@@ -2,7 +2,7 @@
 
 本页介绍 **本项目维护的鹊桥 MCDR 端插件**，它运行在 MCDReforged 之上，负责将 Minecraft 服务器接入鹊桥协议。
 
-*需说明的是：该插件仅支持 MCDReforged 服务端。* 若使用 Spigot / Paper / Fabric / Forge / NeoForge 等其它服务端，请参阅 [鹊桥官方实现](/queqiao/official.html)。
+*需说明的是：该插件仅支持 MCDReforged 服务端。* 若使用 Spigot / Paper / Fabric / Forge / NeoForge 等其它服务端，请参阅 [鹊桥官方实现](/queqiao/官方实现.html)。
 
 ## 功能特性
 

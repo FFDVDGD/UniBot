@@ -87,8 +87,8 @@ export default defineUserConfig({
           collapsed: false,
           items: [
             '/queqiao/',
-            '/queqiao/mcdr.md',
-            '/queqiao/official.md',
+            '/queqiao/MCDR端插件.md',
+            '/queqiao/官方实现.md',
           ],
         },
       ],
@@ -98,7 +98,7 @@ export default defineUserConfig({
           collapsed: false,
           items: [
             '/adapter/',
-            '/adapter/platforms.md',
+            '/adapter/接入聊天平台.md',
             '/adapter/使用说明.md',
           ],
         },

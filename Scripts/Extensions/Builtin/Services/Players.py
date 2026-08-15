@@ -32,6 +32,8 @@ class PlayerData(TypedDict):
 class PlayerService(Service):
     """管理用户与游戏 ID 的绑定关系，数据同源落盘 `Data/Players.json`。"""
 
+    name = 'player'
+
     def __init__(self) -> None:
         self._accounts: dict[str, int] = {}
         self._players: list[list[str]] = []

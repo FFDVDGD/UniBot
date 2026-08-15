@@ -43,7 +43,7 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 
 ## 快速导航
 
-<LinkCard title="接入聊天平台" href="/adapter/platforms.html" icon="fluent-color:chat-24">
+<LinkCard title="接入聊天平台" href="/adapter/接入聊天平台.html" icon="fluent-color:chat-24">
 
 各平台适配器的配置字段与对接方式。
 
@@ -59,7 +59,7 @@ MC 协议适配器的配置与服务器对接。
 
 **NoneBot-Adapter-Minecraft** 是 NoneBot 的 Minecraft 协议适配器，为 UniBot 提供与 Minecraft 服务器通信的能力，是 UniBot 与服务器之间的桥梁。
 
-它通过 [鹊桥](/queqiao/) 协议，与服务器端的插件（如 [鹊桥 MCDR 端插件](/queqiao/mcdr.html)）互通。
+它通过 [鹊桥](/queqiao/) 协议，与服务器端的插件（如 [鹊桥 MCDR 端插件](/queqiao/MCDR端插件.html)）互通。
 
 ## 相关项目
 
@@ -67,7 +67,7 @@ MC 协议适配器的配置与服务器对接。
 | 项目 | 说明 |
 |------|------|
 | [鹊桥](/queqiao/) | 服务器端插件/Mod，协议官方实现 |
-| [QueQiao.MCDReforged](/queqiao/mcdr.html) | MCDR 端协议实现 |
+| [QueQiao.MCDReforged](/queqiao/MCDR端插件.html) | MCDR 端协议实现 |
 | [nonebot-plugin-mcqq](https://github.com/17TheWord/nonebot-plugin-mcqq) | 更完善的 MC 通信插件 |
 | [nonebot-plugin-mcping](https://github.com/17TheWord/nonebot-plugin-mcping) | 获取 MC 服务器 MOTD 并返回图片 |
 :::
