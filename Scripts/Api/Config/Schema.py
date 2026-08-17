@@ -565,11 +565,11 @@ ENV_SCHEMA = [
         'label': 'Minecraft WS 地址',
         'type': 'json',
         'default': {},
-        'description': 'Minecraft WebSocket 连接地址：服务器名称 → 连接地址',
+        'description': 'Minecraft WebSocket 连接地址：服务器名称 → 地址列表（支持一服多地址）',
         'form': {
             'kind': 'map',
             'key_label': '服务器名称',
-            'value_type': 'string',
+            'value_type': 'list',
             'value_placeholder': 'ws://地址:端口/路径',
         },
     },
