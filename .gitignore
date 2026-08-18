@@ -14,6 +14,7 @@ Logs/
 # Extensions/Example/
 Config/Extensions/
 /WebUi/
+/Extensions/
 .docs/
 .dist/
 .**.md
