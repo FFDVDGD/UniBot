@@ -78,6 +78,4 @@ renderer = "html2pic"
 # "Default" = 内置默认模板扩展提供的模板，可被其他模板扩展替换（热生效）。
 template = "Default"
 # 自定义字体文件路径（如 /path/to/Font.ttf）。
-# 留空时自动从资源扩展根目录查找 Font.ttf。
 # font = ""
-font = ""

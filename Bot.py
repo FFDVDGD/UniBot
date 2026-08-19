@@ -23,13 +23,16 @@ async def startup() -> None:
     from Scripts.Extensions import extension_manager
     from Scripts.Managers import (
         data_manager,
+        machine_manager,
         version_manager,
         webui_manager,
     )
 
     data_manager.load()
+    machine_manager.init()
 
     asyncio.create_task(version_manager.init())
+    asyncio.create_task(machine_manager.register())
 
     if config.webui.enabled:
         await webui_manager.init()
@@ -42,8 +45,9 @@ async def startup() -> None:
 async def shutdown() -> None:
     from Scripts.Api.Limiter import rate_limiter
     from Scripts.Extensions import extension_manager
-    from Scripts.Managers import data_manager
+    from Scripts.Managers import data_manager, machine_manager
 
+    await machine_manager.mark_offline()
     await extension_manager.shutdown()
     rate_limiter.stop()
     await data_manager.save()

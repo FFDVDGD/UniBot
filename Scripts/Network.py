@@ -41,6 +41,18 @@ async def request(url: str):
         logger.warning(f'请求 {url} 失败：{error}')
 
 
+async def post_request(url: str, payload: dict) -> dict | None:
+    """发送 POST JSON 请求，成功返回响应 JSON，失败返回 None。"""
+    try:
+        response = await client.post(url, json=payload)
+        if response.status_code == 200:
+            return response.json()
+        logger.warning(f'请求 {url} 失败：错误的状态代码 {response.status_code}')
+    except Exception as error:
+        logger.warning(f'请求 {url} 失败：{error}')
+    return None
+
+
 async def download(url: str) -> BytesIO | None:
     """下载单个 URL 的文件内容，成功返回 BytesIO，失败返回 None。"""
     try:
