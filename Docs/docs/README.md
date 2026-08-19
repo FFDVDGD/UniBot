@@ -59,6 +59,16 @@ config:
 
 这是 **Minecraft UniBot** 项目的官方文档。本项目由多个子项目共同构成，目标是打造一套跨平台、多服互联的 Minecraft 机器人生态。
 
+## ::fluent-color:chart-multiple-24:: 机器状态
+
+<ClientOnly>
+  <MachineStats />
+</ClientOnly>
+
+<script setup>
+import MachineStats from './.vuepress/components/MachineStats.vue'
+</script>
+
 ## ::fluent-color:book-24:: 项目组成
 
 | 子项目 | 说明 | 技术栈 |
