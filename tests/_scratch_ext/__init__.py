@@ -1,5 +1,6 @@
-from Scripts.Extensions import Command, Extension, SubCommand
 from typing import override
+
+from Scripts.Extensions import Command, Extension, SubCommand
 
 extension = Extension(id='FakeExt', name='假扩展', version='1.0.0', types=('command',))
 

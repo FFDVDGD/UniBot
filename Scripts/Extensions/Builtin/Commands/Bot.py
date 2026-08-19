@@ -1,7 +1,6 @@
 """内置扩展：机器人管理指令。"""
 
 import asyncio
-import subprocess
 from typing import TypeAlias, override
 
 from nonebot_plugin_alconna import At
@@ -38,7 +37,7 @@ class BotCommand(Command):
         name = 'superusers'
         description = '管理超级用户'
 
-        class Add(SubCommand['_BotSuperusers']):
+        class Add(SubCommand['BotSuperusers']):
             """添加超级用户。"""
 
             name = 'add'
@@ -54,7 +53,7 @@ class BotCommand(Command):
                     return messages.commands.bot.no_permission
                 return self.parent.parent.update_superusers(target, remove=False)
 
-        class Remove(SubCommand['_BotSuperusers']):
+        class Remove(SubCommand['BotSuperusers']):
             """移除超级用户。"""
 
             name = 'remove'
@@ -102,17 +101,17 @@ class BotCommand(Command):
             await version_manager.fetch_latest()
             return await self.parent._render_about()
 
-    # class Update(SubCommand['BotCommand']):
-    #     """更新机器人到最新版本。"""
+    class Update(SubCommand['BotCommand']):
+        """从 GitHub Release 更新机器人到最新版本。"""
 
-    #     name = 'update'
-    #     description = '更新机器人到最新版本'
+        name = 'update'
+        description = '更新机器人到最新版本'
 
-    #     @override
-    #     async def handler(self, session: Uninfo):
-    #         if not get_permission(session):
-    #             return messages.commands.bot.no_permission
-    #         return await self.parent.update_handler()
+        @override
+        async def handler(self, session: Uninfo):
+            if not get_permission(session):
+                return messages.commands.bot.no_permission
+            return await self.parent.update_handler()
 
     class Restart(SubCommand['BotCommand']):
         """重启机器人。"""
@@ -193,16 +192,12 @@ class BotCommand(Command):
         return '机器人正在重启，请稍候……'
 
     async def update_handler(self) -> str:
-        """拉取最新代码并重启机器人，完成更新。"""
+        """从 GitHub Release 下载最新代码并重启机器人，完成更新。"""
         if not is_watchdog_process():
             return '机器人未通过 Watchdog 启动，无法自动更新！'
-        changed, output = await asyncio.to_thread(self._git_pull)
-        if changed is None:
-            logger.warning(f'拉取最新代码失败：{output.strip()}')
-            return '更新失败，请查看控制台日志！'
-        if not changed:
-            await version_manager.fetch_latest()
-            return '当前已是最新版本，无需更新！'
+        error_message = await version_manager.update()
+        if error_message:
+            return f'更新失败：{error_message}'
         logger.success('更新成功，准备重启机器人！')
         asyncio.create_task(self._delayed_restart())
         return '更新成功，机器人正在重启，请稍候……'
@@ -212,28 +207,6 @@ class BotCommand(Command):
         await asyncio.sleep(1)
         request_restart()
 
-    def _git_pull(self) -> tuple[bool | None, str]:
-        """拉取最新代码：成功返回是否实际更新，失败返回 None。"""
-        before = self._run_git('rev-parse', 'HEAD')
-        completed = subprocess.run(
-            ['git', 'pull', '--ff-only'],
-            capture_output=True,
-            text=True,
-            encoding='Utf-8',
-            timeout=180,
-        )
-        output = (completed.stdout or '') + (completed.stderr or '')
-        if completed.returncode != 0:
-            return None, output
-        after = self._run_git('rev-parse', 'HEAD')
-        return before != after, output
-
-    @staticmethod
-    def _run_git(*args: str) -> str:
-        """执行 git 命令并返回标准输出。"""
-        completed = subprocess.run(['git', *args], capture_output=True, text=True, encoding='Utf-8')
-        return completed.stdout.strip()
-
 
 # 深层子命令的父命令类型别名：供 SubCommand 泛型引用，获得完整的 parent 类型提示
-_BotSuperusers: TypeAlias = BotCommand.Superusers
+BotSuperusers: TypeAlias = BotCommand.Superusers

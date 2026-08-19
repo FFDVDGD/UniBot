@@ -23,13 +23,14 @@ def get_status_data() -> dict:
     player_service, server_service = Globals.player_service, Globals.server_service
     servers = server_service.servers if server_service else {}
     players_bound = len(player_service.players) if player_service else 0
+    process = psutil.Process()
     return {
         'version': version_manager.version,
         'latest_version': version_manager.latest_version,
         'has_update': version_manager.check_update(),
         'uptime': int(time.time() - start_time),
-        'memory_mb': round(psutil.Process().memory_info().rss / 1024 / 1024, 1),
-        'cpu_percent': psutil.Process().cpu_percent(interval=0.1),
+        'memory_mb': round(process.memory_info().rss / 1024 / 1024, 1),
+        'cpu_percent': process.cpu_percent(interval=0.1),
         'servers_online': len(servers),
         'players_bound': players_bound,
         'adapters': adapter_names,
@@ -75,6 +76,22 @@ async def health_check():
         'data': {'status': 'healthy', 'started_at': start_time},
         'message': 'ok',
     }
+
+
+@router.post('/update', summary='更新机器人', dependencies=[Depends(require_role('admin'))])
+async def update_bot(background_tasks: BackgroundTasks):
+    """从 GitHub Release 下载最新代码替换 Scripts 目录，成功后重启机器人。"""
+    if not is_watchdog_process():
+        return {
+            'code': 1,
+            'data': None,
+            'message': '机器人未通过 Watchdog 启动，无法自动更新',
+        }
+    error_message = await version_manager.update()
+    if error_message:
+        return {'code': 1, 'data': None, 'message': error_message}
+    background_tasks.add_task(request_restart)
+    return {'code': 0, 'data': None, 'message': '更新成功，机器人正在重启'}
 
 
 @router.post('/restart', summary='重启机器人', dependencies=[Depends(require_role('admin'))])

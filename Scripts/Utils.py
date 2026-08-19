@@ -1,6 +1,9 @@
 import asyncio
 import re
 from collections.abc import AsyncIterable, Iterable
+from io import BytesIO
+from pathlib import Path
+from zipfile import ZipFile, is_zipfile
 
 from nonebot_plugin_alconna import SupportScope as AlconnaSupportScope
 from nonebot_plugin_alconna import Target
@@ -9,6 +12,11 @@ from nonebot_plugin_uninfo import SupportScope as UninfoSupportScope
 from Scripts.Logging import logger
 
 from .Config import config
+
+# 单个 zip 解压后允许的最大体积（默认 100 MB）
+MAX_ARCHIVE_TOTAL = 100 * 1024 * 1024
+# 单个 zip 允许的最大文件数量（防御 zip 炸弹）
+MAX_ARCHIVE_FILES = 2048
 
 regex = re.compile(r'[A-Z0-9_]+|\.[A-Z0-9_]+', re.IGNORECASE)
 minecraft_color_pattern = re.compile(r'§x(?:§[0-9a-f]){6}|§[0-9a-fk-orx]', re.IGNORECASE)
@@ -84,3 +92,52 @@ def get_permission(session) -> bool:
     if config.admin_superusers and session.member and session.member.role:
         return session.member.role.id in ('OWNER', 'ADMINISTRATOR')
     return False
+
+
+# ===== 安全解压 =====
+
+
+class ArchiveError(Exception):
+    """zip 解压校验失败。"""
+
+
+def _safe_relative(relative: str) -> Path:
+    """校验 zip 内相对路径不越界、非绝对路径，返回规范化 Path。"""
+    path = Path(relative)
+    if path.is_absolute():
+        raise ArchiveError(f'压缩包内不允许绝对路径：{relative}')
+    if '..' in path.parts:
+        raise ArchiveError(f'压缩包内不允许路径越界：{relative}')
+    return path
+
+
+def safe_extract_zip(archive_data: bytes, target_dir: Path) -> None:
+    """
+    安全解压 zip 到目标目录。
+
+        拒绝绝对路径、`..` 越界、符号链接/硬链接，并限制解压总大小与文件数量。
+        任一步校验失败都会抛出 `ArchiveError`，且不向目标目录写入任何文件。
+    """
+    if not is_zipfile(BytesIO(archive_data)):
+        raise ArchiveError('压缩包不是有效的 zip 文件！')
+    with ZipFile(BytesIO(archive_data)) as zip_file:
+        _validate_archive(zip_file)
+        zip_file.extractall(target_dir)
+
+
+def _validate_archive(zip_file: ZipFile) -> None:
+    """校验 zip 全部成员：路径安全、符号链接、大小与数量限制。"""
+    infos = zip_file.infolist()
+    if len(infos) > MAX_ARCHIVE_FILES:
+        raise ArchiveError(f'压缩包内文件数量过多（{len(infos)} 超过 {MAX_ARCHIVE_FILES}），已拒绝！')
+    total_size = 0
+    for info in infos:
+        _safe_relative(info.filename)
+        mode = info.external_attr >> 16
+        if mode & 0o170000 == 0o120000:
+            raise ArchiveError(f'压缩包内不允许符号链接：{info.filename}')
+        if not info.is_dir():
+            total_size += info.file_size
+            if total_size > MAX_ARCHIVE_TOTAL:
+                raise ArchiveError(f'压缩包解压后体积过大（超过 {MAX_ARCHIVE_TOTAL // (1024 * 1024)} MB），已拒绝！')
+    logger.debug(f'压缩包校验通过：{len(infos)} 个文件，约 {total_size} 字节。')

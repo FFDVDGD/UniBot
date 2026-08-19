@@ -11,12 +11,8 @@ import zipfile
 
 import pytest
 
-from Scripts.Extensions import (
-    ManifestError,
-    extract_market_package,
-    safe_extract_zip,
-)
-from Scripts.Extensions.Market import MAX_ARCHIVE_FILES
+from Scripts.Extensions import ManifestError, extract_market_package
+from Scripts.Utils import MAX_ARCHIVE_FILES, ArchiveError, safe_extract_zip
 
 
 def _make_zip(files: dict[str, bytes]) -> bytes:
@@ -62,14 +58,14 @@ class TestSafeExtractZip:
 
     def test_path_traversal_rejected(self, tmp_path):
         archive = _make_zip({'../evil.py': b'evil'})
-        with pytest.raises(ManifestError):
+        with pytest.raises(ArchiveError):
             safe_extract_zip(archive, tmp_path)
         # 不得写出目标目录
         assert not (tmp_path.parent / 'evil.py').exists()
 
     def test_absolute_path_rejected(self, tmp_path):
         archive = _make_zip({'/abs.py': b'evil'})
-        with pytest.raises(ManifestError):
+        with pytest.raises(ArchiveError):
             safe_extract_zip(archive, tmp_path)
 
     def test_symlink_rejected(self, tmp_path):
@@ -79,23 +75,23 @@ class TestSafeExtractZip:
             # 在 Unix 标志位中标记为符号链接
             info.external_attr = 0o120777 << 16
             zf.writestr(info, b'target')
-        with pytest.raises(ManifestError):
+        with pytest.raises(ArchiveError):
             safe_extract_zip(buffer.getvalue(), tmp_path)
 
     def test_not_zip_rejected(self, tmp_path):
-        with pytest.raises(ManifestError):
+        with pytest.raises(ArchiveError):
             safe_extract_zip(b'not a zip', tmp_path)
 
     def test_too_many_files_rejected(self, tmp_path):
         files = {f'f{i}': b'x' for i in range(MAX_ARCHIVE_FILES + 1)}
         archive = _make_zip(files)
-        with pytest.raises(ManifestError):
+        with pytest.raises(ArchiveError):
             safe_extract_zip(archive, tmp_path)
 
     def test_too_large_rejected(self, tmp_path, monkeypatch):
-        monkeypatch.setattr('Scripts.Extensions.Market.MAX_ARCHIVE_TOTAL', 10)
+        monkeypatch.setattr('Scripts.Utils.MAX_ARCHIVE_TOTAL', 10)
         archive = _make_zip({'big.bin': b'x' * 100})
-        with pytest.raises(ManifestError):
+        with pytest.raises(ArchiveError):
             safe_extract_zip(archive, tmp_path)
 
 

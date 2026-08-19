@@ -49,7 +49,6 @@ from .Market import (
     MarketExtension,
     MarketRelease,
     extract_market_package,
-    safe_extract_zip,
 )
 from .MarketManager import ExtensionMarketManager, market_manager
 from .Renderer import (
@@ -116,7 +115,6 @@ __all__ = [
     'MarketExtension',
     'MarketRelease',
     'extract_market_package',
-    'safe_extract_zip',
     # MarketManager
     'ExtensionMarketManager',
     'market_manager',

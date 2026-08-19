@@ -15,7 +15,7 @@ from nonebot.log import default_filter
 logger = default_logger.opt(colors=True)
 
 if TYPE_CHECKING:
-    from loguru import Record, HandlerConfig
+    from loguru import HandlerConfig, Record
 
 # 模块名前缀 → 展示名，按前缀长度从长到短排列
 MODULE_ALIASES: tuple[tuple[str, str], ...] = (
@@ -108,15 +108,17 @@ def configure_handlers(log_path: Path | None = None) -> None:
         }
     ]
     if log_path is not None:
-        handlers.append({
-            'sink': log_path / '{time}.log',
-            'level': 0,
-            'rotation': '1 day',
-            'encoding': 'Utf-8',
-            'diagnose': False,
-            'format': file_format,
-            'colorize': False,
-        })
+        handlers.append(
+            {
+                'sink': log_path / '{time}.log',
+                'level': 0,
+                'rotation': '1 day',
+                'encoding': 'Utf-8',
+                'diagnose': False,
+                'format': file_format,
+                'colorize': False,
+            }
+        )
     logger.configure(
         handlers=handlers,
         patcher=_patch_record,
