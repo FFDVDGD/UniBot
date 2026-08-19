@@ -87,7 +87,7 @@ def sync_if_changed() -> bool:
 
 def run() -> None:
     """守护机器人进程，处理异常退出与 WebUI 重启请求。"""
-    configure_handlers(Path('Logs/'))
+    configure_handlers()
     restart_attempts = 0
     restart_window_started_at = time.monotonic()
     shutdown_requested = False

@@ -6,16 +6,16 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from loguru import logger as _logger
+from loguru import logger as default_logger
 from nonebot import get_driver
 from nonebot.log import default_filter
 
 # 统一导出的 logger：默认开启消息颜色标签解析（等价于每次调用 opt(colors=True)），
 # 控制台渲染 ANSI 彩色，文件日志（colorize=False）自动剥离标签保持纯净文本。
-logger = _logger.opt(colors=True)
+logger = default_logger.opt(colors=True)
 
 if TYPE_CHECKING:
-    from loguru import Record
+    from loguru import Record, HandlerConfig
 
 # 模块名前缀 → 展示名，按前缀长度从长到短排列
 MODULE_ALIASES: tuple[tuple[str, str], ...] = (
@@ -92,31 +92,33 @@ def setup_level_colors() -> None:
     logger.level('ERROR', color='<light-red>')
 
 
-def configure_handlers(log_path: Path) -> None:
+def configure_handlers(log_path: Path | None = None) -> None:
     """在 NoneBot 初始化前配置日志处理器，保证启动早期日志格式统一。"""
     setup_level_colors()
     # logger.configure 传 handlers 会先移除全部旧处理器；
     # NoneBot 初始化时会重置 patcher 与 extra，故此处先兜底设置，init 后由 configure_logging 恢复
+    handlers: list[HandlerConfig] = [
+        {
+            'sink': sys.stdout,
+            'level': 0,
+            'diagnose': False,
+            'filter': default_filter,
+            'format': console_format,
+            'colorize': True,
+        }
+    ]
+    if log_path is not None:
+        handlers.append({
+            'sink': log_path / '{time}.log',
+            'level': 0,
+            'rotation': '1 day',
+            'encoding': 'Utf-8',
+            'diagnose': False,
+            'format': file_format,
+            'colorize': False,
+        })
     logger.configure(
-        handlers=[
-            {
-                'sink': sys.stdout,
-                'level': 0,
-                'diagnose': False,
-                'filter': default_filter,
-                'format': console_format,
-                'colorize': True,
-            },
-            {
-                'sink': log_path / '{time}.log',
-                'level': 0,
-                'rotation': '1 day',
-                'encoding': 'Utf-8',
-                'diagnose': False,
-                'format': file_format,
-                'colorize': False,
-            },
-        ],
+        handlers=handlers,
         patcher=_patch_record,
         extra={'nonebot_log_level': 'INFO'},
     )
