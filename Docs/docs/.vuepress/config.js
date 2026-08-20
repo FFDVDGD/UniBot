@@ -4,7 +4,7 @@ import { plumeTheme } from 'vuepress-theme-plume'
 
 export default defineUserConfig({
   lang: 'zh-CN',
-  title: 'Minecraft UniBot',
+  title: 'MC-UniBot Docs',
   description: '跨平台 · 多服互联 · 即插即用 —— 让 Minecraft 与你的聊天世界无缝相连',
 
   head: [
@@ -32,6 +32,8 @@ export default defineUserConfig({
       collapse: true,
       // 缩写词语法：*[xxx]: 定义
       abbr: true,
+      // 隐秘文本
+      plot: true,
     },
 
     social: [
@@ -63,8 +65,9 @@ export default defineUserConfig({
           collapsed: false,
           items: [
             '/guide/',
-            '/guide/功能特性.md',
             '/guide/快速开始.md',
+            '/guide/功能特性.md',
+            '/guide/WebUI.md',
             '/guide/指令手册.md',
           ],
         },

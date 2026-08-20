@@ -65,7 +65,7 @@
 
 指令输出渲染为精美图片，支持玩家头像与自定义背景：
 
-| `/bot about` 指令 | `List` 指令 | `Help` 指令 |
+| `/bot about` 指令 | `/list` 指令 | `/help` 指令 |
 |---|---|---|
 | <p align="center"><img src=".github/images/shows/commands/about.png"></p> | <p align="center"><img src=".github/images/shows/commands/list.png"></p> | <p align="center"><img src=".github/images/shows/commands/help.png"></p> |
 

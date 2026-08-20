@@ -41,6 +41,7 @@ config:
         title: WebUI 管理面板
         icon: fluent-color:laptop-24
         details: 现代化管理界面，可视化配置、实时监控、日志查看，开箱即用。
+        link: /guide/WebUI.html
       -
         title: NoneBot2 生态
         icon: fluent-color:bot-24
@@ -83,6 +84,7 @@ import MachineStats from './.vuepress/components/MachineStats.vue'
 ## ::fluent-color:send-24:: 快速导航
 
 - [开始使用](/guide/快速开始.html) — 从零开始部署你的 UniBot
+- [WebUI 管理面板](/guide/WebUI.html) — 可视化配置、实时监控、日志查看
 - [配置说明](/unibot/配置说明.html) — 全部配置项详解
 - [指令手册](/guide/指令手册.html) — 全部内置指令一览
 - [功能特性](/guide/功能特性.html) — 群服互通、图片渲染、扩展系统等

@@ -24,6 +24,12 @@
 → [查看功能特性](/guide/功能特性.html)
 :::
 
+::: card title="WebUI 管理面板" icon="fluent-color:board-24"
+可视化配置、实时监控、服务器 / 玩家管理、日志查看。
+
+→ [了解 WebUI](/guide/WebUI.html)
+:::
+
 ::: card title="架构设计" icon="fluent-color:apps-24"
 了解整体架构及各组件间的通信方式。
 
@@ -52,6 +58,7 @@
 | [快速开始](/guide/快速开始.html) | 五步完成部署 | 第一次使用的用户 |
 | [指令手册](/guide/指令手册.html) | 全部内置指令及用法 | 所有用户 |
 | [功能特性](/guide/功能特性.html) | 群服互通、图片渲染、WebUI、扩展系统等能力 | 想了解全部能力的用户 |
+| [WebUI 管理面板](/guide/WebUI.html) | WebUI 各页面功能、启用方式与常见问题 | 使用 WebUI 的用户 |
 :::
 
 > ::fluent-color:link-24:: **配置说明**：`.env` 与 `Config.toml` 等全部配置项的详细说明，见 [UniBot 配置说明](/unibot/配置说明.html)。
