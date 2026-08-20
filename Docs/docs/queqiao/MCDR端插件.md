@@ -127,6 +127,57 @@ UniBot 通过 [nonebot-adapter-minecraft](/adapter/使用说明.html) 与鹊桥�
 - **鉴权 Token**：MCDR 端 `access_token` 与适配器 `MINECRAFT_ACCESS_TOKEN` 一致（不为空时校验）。
 - **地址可达**：WebSocket 地址与端口互通，任一端启用客户端模式主动外连即可。
 
+## 基岩版（Bedrock）支持
+
+本插件运行于 MCDReforged 之上，而 MCDR 通过**服务端处理器（Server Handler）**来管理不同类型的 Minecraft 服务端。借助 [Bedrock Liteloader Handler](https://mcdreforged.com/zh-CN/plugin/bedrock_liteloader_handler) 这一处理器，MCDR 可以直接托管 **基岩版专用服务器（BDS）**，从而让本插件也能将基岩版服务器接入鹊桥。
+
+### 原理
+
+`bedrock_liteloader_handler` 是一个 MCDR 服务端处理器，它把 BDS 的标准输出解析为 MCDR 事件（玩家加入 / 退出 / 聊天等）。因此，本插件的事件转发（玩家进出、聊天）在基岩版服务器上**开箱即用**，无需改动插件代码。
+
+### 安装与配置
+
+::: steps
+
+1. **安装处理器**：从 [liteloader_handler Releases](https://github.com/Elec-Glacier/liteloader_handler/releases) 下载最新 `.mcdr` 包，放入 MCDR 的 `plugins/` 目录。
+
+2. **安装本插件**：按上文 [安装](#安装) 安装鹊桥 MCDR 端插件。
+
+3. **配置处理器**：启动 MCDR 后，在 `config/` 下生成处理器的配置文件，选择对应的基岩版处理器（默认即原版处理器），然后重载配置。
+
+4. **配置鹊桥插件**：按上文 [配置](#配置) 填写 `config/queqiao/config.json`，`server_name` / `access_token` 与适配器保持一致。
+
+:::
+
+### 聊天输出
+
+原版 BDS **默认不输出玩家聊天**。要让玩家聊天事件被 MCDR 捕获并转发，需通过**行为包**或**修改服务端**的方式开启聊天输出，否则玩家聊天无法转发到鹊桥。
+
+### 已知限制
+
+基岩版与 Java 版是两套不同的游戏，本插件部分能力在基岩版上存在差异：
+
+::: table title="基岩版能力对照" copy="all"
+| 能力 | Java 版 | 基岩版（BDS） |
+|------|---------|---------------|
+| 玩家加入 / 退出事件 | ✅ | ✅（经处理器解析） |
+| 玩家聊天事件 | ✅ | ✅（需行为包 / 修改服务端开启输出） |
+| 玩家死亡 / 成就事件 | ✅（MoreGameEvents） | ::fluent-color:warning-24:: 依赖 Java 事件，通常不可用 |
+| 玩家坐标 / 生命值等数据 | ✅（minecraft_data_api） | ❌ 不可用，字段为 `None` |
+| Server List Ping（MOTD / 在线数） | ✅（Java SLP 协议） | ❌ 基岩版使用 RakNet 协议，ping 失败，`get_status` 回退 |
+| 广播 / 私聊（`tellraw`） | ✅ | ::fluent-color:warning-24:: 命令语法不同，需适配 |
+| Title / ActionBar | ✅ | ::fluent-color:warning-24:: 命令语法不同（如 `titleraw`） |
+| RCON 命令 | ✅ | ::fluent-color:warning-24:: 命令集不同 |
+:::
+
+*由于基岩版与 Java 版命令体系差异较大，若需在基岩版上使用广播、私聊、Title 等 API，建议在 [QueQiao.MCDReforged](https://github.com/Minecraft-UniBot/QueQiao.MCDReforged) 仓库中提出需求或提交适配。*
+
+### 注意事项
+
+- **LeviLamina**：LeviLamina 1.0.0 之后 MCDR 无法直接获取修改过的服务端输出，需借助支持 pty 的应用作为桥梁（详见 [liteloader_handler#13](https://github.com/Elec-Glacier/liteloader_handler/issues/13)）。
+- **Unicode 修复**：受 [BDS-3791](https://bugs.mojang.com/browse/BDS-3791) 影响，中文等非 ASCII 字符可能显示异常，可安装 [UnicodeFixer](https://www.minebbs.com/resources/unicodefixer.6991/) 修复。
+- **插件兼容性**：基岩版与 Java 版判若两个游戏，使用其它 MCDR 插件前请确认其是否兼容基岩版。
+
 ## 协议
 
 鹊桥 V2 协议基于 WebSocket，通过 `Authorization` 头鉴权，双向实时通信。MCDR 端将游戏事件转发给鹊桥，鹊桥再向 MCDR 发送 API 指令（广播、私聊、Title、RCON 等）。

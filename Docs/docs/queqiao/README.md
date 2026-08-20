@@ -9,11 +9,12 @@
 ::: table title="接入方式" copy="all" hl-rows="tip:2"
 | 服务端类型 | 实现端 | 说明 |
 |------------|--------|------|
-| MCDReforged | [MCDR 端插件](/queqiao/MCDR端插件.html) | 本项目维护实现 |
+| MCDReforged（Java 版） | [MCDR 端插件](/queqiao/MCDR端插件.html) | 本项目维护实现 |
+| MCDReforged（基岩版 BDS） | [MCDR 端插件](/queqiao/MCDR端插件.html#基岩版-bedrock-支持) | 本项目维护实现，配合 Bedrock Liteloader Handler |
 | Spigot / Paper / Folia / Forge / Fabric / NeoForge / Velocity / 原版 | [鹊桥官方实现](/queqiao/官方实现.html) | 第三方官方实现 |
 :::
 
-*需说明的是：本项目仅维护其中的 MCDR 端插件。* 鹊桥协议本身并非本项目开发，它还支持 Spigot、Paper、Fabric、Forge、NeoForge 等多种服务端。
+*需说明的是：本项目仅维护其中的 MCDR 端插件。* 鹊桥协议本身并非本项目开发，它还支持 Spigot、Paper、Fabric、Forge、NeoForge 等多种服务端。基岩版服务器可通过 MCDR 的 [Bedrock Liteloader Handler](https://mcdreforged.com/zh-CN/plugin/bedrock_liteloader_handler) 处理器接入，详见 [MCDR 端插件 · 基岩版支持](/queqiao/MCDR端插件.html#基岩版-bedrock-支持)。
 
 ## 快速导航
 
