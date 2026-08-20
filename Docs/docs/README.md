@@ -75,11 +75,10 @@ import MachineStats from './.vuepress/components/MachineStats.vue'
 | 子项目 | 说明 | 技术栈 |
 |--------|------|--------|
 | [UniBot](/unibot/) | 主机器人框架，负责消息收发、指令处理与 WebUI 管理 | NoneBot2 / Python |
-| [鹊桥](/queqiao/) | 第三方通信协议，本项目维护其 MCDR 端插件 | MCDReforged / Python |
 | [MC 适配器](/adapter/) | NoneBot 的 Minecraft 协议适配器，为 UniBot 提供 MC 通信能力 | NoneBot Adapter |
 
 > [!TIP]
-> 本文档中的「鹊桥」指本项目维护的 **MCDReforged 端插件**。鹊桥协议本身由 [17TheWord / QueQiao](https://github.com/17TheWord/QueQiao) 官方维护，除此端外还支持 Spigot、Paper、Fabric、Forge、NeoForge、Vanilla、Folia、Velocity 等多种服务端，并非由本项目开发。
+> 本文档中的「鹊桥」指 [17TheWord / QueQiao](https://github.com/17TheWord/QueQiao) 官方维护的第三方通信协议，支持 MCDReforged、Spigot、Paper、Fabric、Forge、NeoForge、Vanilla、Folia、Velocity 等多种服务端。UniBot 通过 [MC 适配器](/adapter/) 与鹊桥互通。
 
 ## ::fluent-color:send-24:: 快速导航
 
@@ -90,4 +89,4 @@ import MachineStats from './.vuepress/components/MachineStats.vue'
 - [功能特性](/guide/功能特性.html) — 群服互通、图片渲染、扩展系统等
 - [扩展系统](/unibot/扩展系统.html) — 扩展类型、渲染体系与可视化管理
 - [架构设计](/unibot/架构设计.html) — 深入了解项目架构
-- [鹊桥](/queqiao/) — 第三方通信协议，本项目维护其 MCDR 端插件
+- [MC 适配器](/adapter/) — 鹊桥协议与服务器端接入方式

@@ -101,8 +101,9 @@ UniBot 有两个入口：
 - **`Bot.py`**：直接运行机器人进程。
 - **`Watchdog.py`**：守护进程，监控机器人异常退出并自动重启，同时处理 WebUI 的重启请求与依赖同步。
 
-推荐使用 `Watchdog.py` 启动：
+==推荐使用 `Watchdog.py` 启动==：
 
 ```bash
 uv run Watchdog.py
+```
 ```

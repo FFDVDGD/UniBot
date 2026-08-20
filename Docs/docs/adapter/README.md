@@ -39,7 +39,7 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 
 :::
 
-以上依赖声明变化会在重启时由 Watchdog 通过 `uv sync` 自动落地安装。卸载适配器时，仅移除注册与 `DRIVER` 中多余的驱动，不删除依赖声明，避免误删被其他依赖引用的包。
+以上依赖声明变化会在重启时由 Watchdog 通过 `uv sync` 自动落地安装。卸载适配器时，仅移除注册与 `DRIVER` 中多余的驱动，==不删除依赖声明==，避免误删被其他依赖引用的包。
 
 ## 快速导航
 
@@ -51,7 +51,7 @@ UniBot 基于 **NoneBot2** 框架，通过安装不同的 **NoneBot 适配器** 
 
 <LinkCard title="Minecraft 适配器" href="/adapter/使用说明.html" icon="fluent-color:link-24">
 
-MC 协议适配器的配置与服务器对接。
+MC 协议适配器的配置、连接模式与服务器端接入。
 
 </LinkCard>
 
@@ -59,15 +59,33 @@ MC 协议适配器的配置与服务器对接。
 
 **NoneBot-Adapter-Minecraft** 是 NoneBot 的 Minecraft 协议适配器，为 UniBot 提供与 Minecraft 服务器通信的能力，是 UniBot 与服务器之间的桥梁。
 
-它通过 [鹊桥](/queqiao/) 协议，与服务器端的插件（如 [鹊桥 MCDR 端插件](/queqiao/MCDR端插件.html)）互通。
+它通过 **鹊桥** 协议，与服务器端的插件 / Mod 互通。
+
+### 鹊桥协议
+
+「鹊桥」是一套由 [17TheWord / QueQiao](https://github.com/17TheWord/QueQiao) 开发的 **第三方通信协议**，负责打通 Minecraft 服务器与外部聊天系统（如 UniBot）。服务器端需安装 **鹊桥的实现端** 才能接入机器人，根据服务端类型不同，实现方式分为两类：
+
+::: table title="接入方式" copy="all" hl-rows="tip:2"
+| 服务端类型 | 实现端 | 说明 |
+|------------|--------|------|
+| MCDReforged（Java 版） | [MCDR 端插件](/adapter/使用说明.html#mcdr-端插件) | 运行于 MCDReforged 之上 |
+| MCDReforged（基岩版 BDS） | [MCDR 端插件](/adapter/使用说明.html#基岩版-bedrock-支持) | 配合 Bedrock Liteloader Handler |
+| Spigot / Paper / Folia / Forge / Fabric / NeoForge / Velocity / 原版 | [鹊桥官方实现](/adapter/使用说明.html#鹊桥官方实现) | 鹊桥官方实现 |
+:::
+
+鹊桥协议本身并非本项目开发，它还支持 Spigot、Paper、Fabric、Forge、NeoForge 等多种服务端。基岩版服务器可通过 MCDR 的 [Bedrock Liteloader Handler](https://mcdreforged.com/zh-CN/plugin/bedrock_liteloader_handler) 处理器接入，详见 [MCDR 端插件 · 基岩版支持](/adapter/使用说明.html#基岩版-bedrock-支持)。
+
+### 协议概述
+
+鹊桥 V2 协议基于 WebSocket，通过 `Authorization` 头鉴权，双向实时通信。服务端将游戏事件（玩家进出、聊天、死亡、成就等）转发给外部客户端，同时接收外部客户端发送的 API 指令（广播、私聊、Title、ActionBar、RCON 等）。
 
 ## 相关项目
 
 ::: table title="相关项目" copy="all"
 | 项目 | 说明 |
 |------|------|
-| [鹊桥](/queqiao/) | 服务器端插件/Mod，协议官方实现 |
-| [QueQiao.MCDReforged](/queqiao/MCDR端插件.html) | MCDR 端协议实现 |
+| [MCDR 端插件](/adapter/使用说明.html#mcdr-端插件) | MCDReforged 端的鹊桥实现 |
+| [鹊桥官方实现](/adapter/使用说明.html#鹊桥官方实现) | 其它服务端的鹊桥官方实现 |
 | [nonebot-plugin-mcqq](https://github.com/17TheWord/nonebot-plugin-mcqq) | 更完善的 MC 通信插件 |
 | [nonebot-plugin-mcping](https://github.com/17TheWord/nonebot-plugin-mcping) | 获取 MC 服务器 MOTD 并返回图片 |
 :::

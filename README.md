@@ -32,7 +32,7 @@
 
 - **真正的跨平台**：不止 QQ，还支持 Telegram、Discord、Kook、QQ 频道等，一套指令全平台通用
 - **多服互联**：同时连接多台 Minecraft 服务器，消息互通，跨服聊天零延迟
-- **全服务端兼容**：支持 Fabric、Forge、Spigot、Paper 等主流服务端，即插即用
+- **全服务端兼容**：支持 Fabric、Forge、Spigot、Paper 等主流服务端，甚至是基岩版服务器，即插即用
 - **扩展系统**：指令、服务、渲染引擎、模板与资源五类扩展，即插即用，失败自动隔离
 - **WebUI 管理面板**：现代化管理界面，可视化配置、实时监控、日志查看，开箱即用
 - **图片渲染模式**：将指令输出渲染为精美图片，支持自定义背景
@@ -77,7 +77,7 @@
 - [功能特性](https://bot.mcjpg.dev/guide/功能特性.html) — 功能一览
 - [指令手册](https://bot.mcjpg.dev/guide/指令手册.html) — 指令说明
 - [配置说明](https://bot.mcjpg.dev/unibot/配置说明.html) — 配置文件详解
-- [鹊桥接入](https://bot.mcjpg.dev/queqiao/) — 服务器端接入方式
+- [MC 接入](https://bot.mcjpg.dev/adapter/) — 服务器端接入方式
 
 ## 许可证
 

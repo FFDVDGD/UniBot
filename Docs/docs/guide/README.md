@@ -2,6 +2,8 @@
 
 欢迎使用 **Minecraft UniBot**。本指南作为**用户手册**，帮助你安装机器人并快速上手使用。如需深入调整配置，请跳转到 [配置说明](/unibot/配置说明.html)。
 
+==首次使用请从「快速开始」开始==，按步骤完成部署即可；其余页面按需查阅。
+
 ## 从哪开始
 
 :::: card-grid
@@ -71,8 +73,7 @@
 | 子项目 | 作用 | 文档 |
 |--------|------|------|
 | [UniBot](/unibot/) | 核心机器人，负责与聊天平台、多台服务器通信 | [架构设计](/unibot/架构设计.html) |
-| [鹊桥](/queqiao/) | 第三方通信协议，本项目维护其 MCDR 端插件 | [鹊桥文档](/queqiao/) |
 | [MC 适配器](/adapter/) | NoneBot 的 MC 协议适配器，通信桥梁 | [适配器文档](/adapter/) |
 :::
 
-> ::fluent-color:pin-24:: **关于鹊桥**：本项目维护的是鹊桥协议的 **MCDR 端实现**。鹊桥协议本体由 [17TheWord / QueQiao](https://github.com/17TheWord/QueQiao) 官方维护，还支持 Spigot、Paper、Fabric、Forge 等多种服务端，并非本项目开发。
+> ::fluent-color:pin-24:: **关于鹊桥**：鹊桥是一套第三方通信协议，由 [17TheWord / QueQiao](https://github.com/17TheWord/QueQiao) 官方维护，支持 MCDReforged、Spigot、Paper、Fabric、Forge 等多种服务端。UniBot 通过 [MC 适配器](/adapter/) 与鹊桥互通。

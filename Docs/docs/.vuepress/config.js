@@ -54,7 +54,6 @@ export default defineUserConfig({
       { text: '首页', link: '/' },
       { text: '指南', link: '/guide/' },
       { text: 'UniBot', link: '/unibot/' },
-      { text: '鹊桥', link: '/queqiao/' },
       { text: '适配器', link: '/adapter/' },
     ],
 
@@ -84,17 +83,6 @@ export default defineUserConfig({
             '/unibot/接口文档.md',
             '/unibot/开发插件.md',
             '/unibot/上传市场.md',
-          ],
-        },
-      ],
-      '/queqiao/': [
-        {
-          text: '鹊桥',
-          collapsed: false,
-          items: [
-            '/queqiao/',
-            '/queqiao/MCDR端插件.md',
-            '/queqiao/官方实现.md',
           ],
         },
       ],
