@@ -12,6 +12,9 @@ export default defineUserConfig({
   ],
 
   theme: plumeTheme({
+    // 部署域名：用于 SEO（OGP / JSON-LD / canonical）与 sitemap.xml 的生成
+    hostname: 'https://bot.mcjpg.dev/',
+
     logo: '/icon.svg',
     repo: 'MineJPGcraft/UniBot',
     docsDir: 'Docs/docs',
@@ -103,6 +106,26 @@ export default defineUserConfig({
           ],
         },
       ],
+    },
+
+    plugins: {
+      // SEO：默认生成 OGP / JSON-LD / robots.txt，仅生产构建（vuepress build）生效
+      seo: {
+        // 站点默认作者（页面 frontmatter 中 author 优先）
+        author: {
+          name: 'McJPG 团队',
+          url: 'https://mcjpg.org/',
+        },
+        // 无配图页面回退到站点图标（需绝对 URL）
+        fallBackImage: 'https://bot.mcjpg.dev/icon.svg',
+        // 补充默认 OGP：强制站点名（若站点新增语言后 siteData 取到其他 title 时兜底）
+        ogp: (ogpInfo) => ({
+          ...ogpInfo,
+          'og:site_name': 'Minecraft UniBot',
+        }),
+      },
+      // sitemap：生成 sitemap.xml（仅生产构建生效，hostname 自动继承顶层配置）
+      sitemap: {},
     },
   }),
 
